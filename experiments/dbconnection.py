@@ -4,7 +4,7 @@ import logging
 import os
 import psycopg2
 from abc import ABCMeta
-from util import get_duration_seconds
+from experiments.util import get_duration_seconds
 from pycilt.utils import print_dictionary
 from datetime import timedelta, datetime
 from psycopg2.extras import DictCursor

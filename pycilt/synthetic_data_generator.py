@@ -1,10 +1,7 @@
 import numpy as np
 from abc import ABCMeta
-from infoselect import SelectVars, get_gmm
 from scipy.stats import multivariate_normal
 from scipy.stats import ortho_group
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_val_score
 from sklearn.utils import check_random_state, shuffle
 
 
@@ -13,10 +10,10 @@ def pdf(dist, x):
 
 
 class SyntheticDatasetGenerator(metaclass=ABCMeta):
-    def __init__(self, n_classes=2, n_features=2, samples_per_class=1000, flip_y=0.1, random_state=42):
+    def __init__(self, n_classes=2, n_features=2, samples_per_class=1000, flip_y=0.1, random_state=42, fold_id=0):
         self.n_classes = n_classes
         self.n_features = n_features
-        self.random_state = check_random_state(random_state)
+        self.random_state = check_random_state(random_state + fold_id)
         self.means = {}
         self.covariances = {}
         self.seeds = {}

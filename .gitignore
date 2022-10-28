@@ -3,3 +3,4 @@
 *.pyc
 /pycild.egg-info/
 *.ipynb
+*.log

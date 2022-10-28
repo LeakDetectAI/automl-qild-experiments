@@ -16,25 +16,27 @@ Options:
 """
 import inspect
 import logging
+import numpy as np
 import os
 import sys
 import traceback
 from datetime import datetime
-import numpy as np
 from docopt import docopt
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold
+from skopt import BayesSearchCV
 
-from pycilt.utils import setup_logging, setup_random_seed, print_dictionary
-from util import get_duration_seconds
-from dbconnection import DBConnector
-
+from experiments.bayes_search_utils import update_params, log_callback, get_scores
+from experiments.dbconnection import DBConnector
+from experiments.util import get_duration_seconds, get_dataset_reader, create_search_space, setup_logging, \
+    setup_random_seed, create_directory_safely, learners
+from pycilt.utils import print_dictionary
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 LOGS_FOLDER = 'logs'
-OPTIMIZER_FOLDER = 'optimizers'
-PREDICTIONS_FOLDER = 'predictions'
-MODEL_FOLDER = 'models'
+RESULT_FOLDER = 'results'
+EXPERIMENTS = 'experiments'
 ERROR_OUTPUT_STRING = 'Out of sample error %s : %0.4f'
-
 
 if __name__ == "__main__":
     start = datetime.now()
@@ -45,7 +47,7 @@ if __name__ == "__main__":
     is_gpu = bool(int(arguments["--isgpu"]))
     schema = arguments["--schema"]
     ###################### POSTGRESQL PARAMETERS ###############################
-    config_file_path = os.path.join(DIR_PATH, 'config', 'autosca.json')
+    config_file_path = os.path.join(DIR_PATH, EXPERIMENTS, 'config', 'autosca.json')
     dbConnector = DBConnector(config_file_path=config_file_path, is_gpu=is_gpu, schema=schema)
     if 'CCS_REQID' in os.environ.keys():
         cluster_id = int(os.environ['CCS_REQID'])
@@ -70,8 +72,9 @@ if __name__ == "__main__":
             experiment_table = dbConnector.job_description["experiment_table"]
             validation_loss = dbConnector.job_description["validation_loss"]
             hash_value = dbConnector.job_description["hash_value"]
+
             random_state = np.random.RandomState(seed=seed + fold_id)
-            log_path = os.path.join(DIR_PATH, LOGS_FOLDER, "{}.log".format(hash_value))
+            log_path = os.path.join(DIR_PATH, EXPERIMENTS, LOGS_FOLDER, "{}.log".format(hash_value))
             setup_logging(log_path=log_path)
             setup_random_seed(seed=seed)
             logger = logging.getLogger('Experiment')
@@ -79,6 +82,49 @@ if __name__ == "__main__":
             logger.info("Arguments {}".format(arguments))
             logger.info("Job Description {}".format(print_dictionary(dbConnector.job_description)))
             duration = get_duration_seconds(duration)
+            dataset_params['random_state'] = random_state
+            dataset_params['fold_id'] = fold_id
+            dataset_reader = get_dataset_reader(dataset_name, dataset_params)
+            X, y = dataset_reader.generate_dataset()
+            input_dim = X.shape[-1]
+            n_classes = len(np.unique(y))
+
+            sss = StratifiedShuffleSplit(n_splits=1, test_size=0.33, random_state=0)
+            train_index, test_index = list(sss.split(X, y))[0]
+            X_train, X_test = X[train_index], X[test_index]
+            y_train, y_test = y[train_index], y[test_index]
+            inner_cv_iterator = StratifiedKFold(n_splits=n_inner_folds, shuffle=True, random_state=random_state)
+            search_spaces = create_search_space(hp_ranges)
+            hash_file = os.path.join(DIR_PATH, RESULT_FOLDER, "{}.h5".format(hash_value))
+            create_directory_safely(hash_file, True)
+
+            learner_params = {**learner_params, **dict(input_dim=input_dim, n_classes=n_classes)}
+            learner = learners[learner_name]
+            estimator = learner(**learner_params)
+
+            bayes_search_params = dict(estimator=estimator, search_spaces=search_spaces, n_iter=hp_iters,
+                                       scoring=validation_loss, n_jobs=10, cv=inner_cv_iterator, error_score=0,
+                                       random_state=random_state)
+            bayes_search = BayesSearchCV(**bayes_search_params)
+            bayes_search.fit(X_train, y_train, groups=None, callback=log_callback(logger), **fit_params)
+            learner_params = update_params(bayes_search, logger, learner_params)
+            estimator = learner(**learner_params)
+            estimator.fit(X_train, y_train)
+            p_pred, y_pred = get_scores(X_test, estimator)
+            val = accuracy_score(y_test, y_pred)
+            # TODO: Store the results in the table
+            results = {'job_id': str(job_id), 'cluster_id': str(cluster_id)}
+            for name, evaluation_metric in lp_metric_dict[learning_problem].items():
+                predictions = y_pred
+                metric_loss =
+                logger.info(ERROR_OUTPUT_STRING % (name, metric_loss))
+                if np.isnan(metric_loss):
+                    results[name] = "\'Infinity\'"
+                else:
+                    results[name] = "{0:.4f}".format(metric_loss)
+            dbConnector.insert_results(experiment_schema=experiment_schema, experiment_table=experiment_table,
+                                       results=results)
+            dbConnector.mark_running_job_finished(job_id)
         except Exception as e:
             if hasattr(e, 'message'):
                 message = e.message
