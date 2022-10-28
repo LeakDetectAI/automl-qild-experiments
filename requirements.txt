@@ -1,0 +1,12 @@
+bottleneck
+setuptools
+numpy>=1.12.1
+scipy>=1.7.3
+scikit-learn>=1.1.1
+scikit-optimize>=0.9.0
+pandas>=0.22
+h5py>=2.7
+python-dateutil>=2.4.1
+tensorflow>=2.9.0
+tensorflow_addons>=0.17.0
+keras>=2.9.0

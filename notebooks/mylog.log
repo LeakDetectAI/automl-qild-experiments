@@ -1,0 +1,16 @@
+2022-10-28 15:41:19,368 - Classifier-Test - INFO - Next parameters: [True, 0.005061952149969536, 63, 86, 'adam', 0.006989564250477501], accuracy 0.35770751237869264
+2022-10-28 15:43:02,840 - Classifier-Test - INFO - Next parameters: [False, 0.08234071497364642, 91, 80, 'Adamax', 2.005672238822703e-09], accuracy 0.3482213497161865
+2022-10-28 15:43:42,620 - Classifier-Test - INFO - Next parameters: [True, 1.704477900661691e-05, 35, 31, 'Adamax', 5.457782224167109e-08], accuracy 0.3482213497161865
+2022-10-28 15:44:36,167 - Classifier-Test - INFO - Next parameters: [False, 0.013585170165692972, 48, 63, 'adam', 2.690150775233308e-05], accuracy 0.3664031684398651
+2022-10-28 15:45:54,374 - Classifier-Test - INFO - Next parameters: [False, 9.404673912146786e-05, 73, 42, 'Adagrad', 1.0686342906051305e-08], accuracy 0.33952568769454955
+2022-10-28 15:51:39,412 - Classifier-Test - INFO - Best parameters are: 
+early_stopping => False	learning_rate => 0.013585170165692972	n_hidden => 48	n_units => 63	optimizer => adam	reg_strength => 2.690150775233308e-05	 with accuracy of: 0.3664031684398651
+
+2022-10-28 15:54:46,962 - Classifier-Test - INFO - Next parameters: [True, 0.005061952149969536, 63, 86, 'adam', 0.006989564250477501], accuracy 0.3573122560977936
+2022-10-28 15:56:19,579 - Classifier-Test - INFO - Next parameters: [False, 0.08234071497364642, 91, 80, 'Adamax', 2.005672238822703e-09], accuracy 0.31225296258926394
+2022-10-28 15:56:54,998 - Classifier-Test - INFO - Next parameters: [True, 1.704477900661691e-05, 35, 31, 'Adamax', 5.457782224167109e-08], accuracy 0.3300395250320435
+2022-10-28 15:57:43,091 - Classifier-Test - INFO - Next parameters: [False, 0.013585170165692972, 48, 63, 'adam', 2.690150775233308e-05], accuracy 0.33913043737411497
+2022-10-28 15:58:56,056 - Classifier-Test - INFO - Next parameters: [False, 9.404673912146786e-05, 73, 42, 'Adagrad', 1.0686342906051305e-08], accuracy 0.3300395250320435
+2022-10-28 15:59:08,721 - Classifier-Test - INFO - Best parameters are: 
+early_stopping => True	learning_rate => 0.005061952149969536	n_hidden => 63	n_units => 86	optimizer_str => adam	reg_strength => 0.006989564250477501	 with accuracy of: 0.3573122560977936
+

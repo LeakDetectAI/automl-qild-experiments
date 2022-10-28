@@ -1,0 +1,1 @@
+SYNTHETIC_DATASET = 'synthetic'
