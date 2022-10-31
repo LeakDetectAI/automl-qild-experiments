@@ -14,3 +14,8 @@ early_stopping => False	learning_rate => 0.013585170165692972	n_hidden => 48	n_u
 2022-10-28 15:59:08,721 - Classifier-Test - INFO - Best parameters are: 
 early_stopping => True	learning_rate => 0.005061952149969536	n_hidden => 63	n_units => 86	optimizer_str => adam	reg_strength => 0.006989564250477501	 with accuracy of: 0.3573122560977936
 
+2022-10-29 22:02:27,192 - Classifier-Test - INFO - Next parameters: [True, 0.005061952149969536, 63, 86, 'adam', 0.006989564250477501], accuracy 0.312648218870163
+2022-10-29 22:04:00,536 - Classifier-Test - INFO - Next parameters: [False, 0.08234071497364642, 91, 80, 'Adamax', 2.005672238822703e-09], accuracy 0.31304347813129424
+2022-10-29 22:04:37,676 - Classifier-Test - INFO - Next parameters: [True, 1.704477900661691e-05, 35, 31, 'Adamax', 5.457782224167109e-08], accuracy 0.33003953099250793
+2022-10-29 22:05:30,671 - Classifier-Test - INFO - Next parameters: [False, 0.013585170165692972, 48, 63, 'adam', 2.690150775233308e-05], accuracy 0.3391304433345795
+2022-10-29 22:07:03,922 - Classifier-Test - INFO - Next parameters: [False, 9.404673912146786e-05, 73, 42, 'Adagrad', 1.0686342906051305e-08], accuracy 0.32134386897087097

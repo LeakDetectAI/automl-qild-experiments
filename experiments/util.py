@@ -19,8 +19,10 @@ from tensorflow.core.protobuf.config_pb2 import ConfigProto
 from tensorflow.python.client.session import Session
 
 from experiments.contants import *
+from pycilt.bayes_predictor import BayesPredictor
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.synthetic_data_generator import SyntheticDatasetGenerator
+from sklearn.metrics import confusion_matrix, roc_auc_score, f1_score, accuracy_score, matthews_corrcoef
 
 __all__ = ["get_dataset_reader", "duration_till_now", "time_from_now", "get_dataset_reader", "create_search_space",
            "create_directory_safely", "setup_logging", "setup_random_seed", "check_file_exists"]
@@ -39,11 +41,30 @@ classifiers = {MULTI_LAYER_PERCEPTRON: MultiLayerPerceptron,
                RANDOM_FOREST: RandomForestClassifier,
                EXTRA_TREES: ExtraTreesClassifier,
                ADA_BOOST_CLASSIFIER: AdaBoostClassifier,
-               GRADIENT_BOOSTING_CLASSIFICATION: GradientBoostingClassifier
+               GRADIENT_BOOSTING_CLASSIFICATION: GradientBoostingClassifier,
+               BAYES_PREDICTOR: BayesPredictor
                }
 
 mi_estimators = {}
 learners = {**classifiers, **mi_estimators}
+def instance_informedness(y_true, y_pred):
+    tp = np.logical_and(y_true, y_pred).sum()
+    tn = np.logical_and(np.logical_not(y_true), np.logical_not(y_pred)).sum()
+    cp = np.array(y_true).sum()
+    cn = np.logical_not(y_true).sum()
+    inf = np.nansum([tp / cp, tn / cn, -1])
+    return inf
+
+
+classification_metrics = {
+    "Accuracy": accuracy_score,
+    "F1Score": f1_score,
+    "ConfusionMatrix": confusion_matrix,
+    "AucScore": roc_auc_score,
+    "MathewsCorrelationCoefficient": matthews_corrcoef,
+    "Informedness": instance_informedness,
+}
+lp_metric_dict = {CLASSIFICATION: classification_metrics}
 
 def get_duration_seconds(duration):
     time = int(re.findall(r"\d+", duration)[0])
@@ -94,6 +115,11 @@ def create_search_space(hp_ranges):
             search_space[key] = Categorical(value)
     return search_space
 
+def convert_learner_params(params):
+    for key, value in params.items():
+        if value == 'None':
+            params[key] = None
+    return params
 
 def create_directory_safely(path, is_file_path=False):
     try:

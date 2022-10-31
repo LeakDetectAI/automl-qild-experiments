@@ -2,14 +2,25 @@ import hashlib
 import json
 import logging
 import os
-import psycopg2
 from abc import ABCMeta
-from experiments.util import get_duration_seconds
-from pycilt.utils import print_dictionary
 from datetime import timedelta, datetime
+
+import psycopg2
 from psycopg2.extras import DictCursor
 
+from experiments.util import get_duration_seconds
+from pycilt.utils import print_dictionary
+import numpy as np
 
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NpEncoder, self).default(obj)
 class DBConnector(metaclass=ABCMeta):
     def __init__(self, config_file_path, is_gpu=False, schema="master", **kwargs):
         self.logger = logging.getLogger("DBConnector")
@@ -394,9 +405,7 @@ class DBConnector(metaclass=ABCMeta):
             for query in self.cursor_db.fetchall():
                 query = dict(query)
                 self.logger.info("Duplicate job {}".format(query["job_id"]))
-                if self.get_hash_value_for_job(job_desc) == self.get_hash_value_for_job(
-                        query
-                ):
+                if self.get_hash_value_for_job(job_desc) == self.get_hash_value_for_job(query):
                     new_job_id = query["job_id"]
                     self.logger.info(
                         "The job {} with fold {} already exist".format(
@@ -461,29 +470,34 @@ class DBConnector(metaclass=ABCMeta):
 
         return new_job_id
 
-    def insert_new_jobs_with_different_fold(
-            self, dataset="synthetic_dc", learner="fate_choice", folds=4
-    ):
+    def check_exists(self, job, select_job):
+        self.cursor_db.execute(select_job)
+        jobs_check = self.cursor_db.fetchall()
+        for job_c in jobs_check:
+            job_c = dict(job_c)
+            if self.get_hash_value_for_job(job_c) == self.get_hash_value_for_job(job):
+                return True
+        return False
+
+    def insert_new_jobs_with_different_fold(self, dataset="synthetic", folds=10):
         self.init_connection()
         avail_jobs = "{}.avail_jobs".format(self.schema)
-        select_job = "SELECT * FROM {0} WHERE {0}.dataset='{1}' AND {0}.learner ='{2}' ORDER  BY {0}.job_id".format(
-            avail_jobs, dataset, learner
-        )
+        select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND {avail_jobs}.fold_id =0 ORDER  BY {avail_jobs}.job_id"
 
         self.cursor_db.execute(select_job)
         jobs_all = self.cursor_db.fetchall()
-
+        self.close_connection()
         for job in jobs_all:
             job = dict(job)
-            fold_id = job["fold_id"]
             del job["job_id"]
             del job["job_allocated_time"]
+            del job['job_end_time']
             self.logger.info(
                 "###########################################################"
             )
             self.logger.info(print_dictionary(job))
             for f_id in range(folds):
-                job["fold_id"] = fold_id + f_id + 1
+                job["fold_id"] = f_id + 1
                 columns = ", ".join(list(job.keys()))
                 values_str = []
                 for i, val in enumerate(job.values()):
@@ -498,18 +512,69 @@ class DBConnector(metaclass=ABCMeta):
                         values = "%s"
                     else:
                         values = values + ", %s"
-                insert_result = "INSERT INTO {0} ({1}) VALUES ({2})".format(
-                    avail_jobs, columns, values
-                )
-                self.logger.info(
-                    "Inserting results: {} {}".format(insert_result, values_str)
-                )
-                self.cursor_db.execute(insert_result, tuple(values_str))
-                if self.cursor_db.rowcount == 1:
-                    self.logger.info(
-                        "Results inserted for the job {}".format(job["fold_id"])
-                    )
+                self.init_connection()
+                condition = self.check_exists(job, f"SELECT * FROM {avail_jobs} ORDER  BY {avail_jobs}.job_id")
+                if not condition:
+                    insert_result = f"INSERT INTO {avail_jobs} ({columns}) VALUES ({values}) RETURNING job_id"
+                    self.logger.info("Inserting results: {} {}".format(insert_result, values_str))
+                    self.cursor_db.execute(insert_result, tuple(values_str))
+                    id_of_new_row = self.cursor_db.fetchone()[0]
+                    if self.cursor_db.rowcount == 1:
+                        self.logger.info("Results inserted for the job {}".format(id_of_new_row))
+                self.close_connection()
+
+    def insert_new_jobs_different_configurations(self, dataset="synthetic"):
+        self.init_connection()
+        avail_jobs = "{}.avail_jobs".format(self.schema)
+        select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND " \
+                     f"{avail_jobs}.fold_id =0 ORDER  BY {avail_jobs}.job_id"
+
+        self.cursor_db.execute(select_job)
+        jobs_all = self.cursor_db.fetchall()
+        features = np.arange(2, 3)
+        classes = np.arange(2, 3)
+        flip_ys = np.arange(0.0, 1.01, .01)
         self.close_connection()
+        for job in jobs_all:
+            job = dict(job)
+            del job["job_id"]
+            del job["job_allocated_time"]
+            del job['job_end_time']
+            self.logger.info("###########################################################")
+            self.logger.info(print_dictionary(job))
+            for n_classes in classes:
+                for n_features in features:
+                    for flip_y in flip_ys:
+                        keys = list(job.keys())
+                        values = list(job.values())
+                        columns = ", ".join(list(job.keys()))
+                        values_str = []
+                        for i, (key, val) in enumerate(zip(keys, values)):
+                            if isinstance(val, dict):
+                                if key == 'dataset_params':
+                                    val['n_classes'] = n_classes
+                                    val['n_features'] = n_features
+                                    val['flip_y'] = flip_y.round(2)
+                                    self.logger.info(key, val)
+                                val = json.dumps(val, cls=NpEncoder)
+
+                            else:
+                                val = str(val)
+                            values_str.append(val)
+                            if i == 0:
+                                str_values = "%s"
+                            else:
+                                str_values = str_values + ", %s"
+                        self.init_connection()
+                        condition = self.check_exists(job, f"SELECT * FROM {avail_jobs} ORDER  BY {avail_jobs}.job_id")
+                        if not condition:
+                            insert_result = f"INSERT INTO {avail_jobs} ({columns}) VALUES ({str_values}) RETURNING job_id"
+                            self.cursor_db.execute(insert_result, tuple(values_str))
+                            id_of_new_row = self.cursor_db.fetchone()[0]
+                            self.logger.info("Inserting results: {} {}".format(insert_result, values_str))
+                            if self.cursor_db.rowcount == 1:
+                                self.logger.info(f"Results inserted for the job {id_of_new_row}")
+                        self.close_connection()
 
     def get_hash_value_for_job(self, job):
         keys = [

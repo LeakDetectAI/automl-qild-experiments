@@ -16,27 +16,28 @@ Options:
 """
 import inspect
 import logging
-import numpy as np
 import os
 import sys
 import traceback
 from datetime import datetime
+
+import numpy as np
 from docopt import docopt
-from sklearn.metrics import accuracy_score
 from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold
 from skopt import BayesSearchCV
 
 from experiments.bayes_search_utils import update_params, log_callback, get_scores
 from experiments.dbconnection import DBConnector
 from experiments.util import get_duration_seconds, get_dataset_reader, create_search_space, setup_logging, \
-    setup_random_seed, create_directory_safely, learners
+    setup_random_seed, create_directory_safely, learners, lp_metric_dict, convert_learner_params
+from pycilt.bayes_predictor import BayesPredictor
+from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.utils import print_dictionary
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 LOGS_FOLDER = 'logs'
 RESULT_FOLDER = 'results'
 EXPERIMENTS = 'experiments'
-ERROR_OUTPUT_STRING = 'Out of sample error %s : %0.4f'
 
 if __name__ == "__main__":
     start = datetime.now()
@@ -52,7 +53,6 @@ if __name__ == "__main__":
     if 'CCS_REQID' in os.environ.keys():
         cluster_id = int(os.environ['CCS_REQID'])
     dbConnector.fetch_job_arguments(cluster_id=cluster_id)
-
     if dbConnector.job_description is not None:
         try:
             seed = int(dbConnector.job_description["seed"])
@@ -72,7 +72,7 @@ if __name__ == "__main__":
             experiment_table = dbConnector.job_description["experiment_table"]
             validation_loss = dbConnector.job_description["validation_loss"]
             hash_value = dbConnector.job_description["hash_value"]
-
+            dbConnector.insert_new_jobs_with_different_fold(dataset='synthetic', learner='random_forest', folds=4)
             random_state = np.random.RandomState(seed=seed + fold_id)
             log_path = os.path.join(DIR_PATH, EXPERIMENTS, LOGS_FOLDER, "{}.log".format(hash_value))
             setup_logging(log_path=log_path)
@@ -88,7 +88,6 @@ if __name__ == "__main__":
             X, y = dataset_reader.generate_dataset()
             input_dim = X.shape[-1]
             n_classes = len(np.unique(y))
-
             sss = StratifiedShuffleSplit(n_splits=1, test_size=0.33, random_state=0)
             train_index, test_index = list(sss.split(X, y))[0]
             X_train, X_test = X[train_index], X[test_index]
@@ -97,31 +96,50 @@ if __name__ == "__main__":
             search_spaces = create_search_space(hp_ranges)
             hash_file = os.path.join(DIR_PATH, RESULT_FOLDER, "{}.h5".format(hash_value))
             create_directory_safely(hash_file, True)
-
-            learner_params = {**learner_params, **dict(input_dim=input_dim, n_classes=n_classes)}
             learner = learners[learner_name]
-            estimator = learner(**learner_params)
+            learner_params = convert_learner_params(learner_params)
+            if learner == BayesPredictor:
+                learner_params = {'dataset_obj': dataset_reader}
+                estimator = learner(**learner_params)
+                estimator.fit(X_train, y_train)
+                p_pred, y_pred = get_scores(X, estimator)
+                y_true = y
+            else:
+                learner_params['random_state'] = random_state
+                if learner == MultiLayerPerceptron:
+                    learner_params = {**learner_params, **dict(input_dim=input_dim, n_classes=n_classes)}
+                estimator = learner(**learner_params)
+                bayes_search_params = dict(estimator=estimator, search_spaces=search_spaces, n_iter=hp_iters,
+                                           scoring=validation_loss, n_jobs=10, cv=inner_cv_iterator, error_score=0,
+                                           random_state=random_state)
+                bayes_search = BayesSearchCV(**bayes_search_params)
+                bayes_search.fit(X_train, y_train, groups=None, callback=log_callback(logger), **fit_params)
+                learner_params = update_params(bayes_search, logger, learner_params)
+                estimator = learner(**learner_params)
+                estimator.fit(X_train, y_train)
+                p_pred, y_pred = get_scores(X_test, estimator)
+                y_true = y_test
 
-            bayes_search_params = dict(estimator=estimator, search_spaces=search_spaces, n_iter=hp_iters,
-                                       scoring=validation_loss, n_jobs=10, cv=inner_cv_iterator, error_score=0,
-                                       random_state=random_state)
-            bayes_search = BayesSearchCV(**bayes_search_params)
-            bayes_search.fit(X_train, y_train, groups=None, callback=log_callback(logger), **fit_params)
-            learner_params = update_params(bayes_search, logger, learner_params)
-            estimator = learner(**learner_params)
-            estimator.fit(X_train, y_train)
-            p_pred, y_pred = get_scores(X_test, estimator)
-            val = accuracy_score(y_test, y_pred)
-            # TODO: Store the results in the table
             results = {'job_id': str(job_id), 'cluster_id': str(cluster_id)}
             for name, evaluation_metric in lp_metric_dict[learning_problem].items():
                 predictions = y_pred
-                metric_loss =
-                logger.info(ERROR_OUTPUT_STRING % (name, metric_loss))
-                if np.isnan(metric_loss):
-                    results[name] = "\'Infinity\'"
+                if 'AUC' in name:
+                    metric_loss = evaluation_metric(y_true, p_pred)
                 else:
-                    results[name] = "{0:.4f}".format(metric_loss)
+                    metric_loss = evaluation_metric(y_true, y_pred)
+                if 'ConfusionMatrix' == name:
+                    tn, fp, fn, tp = metric_loss.ravel()
+                    results['TN'] = "{0:.4f}".format(tn)
+                    results['FP'] = "{0:.4f}".format(fp)
+                    results['FN'] = "{0:.4f}".format(fn)
+                    results['TP'] = "{0:.4f}".format(tp)
+                else:
+                    if np.isnan(metric_loss):
+                        results[name] = "\'Infinity\'"
+                    else:
+                        results[name] = f"{metric_loss.round(4)}"
+                logger.info(f"Out of sample error {name} : {metric_loss}")
+
             dbConnector.insert_results(experiment_schema=experiment_schema, experiment_table=experiment_table,
                                        results=results)
             dbConnector.mark_running_job_finished(job_id)

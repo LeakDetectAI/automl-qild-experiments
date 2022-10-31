@@ -102,7 +102,7 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
 
     def score(self, X, y, sample_weight=None, verbose=0):
         y = self.reshape_inputs(y)
-        model_metrics = dict(zip(self.model.evaluate(x=X, y=y, verbose=verbose), self.metrics))
+        model_metrics = dict(zip(self.metrics, self.model.evaluate(x=X, y=y, verbose=verbose)[1:]))
         model_metrics = model_metrics['accuracy']
         return model_metrics
 

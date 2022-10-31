@@ -13,7 +13,8 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
     def __init__(self, n_classes=2, n_features=2, samples_per_class=1000, flip_y=0.1, random_state=42, fold_id=0):
         self.n_classes = n_classes
         self.n_features = n_features
-        self.random_state = check_random_state(random_state + fold_id)
+        self.random_state = check_random_state(random_state)
+        self.fold_id = fold_id
         self.means = {}
         self.covariances = {}
         self.seeds = {}
@@ -34,12 +35,12 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
         for k_class in self.class_labels:
             # A = rs.rand(n_features, n_features)
             # matrix1 = np.matmul(A, A.transpose())
-            seed = self.random_state.randint(2 ** 32, dtype="uint32")
+            seed = self.random_state.randint(2 ** 31, dtype="uint32") + self.fold_id
             rs = np.random.RandomState(seed=seed)
             Q = ortho_group.rvs(dim=self.n_features)
             S = np.diag(np.diag(rs.rand(self.n_features, self.n_features)))
             cov = np.dot(np.dot(Q, S), np.transpose(Q))
-            mean = np.ones(self.n_features) + k_class * self.n_classes / 2
+            mean = np.ones(self.n_features) + k_class * 1.5
             self.means[k_class] = mean
             self.covariances[k_class] = cov
             self.seeds[k_class] = seed
