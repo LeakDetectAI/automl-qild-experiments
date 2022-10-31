@@ -23,6 +23,7 @@ from datetime import datetime
 
 import numpy as np
 from docopt import docopt
+from sklearn.dummy import DummyClassifier
 from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold
 from skopt import BayesSearchCV
 
@@ -72,7 +73,6 @@ if __name__ == "__main__":
             experiment_table = dbConnector.job_description["experiment_table"]
             validation_loss = dbConnector.job_description["validation_loss"]
             hash_value = dbConnector.job_description["hash_value"]
-            dbConnector.insert_new_jobs_with_different_fold(dataset='synthetic', learner='random_forest', folds=4)
             random_state = np.random.RandomState(seed=seed + fold_id)
             log_path = os.path.join(DIR_PATH, EXPERIMENTS, LOGS_FOLDER, "{}.log".format(hash_value))
             setup_logging(log_path=log_path)
@@ -98,8 +98,9 @@ if __name__ == "__main__":
             create_directory_safely(hash_file, True)
             learner = learners[learner_name]
             learner_params = convert_learner_params(learner_params)
-            if learner == BayesPredictor:
-                learner_params = {'dataset_obj': dataset_reader}
+            if learner == BayesPredictor or issubclass(learner, DummyClassifier):
+                if learner == BayesPredictor:
+                    learner_params = {'dataset_obj': dataset_reader}
                 estimator = learner(**learner_params)
                 estimator.fit(X_train, y_train)
                 p_pred, y_pred = get_scores(X, estimator)
@@ -137,7 +138,7 @@ if __name__ == "__main__":
                     if np.isnan(metric_loss):
                         results[name] = "\'Infinity\'"
                     else:
-                        results[name] = f"{metric_loss.round(4)}"
+                        results[name] = f"{np.around(metric_loss, 4)}"
                 logger.info(f"Out of sample error {name} : {metric_loss}")
 
             dbConnector.insert_results(experiment_schema=experiment_schema, experiment_table=experiment_table,

@@ -15,3 +15,4 @@ ADA_BOOST_CLASSIFIER = "ada_boost"
 GRADIENT_BOOSTING_CLASSIFICATION = "gradient_boost"
 CLASSIFICATION = 'classification'
 BAYES_PREDICTOR = 'bayes_predictor'
+MAJORITY_VOTING = 'majority_voting'

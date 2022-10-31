@@ -555,7 +555,6 @@ class DBConnector(metaclass=ABCMeta):
                                     val['n_classes'] = n_classes
                                     val['n_features'] = n_features
                                     val['flip_y'] = flip_y.round(2)
-                                    self.logger.info(key, val)
                                 val = json.dumps(val, cls=NpEncoder)
 
                             else:

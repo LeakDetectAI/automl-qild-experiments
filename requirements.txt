@@ -10,3 +10,4 @@ python-dateutil>=2.4.1
 tensorflow>=2.9.0
 tensorflow_addons>=0.17.0
 keras>=2.9.0
+psycopg2

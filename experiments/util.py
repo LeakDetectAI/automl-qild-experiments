@@ -19,7 +19,9 @@ from tensorflow.core.protobuf.config_pb2 import ConfigProto
 from tensorflow.python.client.session import Session
 
 from experiments.contants import *
+from experiments.contants import MAJORITY_VOTING
 from pycilt.bayes_predictor import BayesPredictor
+from pycilt.baseline import MajorityVoting
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.synthetic_data_generator import SyntheticDatasetGenerator
 from sklearn.metrics import confusion_matrix, roc_auc_score, f1_score, accuracy_score, matthews_corrcoef
@@ -42,7 +44,8 @@ classifiers = {MULTI_LAYER_PERCEPTRON: MultiLayerPerceptron,
                EXTRA_TREES: ExtraTreesClassifier,
                ADA_BOOST_CLASSIFIER: AdaBoostClassifier,
                GRADIENT_BOOSTING_CLASSIFICATION: GradientBoostingClassifier,
-               BAYES_PREDICTOR: BayesPredictor
+               BAYES_PREDICTOR: BayesPredictor,
+               MAJORITY_VOTING: MajorityVoting
                }
 
 mi_estimators = {}
