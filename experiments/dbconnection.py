@@ -492,9 +492,7 @@ class DBConnector(metaclass=ABCMeta):
             del job["job_id"]
             del job["job_allocated_time"]
             del job['job_end_time']
-            self.logger.info(
-                "###########################################################"
-            )
+            self.logger.info("###########################################################")
             self.logger.info(print_dictionary(job))
             for f_id in range(folds):
                 job["fold_id"] = f_id + 1
@@ -556,7 +554,6 @@ class DBConnector(metaclass=ABCMeta):
                                     val['n_features'] = n_features
                                     val['flip_y'] = flip_y.round(2)
                                 val = json.dumps(val, cls=NpEncoder)
-
                             else:
                                 val = str(val)
                             values_str.append(val)
@@ -592,7 +589,5 @@ class DBConnector(metaclass=ABCMeta):
             hash_string = hash_string + str(k) + ":" + str(job[k])
         hash_object = hashlib.sha1(hash_string.encode())
         hex_dig = hash_object.hexdigest()
-        self.logger.info(
-            "Job_id {} Hash_string {}".format(job.get("job_id", None), str(hex_dig))
-        )
+        #self.logger.info(   "Job_id {} Hash_string {}".format(job.get("job_id", None), str(hex_dig)))
         return str(hex_dig)
