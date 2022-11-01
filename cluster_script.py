@@ -98,6 +98,7 @@ if __name__ == "__main__":
             create_directory_safely(hash_file, True)
             learner = learners[learner_name]
             learner_params = convert_learner_params(learner_params)
+            learner_params['random_state'] = random_state
             if learner == BayesPredictor or issubclass(learner, DummyClassifier):
                 if learner == BayesPredictor:
                     learner_params = {'dataset_obj': dataset_reader}
@@ -125,7 +126,10 @@ if __name__ == "__main__":
             for name, evaluation_metric in lp_metric_dict[learning_problem].items():
                 predictions = y_pred
                 if 'AUC' in name:
-                    metric_loss = evaluation_metric(y_true, p_pred)
+                    if n_classes>2:
+                        metric_loss = evaluation_metric(y_true, p_pred, multi_class='ovr')
+                    else:
+                        metric_loss = evaluation_metric(y_true, p_pred)
                 else:
                     metric_loss = evaluation_metric(y_true, y_pred)
                 if 'ConfusionMatrix' == name:

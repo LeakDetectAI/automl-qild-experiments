@@ -33,7 +33,7 @@ def get_scores(X, estimator):
         if pred_prob.shape[-1] == 2:
             p_pred = pred_prob[:, 1]
         else:
-            p_pred = np.max(pred_prob, axis=1)
+            p_pred = pred_prob
     else:
         p_pred = pred_prob.flatten()
     return p_pred, y_pred

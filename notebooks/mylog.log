@@ -19,3 +19,30 @@ early_stopping => True	learning_rate => 0.005061952149969536	n_hidden => 63	n_un
 2022-10-29 22:04:37,676 - Classifier-Test - INFO - Next parameters: [True, 1.704477900661691e-05, 35, 31, 'Adamax', 5.457782224167109e-08], accuracy 0.33003953099250793
 2022-10-29 22:05:30,671 - Classifier-Test - INFO - Next parameters: [False, 0.013585170165692972, 48, 63, 'adam', 2.690150775233308e-05], accuracy 0.3391304433345795
 2022-10-29 22:07:03,922 - Classifier-Test - INFO - Next parameters: [False, 9.404673912146786e-05, 73, 42, 'Adagrad', 1.0686342906051305e-08], accuracy 0.32134386897087097
+2022-11-01 12:20:12,426 - parso.cache - DEBUG - pickle loaded: /home/pritha/anaconda3/envs/deepsca/lib/python3.9/site-packages/jedi/third_party/typeshed/stdlib/3/builtins.pyi
+2022-11-01 12:22:39,319 - parso.python.diff - DEBUG - diff parser start
+2022-11-01 12:22:39,319 - parso.python.diff - DEBUG - line_lengths old: 1; new: 1
+2022-11-01 12:22:39,320 - parso.python.diff - DEBUG - -> code[replace] old[1:1] new[1:1]
+2022-11-01 12:22:39,320 - parso.python.diff - DEBUG - parse_part from 1 to 1 (to 0 in part parser)
+2022-11-01 12:22:39,320 - parso.python.diff - DEBUG - diff parser end
+2022-11-01 12:22:39,321 - parso.python.diff - DEBUG - diff parser start
+2022-11-01 12:22:39,321 - parso.python.diff - DEBUG - line_lengths old: 134; new: 134
+2022-11-01 12:22:39,322 - parso.python.diff - DEBUG - -> code[equal] old[1:116] new[1:116]
+2022-11-01 12:22:39,322 - parso.python.diff - DEBUG - copy old[1:133] new[1:114]
+2022-11-01 12:22:39,322 - parso.python.diff - DEBUG - parse_part from 115 to 115 (to 115 in part parser)
+2022-11-01 12:22:39,323 - parso.python.diff - DEBUG - parse_part from 116 to 118 (to 119 in part parser)
+2022-11-01 12:22:39,323 - parso.python.diff - DEBUG - -> code[replace] old[117:117] new[117:117]
+2022-11-01 12:22:39,324 - parso.python.diff - DEBUG - -> code[equal] old[118:134] new[118:134]
+2022-11-01 12:22:39,324 - parso.python.diff - DEBUG - copy old[120:133] new[119:133]
+2022-11-01 12:22:39,324 - parso.python.diff - DEBUG - diff parser end
+2022-11-01 12:36:30,039 - parso.cache - DEBUG - pickle loaded: /home/pritha/anaconda3/envs/deepsca/lib/python3.9/site-packages/sklearn/__init__.py
+2022-11-01 12:36:30,632 - parso.python.diff - DEBUG - diff parser start
+2022-11-01 12:36:30,633 - parso.python.diff - DEBUG - line_lengths old: 1; new: 1
+2022-11-01 12:36:30,633 - parso.python.diff - DEBUG - -> code[replace] old[1:1] new[1:1]
+2022-11-01 12:36:30,634 - parso.python.diff - DEBUG - parse_part from 1 to 1 (to 0 in part parser)
+2022-11-01 12:36:30,634 - parso.python.diff - DEBUG - diff parser end
+2022-11-01 12:36:31,251 - parso.python.diff - DEBUG - diff parser start
+2022-11-01 12:36:31,251 - parso.python.diff - DEBUG - line_lengths old: 1; new: 1
+2022-11-01 12:36:31,252 - parso.python.diff - DEBUG - -> code[replace] old[1:1] new[1:1]
+2022-11-01 12:36:31,252 - parso.python.diff - DEBUG - parse_part from 1 to 1 (to 0 in part parser)
+2022-11-01 12:36:31,253 - parso.python.diff - DEBUG - diff parser end

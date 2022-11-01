@@ -1,11 +1,14 @@
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.utils import check_random_state
 
 
 class BayesPredictor(BaseEstimator, ClassifierMixin):
 
-    def __init__(self, dataset_obj):
+    def __init__(self, dataset_obj, random_state=None, **kwargs):
         self.dataset_obj = dataset_obj
+        self.random_state = check_random_state(random_state)
+
 
     def fit(self, X, y, **kwd):
         pass

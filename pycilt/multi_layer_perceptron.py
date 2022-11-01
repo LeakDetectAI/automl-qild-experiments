@@ -1,4 +1,6 @@
 import logging
+
+import numpy as np
 from keras import Input, Model
 from keras import backend as K
 from keras.callbacks import EarlyStopping
@@ -6,6 +8,8 @@ from keras.layers import Dense, Activation
 from keras.regularizers import l2
 from keras.utils import to_categorical
 from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.metrics import accuracy_score
+from sklearn.utils import check_random_state
 from tensorflow import optimizers
 
 from .layers import NormalizedDense
@@ -15,7 +19,7 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
     def __init__(self, input_dim, n_classes, n_hidden=10, n_units=100, batch_normalization=True, activation='relu',
                  loss_function='categorical_crossentropy', metrics=['accuracy'], optimizer_str='sgd',
                  reg_strength=1e-4, kernel_initializer="lecun_normal", learning_rate=0.001,
-                 early_stopping=False, model_save_path='', **kwargs):
+                 early_stopping=False, model_save_path='', random_state=None, **kwargs):
         self.logger = logging.getLogger(name=MultiLayerPerceptron.__name__)
         self.input_dim = input_dim
         self.n_classes = n_classes
@@ -36,6 +40,7 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
         self.kernel_regularizer = l2(l=self.reg_strength)
         self.kernel_initializer = kernel_initializer
         self.kwargs = kwargs
+        self.random_state = check_random_state(random_state)
         self.model, self.scoring_model = None, None
 
     def _construct_layers(self, **kwargs):
@@ -97,21 +102,23 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
         return self
 
     def predict(self, X, verbose=0):
-        predictions = self.model.predict(x=X, verbose=verbose)
-        return predictions
+        scores = self.model.predict(x=X, verbose=verbose)
+        y_pred = np.argmax(scores, axis=1)
+        return y_pred
 
     def score(self, X, y, sample_weight=None, verbose=0):
-        y = self.reshape_inputs(y)
-        model_metrics = dict(zip(self.metrics, self.model.evaluate(x=X, y=y, verbose=verbose)[1:]))
-        model_metrics = model_metrics['accuracy']
-        return model_metrics
+        y_pred = self.predict(X, verbose=verbose)
+        acc = accuracy_score(y, y_pred)
+        return acc
 
     def predict_proba(self, X, verbose=0):
-        prob_predictions = self.model.predict_proba(x=X, verbose=verbose)
+        prob_predictions = self.model.predict(x=X, verbose=verbose)
         return prob_predictions
 
     def decision_function(self, X, verbose=0):
-        prob_predictions = self.model.predict_proba(x=X, verbose=verbose)
+        prob_predictions = self.scoring_model.predict(x=X, verbose=verbose)
+        if self.n_classes == 2:
+            prob_predictions = prob_predictions[:, 1]
         return prob_predictions
 
     def get_params(self, deep=True):
