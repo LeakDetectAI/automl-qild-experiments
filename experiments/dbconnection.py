@@ -5,12 +5,13 @@ import os
 from abc import ABCMeta
 from datetime import timedelta, datetime
 
+import numpy as np
 import psycopg2
 from psycopg2.extras import DictCursor
 
 from experiments.util import get_duration_seconds
 from pycilt.utils import print_dictionary
-import numpy as np
+
 
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -213,17 +214,20 @@ class DBConnector(metaclass=ABCMeta):
                     )
                 )
                 break
-
     def mark_running_job_finished(self, job_id, **kwargs):
         self.init_connection()
         running_jobs = "{}.running_jobs".format(self.schema)
-        update_job = (
-            "UPDATE {0} set finished = TRUE, interrupted = FALSE "
-            "WHERE job_id = {1}".format(running_jobs, job_id)
-        )
+        avail_jobs = "{}.avail_jobs".format(self.schema)
+        update_job = f"""UPDATE {running_jobs} set finished = TRUE, interrupted = FALSE  WHERE job_id = {job_id}"""
         self.cursor_db.execute(update_job)
         if self.cursor_db.rowcount == 1:
-            self.logger.info("The job {} is finished".format(job_id))
+            self.logger.info(f"The job {job_id} is finished")
+
+        end_time = datetime.now()
+        update_job = f"""UPDATE {avail_jobs} set job_end_time = %s WHERE job_id = %s"""
+        self.cursor_db.execute(update_job, (end_time, job_id))
+        if self.cursor_db.rowcount == 1:
+            self.logger.info(f"The job {job_id} end time {end_time} is updated")
         self.close_connection()
 
     def insert_results(self, experiment_schema, experiment_table, results, **kwargs):
@@ -479,7 +483,7 @@ class DBConnector(metaclass=ABCMeta):
                 return True
         return False
 
-    def insert_new_jobs_with_different_fold(self, dataset="synthetic", folds=10):
+    def insert_new_jobs_with_different_fold(self, dataset="synthetic", folds=9):
         self.init_connection()
         avail_jobs = "{}.avail_jobs".format(self.schema)
         select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND {avail_jobs}.fold_id =0 ORDER  BY {avail_jobs}.job_id"

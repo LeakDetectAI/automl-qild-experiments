@@ -21,16 +21,18 @@ import sys
 import traceback
 from datetime import datetime
 
+import h5py
 import numpy as np
 from docopt import docopt
 from sklearn.dummy import DummyClassifier
-from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold
-from skopt import BayesSearchCV
+from sklearn.model_selection import StratifiedShuffleSplit
 
+from experiments.bayes_search import BayesSearchCV
 from experiments.bayes_search_utils import update_params, log_callback, get_scores
 from experiments.dbconnection import DBConnector
 from experiments.util import get_duration_seconds, get_dataset_reader, create_search_space, setup_logging, \
-    setup_random_seed, create_directory_safely, learners, lp_metric_dict, convert_learner_params
+    setup_random_seed, create_directory_safely, learners, lp_metric_dict, convert_learner_params, duration_till_now, \
+    seconds_to_time
 from pycilt.bayes_predictor import BayesPredictor
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.utils import print_dictionary
@@ -39,6 +41,7 @@ DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe(
 LOGS_FOLDER = 'logs'
 RESULT_FOLDER = 'results'
 EXPERIMENTS = 'experiments'
+OPTIMIZER_FOLDER = 'optimizers'
 
 if __name__ == "__main__":
     start = datetime.now()
@@ -73,10 +76,11 @@ if __name__ == "__main__":
             experiment_table = dbConnector.job_description["experiment_table"]
             validation_loss = dbConnector.job_description["validation_loss"]
             hash_value = dbConnector.job_description["hash_value"]
+
             random_state = np.random.RandomState(seed=seed + fold_id)
             log_path = os.path.join(DIR_PATH, EXPERIMENTS, LOGS_FOLDER, "{}.log".format(hash_value))
             setup_logging(log_path=log_path)
-            setup_random_seed(seed=seed)
+            setup_random_seed(random_state=random_state)
             logger = logging.getLogger('Experiment')
             logger.info("DB config filePath {}".format(config_file_path))
             logger.info("Arguments {}".format(arguments))
@@ -84,6 +88,7 @@ if __name__ == "__main__":
             duration = get_duration_seconds(duration)
             dataset_params['random_state'] = random_state
             dataset_params['fold_id'] = fold_id
+
             dataset_reader = get_dataset_reader(dataset_name, dataset_params)
             X, y = dataset_reader.generate_dataset()
             input_dim = X.shape[-1]
@@ -92,13 +97,18 @@ if __name__ == "__main__":
             train_index, test_index = list(sss.split(X, y))[0]
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
-            inner_cv_iterator = StratifiedKFold(n_splits=n_inner_folds, shuffle=True, random_state=random_state)
-            search_spaces = create_search_space(hp_ranges)
-            hash_file = os.path.join(DIR_PATH, RESULT_FOLDER, "{}.h5".format(hash_value))
-            create_directory_safely(hash_file, True)
+
+            optimizers_file_path = os.path.join(DIR_PATH, EXPERIMENTS, OPTIMIZER_FOLDER, "{}.pkl".format(hash_value))
+            create_directory_safely(optimizers_file_path, True)
+
             learner = learners[learner_name]
             learner_params = convert_learner_params(learner_params)
             learner_params['random_state'] = random_state
+            time_taken = duration_till_now(start)
+            logger.info(f"Time Taken till now: {seconds_to_time(time_taken)}  milliseconds")
+            time_eout_eval = get_duration_seconds('1H')
+            logger.info(f"Time spared for the out of sample evaluation : {seconds_to_time(time_eout_eval)}")
+
             if learner == BayesPredictor or issubclass(learner, DummyClassifier):
                 if learner == BayesPredictor:
                     learner_params = {'dataset_obj': dataset_reader}
@@ -107,26 +117,41 @@ if __name__ == "__main__":
                 p_pred, y_pred = get_scores(X, estimator)
                 y_true = y
             else:
+                inner_cv_iterator = StratifiedShuffleSplit(n_splits=n_inner_folds, test_size=0.1,
+                                                           random_state=random_state)
+                search_space = create_search_space(hp_ranges)
                 learner_params['random_state'] = random_state
                 if learner == MultiLayerPerceptron:
                     learner_params = {**learner_params, **dict(input_dim=input_dim, n_classes=n_classes)}
                 estimator = learner(**learner_params)
-                bayes_search_params = dict(estimator=estimator, search_spaces=search_spaces, n_iter=hp_iters,
+                bayes_search_params = dict(estimator=estimator, search_spaces=search_space, n_iter=hp_iters,
                                            scoring=validation_loss, n_jobs=10, cv=inner_cv_iterator, error_score=0,
-                                           random_state=random_state)
+                                           random_state=random_state, optimizers_file_path=optimizers_file_path)
                 bayes_search = BayesSearchCV(**bayes_search_params)
-                bayes_search.fit(X_train, y_train, groups=None, callback=log_callback(logger), **fit_params)
-                learner_params = update_params(bayes_search, logger, learner_params)
+                search_keys = list(search_space.keys())
+                search_keys.sort()
+                logger.info(f"Search Keys {search_keys}")
+                callback = log_callback(logger, search_keys)
+                bayes_search.fit(X_train, y_train, groups=None, callback=callback, **fit_params)
+                learner_params = update_params(bayes_search, search_keys, learner_params, logger)
                 estimator = learner(**learner_params)
                 estimator.fit(X_train, y_train)
                 p_pred, y_pred = get_scores(X_test, estimator)
                 y_true = y_test
 
+            result_file = os.path.join(DIR_PATH, EXPERIMENTS, RESULT_FOLDER, "{}.h5".format(hash_value))
+            create_directory_safely(result_file, True)
+            f = h5py.File(result_file, 'w')
+            f.create_dataset('scores', data=p_pred)
+            f.create_dataset('predictions', data=y_pred)
+            f.create_dataset('ground_truth', data=y_true)
+            f.close()
+
             results = {'job_id': str(job_id), 'cluster_id': str(cluster_id)}
             for name, evaluation_metric in lp_metric_dict[learning_problem].items():
                 predictions = y_pred
                 if 'AUC' in name:
-                    if n_classes>2:
+                    if n_classes > 2:
                         metric_loss = evaluation_metric(y_true, p_pred, multi_class='ovr')
                     else:
                         metric_loss = evaluation_metric(y_true, p_pred)

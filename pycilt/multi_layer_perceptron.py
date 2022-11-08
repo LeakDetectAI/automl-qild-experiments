@@ -81,7 +81,7 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
             y = to_categorical(y, num_classes=self.n_classes)
         return y
 
-    def fit(self, X, y, epochs=10, batch_size=10, callbacks=None, validation_split=0.1, verbose=0, **kwd):
+    def fit(self, X, y, epochs=50, batch_size=32, callbacks=None, validation_split=0.1, verbose=0, **kwd):
         self._construct_layers(
             kernel_regularizer=self.kernel_regularizer,
             kernel_initializer=self.kernel_initializer,

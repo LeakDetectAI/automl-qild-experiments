@@ -5,7 +5,22 @@ from sklearn.preprocessing import RobustScaler
 
 warnings.filterwarnings('ignore')
 
-__all__ = ['progress_bar', 'print_dictionary', 'standardize_features', 'standardize_features']
+__all__ = ['logsumexp', 'softmax', 'progress_bar', 'print_dictionary', 'standardize_features', 'standardize_features']
+
+def logsumexp(x, axis=1):
+    max_x = x.max(axis=axis, keepdims=True)
+    return max_x + np.log(np.sum(np.exp(x - max_x), axis=axis, keepdims=True))
+
+
+def softmax(x, axis=1):
+    """
+    Take softmax for the given numpy array.
+    :param axis: The axis around which the softmax is applied
+    :param x: array-like, shape (n_samples, ...)
+    :return: softmax taken around the given axis
+    """
+    lse = logsumexp(x, axis=axis)
+    return np.exp(x - lse)
 
 def progress_bar(count, total, status=''):
     bar_len = 60
@@ -19,8 +34,11 @@ def progress_bar(count, total, status=''):
 
 def print_dictionary(dictionary, sep='\n'):
     output = "\n"
-    for key, value in dictionary.items():
-        output = output + str(key) + " => " + str(value) + sep
+    for i, (key, value) in enumerate(dictionary.items()):
+        if i<len(dictionary)-1:
+            output = output + str(key) + " => " + str(value) + sep
+        else:
+            output = output + str(key) + " => " + str(value)
     return output
 
 def standardize_features(x_train, x_test):

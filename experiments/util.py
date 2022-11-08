@@ -1,35 +1,36 @@
 import inspect
 import logging
 import multiprocessing
-import numpy as np
 import os
 import random
 import re
 import sys
-import tensorflow as tf
 from datetime import datetime, timedelta
+
+import numpy as np
+import tensorflow as tf
+import torch
 from keras import backend as K
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, \
     ExtraTreesClassifier
 from sklearn.linear_model import RidgeClassifier, SGDClassifier
+from sklearn.metrics import confusion_matrix, roc_auc_score, f1_score, accuracy_score, matthews_corrcoef
 from sklearn.svm import LinearSVC
 from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
+from sklearn.utils import check_random_state
 from skopt.space import Real, Categorical, Integer
 from tensorflow.core.protobuf.config_pb2 import ConfigProto
 from tensorflow.python.client.session import Session
 
 from experiments.contants import *
 from experiments.contants import MAJORITY_VOTING
-from pycilt.bayes_predictor import BayesPredictor
 from pycilt.baseline import MajorityVoting
+from pycilt.bayes_predictor import BayesPredictor
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.synthetic_data_generator import SyntheticDatasetGenerator
-from sklearn.metrics import confusion_matrix, roc_auc_score, f1_score, accuracy_score, matthews_corrcoef
 
 __all__ = ["get_dataset_reader", "duration_till_now", "time_from_now", "get_dataset_reader", "create_search_space",
            "create_directory_safely", "setup_logging", "setup_random_seed", "check_file_exists"]
-
-from pycilt.utils import print_dictionary
 
 datasets = {
     SYNTHETIC_DATASET: SyntheticDatasetGenerator,
@@ -65,9 +66,13 @@ classification_metrics = {
     "ConfusionMatrix": confusion_matrix,
     "AucScore": roc_auc_score,
     "MathewsCorrelationCoefficient": matthews_corrcoef,
-    "Informedness": instance_informedness,
+    "Informedness": instance_informedness
 }
-lp_metric_dict = {CLASSIFICATION: classification_metrics}
+mi_metrics = {
+    "MutualInformation": None,
+}
+lp_metric_dict = {CLASSIFICATION: classification_metrics, MUTUAL_INFORMATION: {**mi_metrics, **classification_metrics}}
+
 
 def get_duration_seconds(duration):
     time = int(re.findall(r"\d+", duration)[0])
@@ -79,6 +84,9 @@ def get_duration_seconds(duration):
 def duration_till_now(start):
     return (datetime.now() - start).total_seconds()
 
+
+def seconds_to_time(target_time_sec):
+    return str(timedelta(seconds=target_time_sec))
 
 def time_from_now(target_time_sec):
     base_datetime = datetime.now()
@@ -151,11 +159,18 @@ def setup_logging(log_path=None, level=logging.DEBUG):
     # logging.captureWarnings(True)
 
 
-def setup_random_seed(seed=1234):
+def setup_random_seed(random_state=1234):
     # logger.info('Seed value: {}'.format(seed))
     logger = logging.getLogger("Setup Logging")
+    random_state = check_random_state(random_state)
+    seed = random_state.randint(2 ** 31, dtype="uint32")
     os.environ['PYTHONHASHSEED'] = str(seed)
+
+    seed = random_state.randint(2 ** 31, dtype="uint32")
+    torch.manual_seed(seed)
     tf.random.set_seed(seed)
+
+    seed = random_state.randint(2 ** 31, dtype="uint32")
     np.random.seed(seed)
     random.seed(seed)
     os.environ["KERAS_BACKEND"] = "tensorflow"
