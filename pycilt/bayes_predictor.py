@@ -4,6 +4,8 @@ import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils import check_random_state
 
+from pycilt.utils import normalize
+
 
 class BayesPredictor(BaseEstimator, ClassifierMixin):
 
@@ -11,8 +13,10 @@ class BayesPredictor(BaseEstimator, ClassifierMixin):
         self.dataset_obj = dataset_obj
         self.random_state = check_random_state(random_state)
         self.logger = logging.getLogger(BayesPredictor.__name__)
+        self.n_classes = None
 
     def fit(self, X, y, **kwd):
+        self.n_classes = len(np.unique(y))
         pass
 
     def predict(self, X, verbose=0):
@@ -25,6 +29,17 @@ class BayesPredictor(BaseEstimator, ClassifierMixin):
         acc_bp = np.mean(y_pred == y)
         return acc_bp
 
+    def decision_function(self, X, verbose=0):
+        prob_predictions = np.zeros((X.shape[0], self.dataset_obj.n_classes))
+        for k_class in self.dataset_obj.class_labels:
+            if self.dataset_obj.flip_y == 0.0:
+                prob_predictions[:, k_class] = self.dataset_obj.get_prob_y_given_x(X=X, class_label=k_class)
+            else:
+                prob_predictions[:, k_class] = self.dataset_obj.get_prob_flip_y_given_x(X=X, class_label=k_class)
+        if self.n_classes == 2:
+            prob_predictions = prob_predictions[:, 1]
+        return prob_predictions
+
     def predict_proba(self, X, verbose=0):
         prob_predictions = np.zeros((X.shape[0], self.dataset_obj.n_classes))
         for k_class in self.dataset_obj.class_labels:
@@ -32,6 +47,7 @@ class BayesPredictor(BaseEstimator, ClassifierMixin):
                 prob_predictions[:, k_class] = self.dataset_obj.get_prob_y_given_x(X=X, class_label=k_class)
             else:
                 prob_predictions[:, k_class] = self.dataset_obj.get_prob_flip_y_given_x(X=X, class_label=k_class)
+        prob_predictions = normalize(prob_predictions, axis=1)
         return prob_predictions
 
     def get_scores(self, X):

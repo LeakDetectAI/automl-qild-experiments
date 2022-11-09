@@ -1,3 +1,4 @@
+import copy
 import logging
 
 import numpy as np
@@ -21,6 +22,7 @@ class GMMMIEstimator(MIEstimatorBase):
         self.best_model = None
         self.cls_model = None
         self.bext_model_idx = 0
+        self.round = None
         self.logger = logging.getLogger(GMMMIEstimator.__name__)
 
     def fit(self, X, y, verbose=0, **kwd):
@@ -40,27 +42,30 @@ class GMMMIEstimator(MIEstimatorBase):
         return self
 
     def create_best_model(self, X, y, verbose=0, **kwd):
-        self.estimate_mi(X, y, verbose=verbose, **kwd)
-        self.best_model = self.models[self.bext_model_idx]
+        self.estimate_mi(X, y, verbose=verbose, create_bext_model=True, **kwd)
+        self.best_model = copy.deepcopy(self.models[self.bext_model_idx])
         idx = np.where(self.best_model.get_info()['delta'].values < 0)
-        rd = idx[0][0] - 1
-        X_new = self.best_model.transform(X, rd=rd)
+        self.round = idx[0][0] - 1
+        X_new = self.best_model.transform(X, rd=self.round)
         self.cls_model = LogisticRegression()
         self.cls_model.fit(X_new, y)
 
     def predict(self, X, verbose=0):
+        X = self.best_model.transform(X, rd=self.round)
         return self.cls_model.predict(X=X)
 
     def score(self, X, y, sample_weight=None, verbose=0):
         return self.estimate_mi(X, y, verbose=verbose)
 
     def predict_proba(self, X, verbose=0):
+        X = self.best_model.transform(X, rd=self.round)
         return self.cls_model.predict_proba(X=X)
 
     def decision_function(self, X, verbose=0):
+        X = self.best_model.transform(X, rd=self.round)
         return self.cls_model.decision_function(X=X)
 
-    def estimate_mi(self, X, y, verbose=0, **kwd):
+    def estimate_mi(self, X, y, verbose=0, create_bext_model=False, **kwd):
         mi_hats = []
         for iter_, model in enumerate(self.models):
             iterations = 100
@@ -79,6 +84,7 @@ class GMMMIEstimator(MIEstimatorBase):
         n = int(len(self.models) / 3)
         mi_hats = mi_hats[np.argpartition(mi_hats, -n)[-n:]]
         mi_hat = np.mean(mi_hats)
-        self.bext_model_idx = np.argmax(mi_hats)
-        self.logger.info(f'Best model: {self.bext_model_idx}, Estimated MI: {mi_hats[self.bext_model_idx]}')
+        if create_bext_model:
+            self.bext_model_idx = np.argmax(mi_hats)
+            self.logger.info(f'Best model: {self.bext_model_idx}, Estimated MI: {mi_hats[self.bext_model_idx]}')
         return mi_hat
