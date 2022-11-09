@@ -60,7 +60,7 @@ class BayesSearchCV(BayesSearchCVSK):
 
         # make lists into dictionaries
         params_dict = [point_asdict(search_space, p) for p in params]
-        self.logger.info(f"Next Parameters values to be tested {params}")
+        self.logger.info(f"Parameters values to be tested {params}")
         try:
             all_results = evaluate_candidates(params_dict)
             local_results = all_results["mean_test_score"][-len(params):]
@@ -120,7 +120,7 @@ class BayesSearchCV(BayesSearchCVSK):
                 # when n_iter < n_points points left for evaluation
                 n_points_adjusted = min(n_iter, n_points)
                 iter_idx += n_points
-                self.logger.info(f"The {iter_idx}th parameter values is being tested")
+                self.logger.info(f"The {iter_idx + n_finished}th parameter values are being tested")
                 optim_result = self._step(
                     search_space, optimizer,
                     evaluate_candidates, n_points=n_points_adjusted

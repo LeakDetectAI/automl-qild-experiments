@@ -41,7 +41,7 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
                                     pin_memory=True)
         return dataset_prop, tra_dataloader
 
-    def fit(self, X, y, epochs=500, verbose=0, **kwd):
+    def fit(self, X, y, epochs=50, verbose=0, **kwd):
         self.class_net = ClassNet(in_dim=self.input_dim, out_dim=self.n_classes, n_hidden=self.n_hidden,
                                   n_units=self.n_units, is_pc_softmax=self.is_pc_softmax)
         self.class_net.apply(init)
@@ -66,8 +66,7 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
             if verbose and epoch % 10 == 0:
                 _, predicted = torch.max(preds_, 1)
                 correct += (predicted == tensor_y).sum().item()
-                self.logger.info(
-                    f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {100 * correct / tensor_y.size(0)} %')
+                self.logger.info(f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {100 * correct / tensor_y.size(0)} %')
         return self
 
     def predict(self, X, verbose=0):

@@ -1,11 +1,13 @@
-import numpy as np
 import sys
 import warnings
+
+import numpy as np
 from sklearn.preprocessing import RobustScaler
 
 warnings.filterwarnings('ignore')
 
 __all__ = ['logsumexp', 'softmax', 'progress_bar', 'print_dictionary', 'standardize_features', 'standardize_features']
+
 
 def logsumexp(x, axis=1):
     max_x = x.max(axis=axis, keepdims=True)
@@ -33,9 +35,9 @@ def progress_bar(count, total, status=''):
 
 
 def print_dictionary(dictionary, sep='\n'):
-    output = "\n"
+    output = "  "
     for i, (key, value) in enumerate(dictionary.items()):
-        if i<len(dictionary)-1:
+        if i < len(dictionary) - 1:
             output = output + str(key) + " => " + str(value) + sep
         else:
             output = output + str(key) + " => " + str(value)
