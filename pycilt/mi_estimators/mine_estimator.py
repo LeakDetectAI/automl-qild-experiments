@@ -29,16 +29,17 @@ class MineMIEstimator(MIEstimatorBase):
         self.optimizer = None
         self.stat_net = None
         self.dataset_properties = None
-        self.logger = logging.getLogger(MIEstimatorBase.__name__)
+        self.label_binarizer = None
+        self.logger = logging.getLogger(MineMIEstimator.__name__)
 
     def pytorch_tensor_dataset(self, X, y, i=2):
         seed = self.random_state.randint(2 ** 31, dtype="uint32") + i
         rs = np.random.RandomState(seed)
         if self.encode_classes:
-            y_t = LabelBinarizer().fit_transform(y)
+            y_t = self.label_binarizer.transform(y)
             xy = np.hstack((X, y_t))
             y_s = rs.permutation(y)
-            y_t = LabelBinarizer().fit_transform(y_s)
+            y_t = self.label_binarizer.transform(y_s)
             xy_tilde = np.hstack((X, y_t))
         else:
             xy = np.hstack((X, y[:, None]))
@@ -57,6 +58,7 @@ class MineMIEstimator(MIEstimatorBase):
             cls_enc = y_t.shape[-1]
         else:
             cls_enc = 1
+        self.label_binarizer = LabelBinarizer().fit(y)
         self.stat_net = StatNet(in_dim=self.input_dim, cls_enc=cls_enc, n_hidden=self.n_hidden, n_units=self.n_units)
         self.stat_net.apply(init)
         self.stat_net.to(self.device)
@@ -103,11 +105,16 @@ class MineMIEstimator(MIEstimatorBase):
         return scores
 
     def decision_function(self, X, verbose=0):
-        scores = np.zeros((X.shape[0], self.n_classes))
+        scores = None
         for n_class in range(self.n_classes):
             y = np.zeros(X.shape[0]) + n_class
             xy, xy_tilde = self.pytorch_tensor_dataset(X, y, i=0)
-            scores[:, n_class] = self.stat_net(xy)
+            score = self.stat_net(xy).detach().numpy()
+            self.logger.info(f"Class {n_class} scores {score.flatten()}")
+            if scores is None:
+                scores = score
+            else:
+                scores = np.hstack((scores, score))
         return scores
 
     def estimate_mi(self, X, y, verbose=0):
@@ -118,10 +125,13 @@ class MineMIEstimator(MIEstimatorBase):
             preds_xy = self.stat_net(xy)
             preds_xy_tilde = self.stat_net(xy_tilde)
             eval_div = get_mine_loss(preds_xy, preds_xy_tilde, metric=self.loss_function)
-            mi_hat = eval_div.detach().numpy()
+            mi_hat = eval_div.detach().numpy().flatten()[0]
             if verbose:
                 print(f'iter: {iter_}, MI hat: {mi_hat}')
-            self.logger.info(f'iter: {iter_}, MI hat: {mi_hat}')
             mi_hats.append(mi_hat)
+        mi_hats = np.array(mi_hats)
+        n = int(MON_ITER / 2)
+        mi_hats = mi_hats[np.argpartition(mi_hats, -n)[-n:]]
         mi_hat = np.mean(mi_hats)
+        self.logger.info(f'Estimated MIs: {mi_hats} Mean {mi_hat}')
         return mi_hat

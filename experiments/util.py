@@ -14,7 +14,8 @@ from keras import backend as K
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, \
     ExtraTreesClassifier
 from sklearn.linear_model import RidgeClassifier, SGDClassifier
-from sklearn.metrics import confusion_matrix, roc_auc_score, f1_score, accuracy_score, matthews_corrcoef
+from sklearn.metrics import roc_auc_score, f1_score, accuracy_score, matthews_corrcoef, \
+    mutual_info_score
 from sklearn.svm import LinearSVC
 from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
 from sklearn.utils import check_random_state
@@ -23,9 +24,10 @@ from tensorflow.core.protobuf.config_pb2 import ConfigProto
 from tensorflow.python.client.session import Session
 
 from experiments.contants import *
-from experiments.contants import MAJORITY_VOTING
 from pycilt.baseline import MajorityVoting
 from pycilt.bayes_predictor import BayesPredictor
+from pycilt.mi_bounds import *
+from pycilt.mi_estimators import MineMIEstimator, GMMMIEstimator, PCSoftmaxMIEstimator
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.synthetic_data_generator import SyntheticDatasetGenerator
 
@@ -49,7 +51,10 @@ classifiers = {MULTI_LAYER_PERCEPTRON: MultiLayerPerceptron,
                MAJORITY_VOTING: MajorityVoting
                }
 
-mi_estimators = {}
+mi_estimators = {'gmm_mi_estimator': GMMMIEstimator,
+                 'mine_mi_estimator': MineMIEstimator,
+                 'softmax_mi_estimator': PCSoftmaxMIEstimator,
+                 'pc_softmax_mi_estimator': PCSoftmaxMIEstimator}
 learners = {**classifiers, **mi_estimators}
 def instance_informedness(y_true, y_pred):
     tp = np.logical_and(y_true, y_pred).sum()
@@ -61,15 +66,19 @@ def instance_informedness(y_true, y_pred):
 
 
 classification_metrics = {
-    "Accuracy": accuracy_score,
-    "F1Score": f1_score,
-    "ConfusionMatrix": confusion_matrix,
-    "AucScore": roc_auc_score,
-    "MathewsCorrelationCoefficient": matthews_corrcoef,
-    "Informedness": instance_informedness
+    ACCURACY: accuracy_score,
+    F_SCORE: f1_score,
+    AUC_SCORE: roc_auc_score,
+    MCC: matthews_corrcoef,
+    INFORMEDNESS: instance_informedness,
+    MISCORE: mutual_info_score,
+    SANTHIUB: santhi_vardi_upper_bound,
+    HELLMANUB: helmann_raviv_upper_bound,
+    FANOSLB: fanos_lower_bound,
+    FANOS_ADJUSTEDLB: fanos_adjusted_lower_bound
 }
 mi_metrics = {
-    "MutualInformation": None,
+    EMI: None,
 }
 lp_metric_dict = {CLASSIFICATION: classification_metrics, MUTUAL_INFORMATION: {**mi_metrics, **classification_metrics}}
 
@@ -142,7 +151,7 @@ def create_directory_safely(path, is_file_path=False):
         print(str(e))
 
 
-def setup_logging(log_path=None, level=logging.DEBUG):
+def setup_logging(log_path=None, level=logging.INFO):
     """Function setup as many logging for the experiments"""
     if log_path is None:
         dirname = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -155,6 +164,8 @@ def setup_logging(log_path=None, level=logging.DEBUG):
     logger = logging.getLogger("SetupLogger")
     logger.info("log file path: {}".format(log_path))
     logging.getLogger("matplotlib").setLevel(logging.ERROR)
+    logging.getLogger("tensorflow").setLevel(logging.ERROR)
+    logging.getLogger("pytorch").setLevel(logging.ERROR)
 
     # logging.captureWarnings(True)
 

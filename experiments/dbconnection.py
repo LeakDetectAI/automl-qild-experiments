@@ -9,7 +9,7 @@ import numpy as np
 import psycopg2
 from psycopg2.extras import DictCursor
 
-from experiments.util import get_duration_seconds
+from experiments.util import get_duration_seconds, duration_till_now
 from pycilt.utils import print_dictionary
 
 
@@ -214,7 +214,8 @@ class DBConnector(metaclass=ABCMeta):
                     )
                 )
                 break
-    def mark_running_job_finished(self, job_id, **kwargs):
+
+    def mark_running_job_finished(self, job_id, start, **kwargs):
         self.init_connection()
         running_jobs = "{}.running_jobs".format(self.schema)
         avail_jobs = "{}.avail_jobs".format(self.schema)
@@ -224,8 +225,9 @@ class DBConnector(metaclass=ABCMeta):
             self.logger.info(f"The job {job_id} is finished")
 
         end_time = datetime.now()
-        update_job = f"""UPDATE {avail_jobs} set job_end_time = %s WHERE job_id = %s"""
-        self.cursor_db.execute(update_job, (end_time, job_id))
+        time_taken = duration_till_now(start)
+        update_job = f"""UPDATE {avail_jobs} set job_end_time = %s, evaluation_time = evaluation_time + %s WHERE job_id = %s"""
+        self.cursor_db.execute(update_job, (end_time, time_taken, job_id))
         if self.cursor_db.rowcount == 1:
             self.logger.info(f"The job {job_id} end time {end_time} is updated")
         self.close_connection()

@@ -23,6 +23,7 @@ torchvision = {index ="pytorch", version= "==0.13.0"}
 protobuf = "==3.20.1"
 psycopg2 = "==2.9.5"
 docopt = "==0.6.2"
+dill = "==0.3.6"
 
 [requires] # Here goes your required Python version.
 python_version = "3.9.2"

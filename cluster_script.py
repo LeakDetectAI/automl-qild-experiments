@@ -27,13 +27,15 @@ from docopt import docopt
 from sklearn.dummy import DummyClassifier
 from sklearn.model_selection import StratifiedShuffleSplit
 
-from experiments.bayes_search import BayesSearchCV
 from experiments.bayes_search_utils import update_params, log_callback, get_scores
+from experiments.contants import AUC_SCORE, EMI, F_SCORE
 from experiments.dbconnection import DBConnector
 from experiments.util import get_duration_seconds, get_dataset_reader, create_search_space, setup_logging, \
     setup_random_seed, create_directory_safely, learners, lp_metric_dict, convert_learner_params, duration_till_now, \
     seconds_to_time
 from pycilt.bayes_predictor import BayesPredictor
+from pycilt.bayes_search import BayesSearchCV
+from pycilt.mi_estimators.mi_base_class import MIEstimatorBase
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.utils import print_dictionary
 
@@ -105,7 +107,7 @@ if __name__ == "__main__":
             learner_params = convert_learner_params(learner_params)
             learner_params['random_state'] = random_state
             time_taken = duration_till_now(start)
-            logger.info(f"Time Taken till now: {seconds_to_time(time_taken)}  milliseconds")
+            logger.info(f"Time Taken till now: {seconds_to_time(time_taken)}  seconds")
             time_eout_eval = get_duration_seconds('1H')
             logger.info(f"Time spared for the out of sample evaluation : {seconds_to_time(time_eout_eval)}")
 
@@ -121,7 +123,7 @@ if __name__ == "__main__":
                                                            random_state=random_state)
                 search_space = create_search_space(hp_ranges)
                 learner_params['random_state'] = random_state
-                if learner == MultiLayerPerceptron:
+                if learner == MultiLayerPerceptron or issubclass(learner, MIEstimatorBase):
                     learner_params = {**learner_params, **dict(input_dim=input_dim, n_classes=n_classes)}
                 estimator = learner(**learner_params)
                 bayes_search_params = dict(estimator=estimator, search_spaces=search_space, n_iter=hp_iters,
@@ -132,13 +134,19 @@ if __name__ == "__main__":
                 search_keys.sort()
                 logger.info(f"Search Keys {search_keys}")
                 callback = log_callback(logger, search_keys)
-                bayes_search.fit(X_train, y_train, groups=None, callback=callback, **fit_params)
+                try:
+                    bayes_search.fit(X_train, y_train, groups=None, callback=callback, **fit_params)
+                except Exception as e:
+                    logger.info(f"Exception {str(e)}")
                 learner_params = update_params(bayes_search, search_keys, learner_params, logger)
                 estimator = learner(**learner_params)
                 estimator.fit(X_train, y_train)
                 p_pred, y_pred = get_scores(X_test, estimator)
                 y_true = y_test
-
+            if issubclass(learner, MIEstimatorBase):
+                estimated_mi = estimator.estimate_mi(X, y)
+            else:
+                estimated_mi = 0
             result_file = os.path.join(DIR_PATH, EXPERIMENTS, RESULT_FOLDER, "{}.h5".format(hash_value))
             create_directory_safely(result_file, True)
             f = h5py.File(result_file, 'w')
@@ -149,30 +157,42 @@ if __name__ == "__main__":
 
             results = {'job_id': str(job_id), 'cluster_id': str(cluster_id)}
             for name, evaluation_metric in lp_metric_dict[learning_problem].items():
-                predictions = y_pred
-                if 'AUC' in name:
-                    if n_classes > 2:
-                        metric_loss = evaluation_metric(y_true, p_pred, multi_class='ovr')
-                    else:
-                        metric_loss = evaluation_metric(y_true, p_pred)
-                else:
-                    metric_loss = evaluation_metric(y_true, y_pred)
-                if 'ConfusionMatrix' == name:
-                    tn, fp, fn, tp = metric_loss.ravel()
-                    results['TN'] = "{0:.4f}".format(tn)
-                    results['FP'] = "{0:.4f}".format(fp)
-                    results['FN'] = "{0:.4f}".format(fn)
-                    results['TP'] = "{0:.4f}".format(tp)
-                else:
+                if name == EMI:
+                    metric_loss = estimated_mi
                     if np.isnan(metric_loss):
                         results[name] = "\'Infinity\'"
                     else:
                         results[name] = f"{np.around(metric_loss, 4)}"
+                else:
+                    predictions = y_pred
+                    if name == AUC_SCORE:
+                        if n_classes > 2:
+                            metric_loss = evaluation_metric(y_true, p_pred, multi_class='ovr')
+                        else:
+                            metric_loss = evaluation_metric(y_true, p_pred)
+                    elif name == F_SCORE:
+                        if n_classes > 2:
+                            metric_loss = evaluation_metric(y_true, y_pred, average='macro')
+                        else:
+                            metric_loss = evaluation_metric(y_true, y_pred, average='binary')
+                    else:
+                        metric_loss = evaluation_metric(y_true, y_pred)
+                    if np.isnan(metric_loss):
+                        results[name] = "\'Infinity\'"
+                    else:
+                        results[name] = f"{np.around(metric_loss, 4)}"
+                    # if CONFUSION_MATRIX == name:
+                    #    tn, fp, fn, tp = metric_loss.ravel()
+                    #   results['TN'] = "{0:.4f}".format(tn)
+                    #   results['FP'] = "{0:.4f}".format(fp)
+                    #   results['FN'] = "{0:.4f}".format(fn)
+                    #   results['TP'] = "{0:.4f}".format(tp)
+
                 logger.info(f"Out of sample error {name} : {metric_loss}")
 
             dbConnector.insert_results(experiment_schema=experiment_schema, experiment_table=experiment_table,
                                        results=results)
-            dbConnector.mark_running_job_finished(job_id)
+            dbConnector.mark_running_job_finished(job_id, start)
         except Exception as e:
             if hasattr(e, 'message'):
                 message = e.message

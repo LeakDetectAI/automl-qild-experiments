@@ -4,3 +4,8 @@
 /pycild.egg-info/
 *.ipynb
 *.log
+/__pycache__/
+experiments/logs/
+experiments/optimizers/
+experiments/results/
+experiments/__pycache__/

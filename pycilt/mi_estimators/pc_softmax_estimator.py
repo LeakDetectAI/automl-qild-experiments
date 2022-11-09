@@ -139,6 +139,7 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
                 softmax_list.append(math.log(a_softmax.cpu().item()) + math.log(len(dataset_prop)))
         mi_estimated = np.nanmean(softmax_list)
         self.logger.info(f'Estimated MI: {mi_estimated}')
-        if np.isnan(mi_estimated):
-            return 0
+        if np.isnan(mi_estimated) or np.isinf(mi_estimated):
+            self.logger.info(f'Setting MI to 0')
+            mi_estimated = 0
         return mi_estimated

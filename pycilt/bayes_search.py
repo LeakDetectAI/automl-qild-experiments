@@ -1,9 +1,10 @@
 import logging
 
 import dill
+import numpy as np
 from sklearn.utils import check_random_state
 from skopt import BayesSearchCV as BayesSearchCVSK
-from skopt.utils import eval_callbacks
+from skopt.utils import eval_callbacks, point_asdict
 
 
 class BayesSearchCV(BayesSearchCVSK):
@@ -48,6 +49,28 @@ class BayesSearchCV(BayesSearchCVSK):
         self.optimizers_file_path = optimizers_file_path
         self.logger = logging.getLogger(BayesSearchCV.__name__)
 
+    def _step(self, search_space, optimizer, evaluate_candidates, n_points=1):
+        """Generate n_jobs parameters and evaluate them in parallel.
+        """
+        # get parameter values to evaluate
+        params = optimizer.ask(n_points=n_points)
+
+        # convert parameters to python native types
+        params = [[np.array(v).item() for v in p] for p in params]
+
+        # make lists into dictionaries
+        params_dict = [point_asdict(search_space, p) for p in params]
+        self.logger.info(f"Next Parameters values to be tested {params}")
+        try:
+            all_results = evaluate_candidates(params_dict)
+            local_results = all_results["mean_test_score"][-len(params):]
+        except Exception as e:
+            local_results = list(np.zeros(len(params)))
+        # Feed the point and objective value back into optimizer
+        # Optimizer minimizes objective, hence provide negative score
+
+        return optimizer.tell(params, [-score for score in local_results])
+
     def _run_search(self, evaluate_candidates):
         # check if space is a single dict, convert to list if so
         search_spaces = self.search_spaces
@@ -73,7 +96,7 @@ class BayesSearchCV(BayesSearchCVSK):
                     search_space = search_space[0]
                 optimizers.append(self._make_optimizer(search_space))
             self.optimizers_ = optimizers  # will save the states of the optimizers
-            self._optim_results = [_ for o in optimizers]
+            self._optim_results = [0 for o in optimizers]
         else:
             self._optim_results = optim_results
             self.optimizers_ = optimizers
@@ -92,16 +115,17 @@ class BayesSearchCV(BayesSearchCVSK):
             self.logger.info(f"Iterations already done: {n_finished} and running iterations {n_iter}")
             # do the optimization for particular search space
             optim_result = None
+            iter_idx = 0
             while n_iter > 0:
                 # when n_iter < n_points points left for evaluation
                 n_points_adjusted = min(n_iter, n_points)
-
+                iter_idx += n_points
+                self.logger.info(f"The {iter_idx}th parameter values is being tested")
                 optim_result = self._step(
                     search_space, optimizer,
                     evaluate_candidates, n_points=n_points_adjusted
                 )
                 n_iter -= n_points
-
                 if eval_callbacks(callbacks, optim_result):
                     break
                 self._optim_results[i] = optim_result
