@@ -25,6 +25,7 @@ import h5py
 import numpy as np
 from docopt import docopt
 from sklearn.dummy import DummyClassifier
+from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import StratifiedShuffleSplit
 
 from experiments.bayes_search_utils import update_params, log_callback, get_scores
@@ -114,10 +115,14 @@ if __name__ == "__main__":
             if learner == BayesPredictor or issubclass(learner, DummyClassifier):
                 if learner == BayesPredictor:
                     learner_params = {'dataset_obj': dataset_reader}
-                estimator = learner(**learner_params)
-                estimator.fit(X_train, y_train)
-                p_pred, y_pred = get_scores(X, estimator)
-                y_true = y
+                    estimator = learner(**learner_params)
+                    estimator.fit(X_train, y_train)
+                    y_true, y_pred, p_pred = estimator.get_bayes_predictor_scores()
+                else:
+                    estimator = learner(**learner_params)
+                    estimator.fit(X_train, y_train)
+                    p_pred, y_pred = get_scores(X, estimator)
+                    y_true = np.copy(y)
             else:
                 inner_cv_iterator = StratifiedShuffleSplit(n_splits=n_inner_folds, test_size=0.1,
                                                            random_state=random_state)
@@ -142,7 +147,7 @@ if __name__ == "__main__":
                 estimator = learner(**learner_params)
                 estimator.fit(X_train, y_train)
                 p_pred, y_pred = get_scores(X_test, estimator)
-                y_true = y_test
+                y_true = np.copy(y_test)
             if issubclass(learner, MIEstimatorBase):
                 estimated_mi = estimator.estimate_mi(X, y)
             else:
@@ -153,6 +158,7 @@ if __name__ == "__main__":
             f.create_dataset('scores', data=p_pred)
             f.create_dataset('predictions', data=y_pred)
             f.create_dataset('ground_truth', data=y_true)
+            f.create_dataset('confusion_matrix', data=confusion_matrix(y_true, y_true))
             f.close()
 
             results = {'job_id': str(job_id), 'cluster_id': str(cluster_id)}
@@ -174,7 +180,7 @@ if __name__ == "__main__":
                         if n_classes > 2:
                             metric_loss = evaluation_metric(y_true, y_pred, average='macro')
                         else:
-                            metric_loss = evaluation_metric(y_true, y_pred, average='binary')
+                            metric_loss = evaluation_metric(y_true, y_pred)
                     else:
                         metric_loss = evaluation_metric(y_true, y_pred)
                     if np.isnan(metric_loss):
@@ -187,7 +193,6 @@ if __name__ == "__main__":
                     #   results['FP'] = "{0:.4f}".format(fp)
                     #   results['FN'] = "{0:.4f}".format(fn)
                     #   results['TP'] = "{0:.4f}".format(tp)
-
                 logger.info(f"Out of sample error {name} : {metric_loss}")
 
             dbConnector.insert_results(experiment_schema=experiment_schema, experiment_table=experiment_table,

@@ -535,9 +535,10 @@ class DBConnector(metaclass=ABCMeta):
 
         self.cursor_db.execute(select_job)
         jobs_all = self.cursor_db.fetchall()
-        features = np.arange(2, 3)
-        classes = np.arange(2, 3)
-        flip_ys = np.arange(0.0, 1.01, .01)
+        features = np.arange(2, 21)
+        classes = np.arange(2, 11)
+        # flip_ys_fine = np.arange(0.0, 1.01, .01)
+        flip_ys_broad = np.arange(0.0, 1.01, .05)
         self.close_connection()
         for job in jobs_all:
             job = dict(job)
@@ -548,7 +549,7 @@ class DBConnector(metaclass=ABCMeta):
             self.logger.info(print_dictionary(job))
             for n_classes in classes:
                 for n_features in features:
-                    for flip_y in flip_ys:
+                    for flip_y in flip_ys_broad:
                         keys = list(job.keys())
                         values = list(job.values())
                         columns = ", ".join(list(job.keys()))

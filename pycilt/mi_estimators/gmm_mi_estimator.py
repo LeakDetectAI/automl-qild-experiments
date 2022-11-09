@@ -25,11 +25,11 @@ class GMMMIEstimator(MIEstimatorBase):
 
     def fit(self, X, y, verbose=0, **kwd):
         self.models = []
-        for i, val_size in enumerate(np.linspace(0.20, 0.80, num=20)):
-            gmm = get_gmm(X, y, y_cat=self.y_cat, num_comps=self.num_comps, val_size=val_size,
-                          reg_covar=self.reg_covar, random_state=self.random_state)
-            select = SelectVars(gmm, selection_mode='backward')
+        for i, val_size in enumerate(np.linspace(0.20, 0.80, num=30)):
             try:
+                gmm = get_gmm(X, y, y_cat=self.y_cat, num_comps=self.num_comps, val_size=val_size,
+                              reg_covar=self.reg_covar, random_state=self.random_state)
+                select = SelectVars(gmm, selection_mode='backward')
                 select.fit(X, y, verbose=verbose, eps=np.finfo(np.float32).eps)
                 self.models.append(select)
                 self.logger.info(f"Model {i} trained with validation data {val_size.round(2)}")
