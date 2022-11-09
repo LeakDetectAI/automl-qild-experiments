@@ -26,7 +26,7 @@ import numpy as np
 from docopt import docopt
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold
 
 from experiments.bayes_search_utils import update_params, log_callback, get_scores
 from experiments.contants import AUC_SCORE, EMI, F_SCORE
@@ -80,6 +80,8 @@ if __name__ == "__main__":
             validation_loss = dbConnector.job_description["validation_loss"]
             hash_value = dbConnector.job_description["hash_value"]
 
+            if validation_loss == 'None':
+                validation_loss = None
             random_state = np.random.RandomState(seed=seed + fold_id)
             log_path = os.path.join(DIR_PATH, EXPERIMENTS, LOGS_FOLDER, "{}.log".format(hash_value))
             setup_logging(log_path=log_path)
@@ -111,7 +113,10 @@ if __name__ == "__main__":
             logger.info(f"Time Taken till now: {seconds_to_time(time_taken)}  seconds")
             time_eout_eval = get_duration_seconds('1H')
             logger.info(f"Time spared for the out of sample evaluation : {seconds_to_time(time_eout_eval)}")
-
+            if learner == MultiLayerPerceptron or issubclass(learner, MIEstimatorBase):
+                n_jobs = 1
+            else:
+                n_jobs = 10
             if learner == BayesPredictor or issubclass(learner, DummyClassifier):
                 if learner == BayesPredictor:
                     learner_params = {'dataset_obj': dataset_reader}
@@ -124,15 +129,15 @@ if __name__ == "__main__":
                     p_pred, y_pred = get_scores(X, estimator)
                     y_true = np.copy(y)
             else:
-                inner_cv_iterator = StratifiedShuffleSplit(n_splits=n_inner_folds, test_size=0.1,
-                                                           random_state=random_state)
+                inner_cv_iterator = StratifiedKFold(n_splits=n_inner_folds, shuffle=True, random_state=random_state)
                 search_space = create_search_space(hp_ranges)
                 learner_params['random_state'] = random_state
                 if learner == MultiLayerPerceptron or issubclass(learner, MIEstimatorBase):
                     learner_params = {**learner_params, **dict(input_dim=input_dim, n_classes=n_classes)}
                 estimator = learner(**learner_params)
+
                 bayes_search_params = dict(estimator=estimator, search_spaces=search_space, n_iter=hp_iters,
-                                           scoring=validation_loss, n_jobs=10, cv=inner_cv_iterator, error_score=0,
+                                           scoring=validation_loss, n_jobs=n_jobs, cv=inner_cv_iterator, error_score=0,
                                            random_state=random_state, optimizers_file_path=optimizers_file_path)
                 bayes_search = BayesSearchCV(**bayes_search_params)
                 search_keys = list(search_space.keys())

@@ -542,6 +542,8 @@ class DBConnector(metaclass=ABCMeta):
         self.close_connection()
         for job in jobs_all:
             job = dict(job)
+            if job['learner'] in ['mine_mi_estimator', 'pc_softmax_mi_estimator', 'softmax_mi_estimator']:
+                continue
             del job["job_id"]
             del job["job_allocated_time"]
             del job['job_end_time']
@@ -577,6 +579,8 @@ class DBConnector(metaclass=ABCMeta):
                             self.logger.info("Inserting results: {} {}".format(insert_result, values_str))
                             if self.cursor_db.rowcount == 1:
                                 self.logger.info(f"Results inserted for the job {id_of_new_row}")
+                        else:
+                            self.logger.info(f"Job already exist")
                         self.close_connection()
 
     def get_hash_value_for_job(self, job):

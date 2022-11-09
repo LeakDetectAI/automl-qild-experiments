@@ -66,7 +66,7 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
             if verbose and epoch % 10 == 0:
                 _, predicted = torch.max(preds_, 1)
                 correct += (predicted == tensor_y).sum().item()
-                self.logger.info(f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {100 * correct / tensor_y.size(0)} %')
+                self.logger.error(f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {100 * correct / tensor_y.size(0)} %')
         return self
 
     def predict(self, X, verbose=0):
@@ -137,8 +137,8 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
             else:
                 softmax_list.append(math.log(a_softmax.cpu().item()) + math.log(len(dataset_prop)))
         mi_estimated = np.nanmean(softmax_list)
-        self.logger.info(f'Estimated MI: {mi_estimated}')
+        self.logger.error(f'Estimated MI: {mi_estimated}')
         if np.isnan(mi_estimated) or np.isinf(mi_estimated):
-            self.logger.info(f'Setting MI to 0')
+            self.logger.error(f'Setting MI to 0')
             mi_estimated = 0
         return mi_estimated
