@@ -96,3 +96,5 @@ create table results.mutual_information
 
 alter table mutual_information.avail_jobs add column evaluation_time double precision;
 alter table classification.avail_jobs add column evaluation_time double precision;
+
+rm logs/* optimizers/* results/*

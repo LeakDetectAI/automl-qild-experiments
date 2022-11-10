@@ -24,10 +24,6 @@ from datetime import datetime
 import h5py
 import numpy as np
 from docopt import docopt
-from sklearn.dummy import DummyClassifier
-from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold
-
 from experiments.bayes_search_utils import update_params, log_callback, get_scores
 from experiments.contants import AUC_SCORE, EMI, F_SCORE
 from experiments.dbconnection import DBConnector
@@ -39,6 +35,9 @@ from pycilt.bayes_search import BayesSearchCV
 from pycilt.mi_estimators.mi_base_class import MIEstimatorBase
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.utils import print_dictionary
+from sklearn.dummy import DummyClassifier
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 LOGS_FOLDER = 'logs'
@@ -183,7 +182,18 @@ if __name__ == "__main__":
                     predictions = y_pred
                     if name == AUC_SCORE:
                         if n_classes > 2:
-                            metric_loss = evaluation_metric(y_true, p_pred, multi_class='ovr')
+                            try:
+                                metric_loss = evaluation_metric(y_true, p_pred, multi_class='ovr')
+                            except Exception as e:
+                                logger.error(f"Exception: {str(e)}")
+                                try:
+                                    logger.error(f"Appliying normalization to avoid exception")
+                                    p_pred = normalize(p_pred, axis=1)
+                                    metric_loss = evaluation_metric(y_true, p_pred, multi_class='ovr')
+                                except Exception as e:
+                                    logger.error(f"After normallization Exception: {str(e)}")
+                                    logger.error(f"Setting Auc to nan")
+                                    metric_loss = np.nan
                         else:
                             metric_loss = evaluation_metric(y_true, p_pred)
                     elif name == F_SCORE:
@@ -193,7 +203,7 @@ if __name__ == "__main__":
                             metric_loss = evaluation_metric(y_true, y_pred)
                     else:
                         metric_loss = evaluation_metric(y_true, y_pred)
-                    if np.isnan(metric_loss):
+                    if np.isnan(metric_loss) or np.isinf(metric_loss):
                         results[name] = "\'Infinity\'"
                     else:
                         results[name] = f"{np.around(metric_loss, 4)}"
