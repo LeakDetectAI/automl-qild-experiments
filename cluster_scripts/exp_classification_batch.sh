@@ -1,4 +1,4 @@
 count=$1
 for i in $(seq $count);do
-    sbatch classification_experiment_run.sh
+    sbatch scripts/classification_experiment_run.sh
 done

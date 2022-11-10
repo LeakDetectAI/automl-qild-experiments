@@ -16,6 +16,7 @@ class MineMIEstimator(MIEstimatorBase):
     def __init__(self, n_classes, input_dim, n_hidden=2, n_units=100, loss_function='donsker_varadhan_softplus',
                  optimizer_str='adam', learning_rate=0.001, reg_strength=0.001, encode_classes=True, random_state=42):
         super().__init__(n_classes=n_classes, input_dim=input_dim, random_state=random_state)
+        self.logger = logging.getLogger(MineMIEstimator.__name__)
         self.optimizer_str = optimizer_str
         self.learning_rate = learning_rate
         self.reg_strength = reg_strength
@@ -26,11 +27,12 @@ class MineMIEstimator(MIEstimatorBase):
         self.n_units = n_units
         self.loss_function = loss_function
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.logger.info(f"device {self.device}")
+        print((f"device {self.device}"))
         self.optimizer = None
         self.stat_net = None
         self.dataset_properties = None
         self.label_binarizer = None
-        self.logger = logging.getLogger(MineMIEstimator.__name__)
 
     def pytorch_tensor_dataset(self, X, y, i=2):
         seed = self.random_state.randint(2 ** 31, dtype="uint32") + i
