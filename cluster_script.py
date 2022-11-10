@@ -79,11 +79,16 @@ if __name__ == "__main__":
             experiment_table = dbConnector.job_description["experiment_table"]
             validation_loss = dbConnector.job_description["validation_loss"]
             hash_value = dbConnector.job_description["hash_value"]
+            LEARNING_PROBLEM = learning_problem.lower()
 
             if validation_loss == 'None':
                 validation_loss = None
             random_state = np.random.RandomState(seed=seed + fold_id)
-            log_path = os.path.join(DIR_PATH, EXPERIMENTS, LOGS_FOLDER, "{}.log".format(hash_value))
+            log_path = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, LOGS_FOLDER, "{}.log".format(hash_value))
+            base_dir = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM)
+            create_directory_safely(base_dir, False)
+            create_directory_safely(log_path, True)
+
             setup_logging(log_path=log_path)
             setup_random_seed(random_state=random_state)
             logger = logging.getLogger('Experiment')
@@ -103,7 +108,7 @@ if __name__ == "__main__":
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
 
-            optimizers_file_path = os.path.join(DIR_PATH, EXPERIMENTS, OPTIMIZER_FOLDER, "{}.pkl".format(hash_value))
+            optimizers_file_path = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, OPTIMIZER_FOLDER, "{}.pkl".format(hash_value))
             create_directory_safely(optimizers_file_path, True)
 
             learner = learners[learner_name]
@@ -157,7 +162,7 @@ if __name__ == "__main__":
                 estimated_mi = estimator.estimate_mi(X, y)
             else:
                 estimated_mi = 0
-            result_file = os.path.join(DIR_PATH, EXPERIMENTS, RESULT_FOLDER, "{}.h5".format(hash_value))
+            result_file = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, RESULT_FOLDER, "{}.h5".format(hash_value))
             create_directory_safely(result_file, True)
             f = h5py.File(result_file, 'w')
             f.create_dataset('scores', data=p_pred)

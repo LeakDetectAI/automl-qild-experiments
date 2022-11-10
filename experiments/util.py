@@ -146,7 +146,7 @@ def create_directory_safely(path, is_file_path=False):
         if is_file_path:
             path = os.path.dirname(path)
         if not os.path.exists(path):
-            os.makedirs(path, exist_ok=True)
+            os.mkdir(path)
     except Exception as e:
         print(str(e))
 
