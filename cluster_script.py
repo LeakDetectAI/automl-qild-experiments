@@ -86,7 +86,7 @@ if __name__ == "__main__":
             if validation_loss == 'None':
                 validation_loss = None
             random_state = np.random.RandomState(seed=seed + fold_id)
-            log_path = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, LOGS_FOLDER, "{}.log".format(hash_value))
+            log_path = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, LOGS_FOLDER, f"{hash_value}.log")
             base_dir = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM)
             create_directory_safely(base_dir, False)
             create_directory_safely(log_path, True)
@@ -97,10 +97,6 @@ if __name__ == "__main__":
             logger.info(f"DB config filePath {config_file_path}")
             logger.info(f"Arguments {arguments}")
             logger.info(f"Job Description {print_dictionary(dbConnector.job_description)}")
-            if job_id == 1:
-                logger.info(f"Inserting new jobs into {schema}")
-                dbConnector.insert_new_jobs_different_configurations()
-                dbConnector.insert_new_jobs_with_different_fold()
             duration = get_duration_seconds(duration)
             dataset_params['random_state'] = random_state
             dataset_params['fold_id'] = fold_id
@@ -114,7 +110,8 @@ if __name__ == "__main__":
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
 
-            optimizers_file_path = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, OPTIMIZER_FOLDER, "{}.pkl".format(hash_value))
+            optimizers_file_path = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, OPTIMIZER_FOLDER,
+                                                f"{hash_value}.pkl")
             create_directory_safely(optimizers_file_path, True)
 
             learner = learners[learner_name]
@@ -168,7 +165,7 @@ if __name__ == "__main__":
                 estimated_mi = estimator.estimate_mi(X, y)
             else:
                 estimated_mi = 0
-            result_file = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, RESULT_FOLDER, "{}.h5".format(hash_value))
+            result_file = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, RESULT_FOLDER, f"{hash_value}.h5")
             create_directory_safely(result_file, True)
             f = h5py.File(result_file, 'w')
             f.create_dataset('scores', data=p_pred)

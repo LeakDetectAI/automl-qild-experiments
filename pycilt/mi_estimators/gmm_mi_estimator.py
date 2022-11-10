@@ -19,9 +19,10 @@ class GMMMIEstimator(MIEstimatorBase):
             self.num_comps = list(np.arange(2, self.max_num_components, 3))
         self.reg_covar = reg_covar
         self.models = None
-        self.best_model = None
         self.cls_model = None
-        self.bext_model_idx = 0
+        # Classification Model
+        self.best_model = None
+        self.best_model_idx = None
         self.round = None
         self.logger = logging.getLogger(GMMMIEstimator.__name__)
 
@@ -38,34 +39,46 @@ class GMMMIEstimator(MIEstimatorBase):
             except Exception as e:
                 self.logger.info(f"Model {i} was not valid {val_size.round(2)}")
 
+        gmm = get_gmm(X, y, random_state=self.random_state)
+        select = SelectVars(gmm, selection_mode='backward')
+        select.fit(X, y, verbose=verbose, eps=np.finfo(np.float32).eps)
+        self.models.append(select)
+        self.logger.info(f"Default Model trained with validation data {0.33}")
         self.create_best_model(X, y, verbose=verbose, **kwd)
         return self
 
     def create_best_model(self, X, y, verbose=0, **kwd):
-        self.estimate_mi(X, y, verbose=verbose, create_bext_model=True, **kwd)
-        self.best_model = copy.deepcopy(self.models[self.bext_model_idx])
-        idx = np.where(self.best_model.get_info()['delta'].values < 0)
-        self.round = idx[0][0] - 1
-        X_new = self.best_model.transform(X, rd=self.round)
-        self.cls_model = LogisticRegression()
-        self.cls_model.fit(X_new, y)
+        self.estimate_mi(X, y, verbose=verbose, create_best_model=True, **kwd)
+        if self.best_model_idx is not None:
+            self.best_model = copy.deepcopy(self.models[self.best_model_idx])
+            idx = np.where(self.best_model.get_info()['delta'].values < 0)
+            self.round = idx[0][0] - 1
+            X_new = self.best_model.transform(X, rd=self.round)
+            self.cls_model = LogisticRegression()
+            self.cls_model.fit(X_new, y)
+        else:
+            self.cls_model = LogisticRegression()
+            self.cls_model.fit(X, y)
 
     def predict(self, X, verbose=0):
-        X = self.best_model.transform(X, rd=self.round)
+        if self.best_model is not None:
+            X = self.best_model.transform(X, rd=self.round)
         return self.cls_model.predict(X=X)
 
     def score(self, X, y, sample_weight=None, verbose=0):
         return self.estimate_mi(X, y, verbose=verbose)
 
     def predict_proba(self, X, verbose=0):
-        X = self.best_model.transform(X, rd=self.round)
+        if self.best_model is not None:
+            X = self.best_model.transform(X, rd=self.round)
         return self.cls_model.predict_proba(X=X)
 
     def decision_function(self, X, verbose=0):
-        X = self.best_model.transform(X, rd=self.round)
+        if self.best_model is not None:
+            X = self.best_model.transform(X, rd=self.round)
         return self.cls_model.decision_function(X=X)
 
-    def estimate_mi(self, X, y, verbose=0, create_bext_model=False, **kwd):
+    def estimate_mi(self, X, y, verbose=0, create_best_model=False, **kwd):
         mi_hats = []
         for iter_, model in enumerate(self.models):
             iterations = 100
@@ -80,11 +93,21 @@ class GMMMIEstimator(MIEstimatorBase):
                 print(f'Iter: {iter_}, Estimated MI: {mi_mean}')
             self.logger.info(f'Iter: {iter_}, Estimated MI: {mi_mean}')
             mi_hats.append(mi_mean)
+
         mi_hats = np.array(mi_hats)
-        n = int(len(self.models) / 3)
-        mi_hats = mi_hats[np.argpartition(mi_hats, -n)[-n:]]
-        mi_hat = np.mean(mi_hats)
-        if create_bext_model:
-            self.bext_model_idx = np.argmax(mi_hats)
-            self.logger.info(f'Best model: {self.bext_model_idx}, Estimated MI: {mi_hats[self.bext_model_idx]}')
-        return mi_hat
+        if len(mi_hats) > 0:
+            n = int(len(self.models) / 3)
+            mi_hats = mi_hats[np.argpartition(mi_hats, -n)[-n:]]
+
+        mi_estimated = np.nanmean(mi_hats)
+        if np.isnan(mi_estimated) or np.isinf(mi_estimated):
+            self.logger.error(f'Setting MI to 0')
+            mi_estimated = 0
+
+        if create_best_model:
+            if len(mi_hats) > 0:
+                self.best_model_idx = np.argmax(mi_hats)
+                self.logger.info(f'Best model: {self.best_model_idx}, Estimated MI: {mi_hats[self.best_model_idx]}')
+            else:
+                self.best_model_idx = None
+        return mi_estimated

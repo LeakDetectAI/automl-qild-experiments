@@ -135,6 +135,9 @@ class MineMIEstimator(MIEstimatorBase):
         mi_hats = np.array(mi_hats)
         n = int(MON_ITER / 2)
         mi_hats = mi_hats[np.argpartition(mi_hats, -n)[-n:]]
-        mi_hat = np.mean(mi_hats)
-        self.logger.info(f'Estimated MIs: {mi_hats} Mean {mi_hat}')
-        return mi_hat
+        mi_estimated = np.nanmean(mi_hats)
+        if np.isnan(mi_estimated) or np.isinf(mi_estimated):
+            self.logger.error(f'Setting MI to 0')
+            mi_estimated = 0
+        self.logger.info(f'Estimated MIs: {mi_hats} Mean {mi_estimated}')
+        return mi_estimated
