@@ -61,6 +61,9 @@ if __name__ == "__main__":
     if 'CCS_REQID' in os.environ.keys():
         cluster_id = int(os.environ['CCS_REQID'])
     dbConnector.fetch_job_arguments(cluster_id=cluster_id)
+    os.environ["HIP_LAUNCH_BLOCKING"] = "1"
+    os.environ["CUDA_LAUNCH_BLOCKING"] = "2"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     if dbConnector.job_description is not None:
         try:
             seed = int(dbConnector.job_description["seed"])

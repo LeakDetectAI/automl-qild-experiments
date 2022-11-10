@@ -6,4 +6,5 @@
 *.log
 *.pkl
 *.h5
+*.sif
 /__pycache__/

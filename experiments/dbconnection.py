@@ -542,8 +542,6 @@ class DBConnector(metaclass=ABCMeta):
         self.close_connection()
         for job in jobs_all:
             job = dict(job)
-            if job['learner'] in ['mine_mi_estimator', 'pc_softmax_mi_estimator', 'softmax_mi_estimator']:
-                continue
             del job["job_id"]
             del job["job_allocated_time"]
             del job['job_end_time']

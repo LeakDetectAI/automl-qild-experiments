@@ -6,7 +6,7 @@
 #SBATCH --mem=16G
 #SBATCH -A hpc-prf-obal
 #SBATCH -t 2-00:00:00
-#SBATCH -p largemem
+#SBATCH -p normal
 #SBATCH -o /scratch/hpc-prf-obal/prithag/clusterout/%x-%j
 #SBATCH -e /scratch/hpc-prf-obal/prithag/clusterout/%x-%j
 
