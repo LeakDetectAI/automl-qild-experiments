@@ -81,9 +81,7 @@ if __name__ == "__main__":
             validation_loss = dbConnector.job_description["validation_loss"]
             hash_value = dbConnector.job_description["hash_value"]
             LEARNING_PROBLEM = learning_problem.lower()
-            if job_id == 1:
-                dbConnector.insert_new_jobs_different_configurations()
-                dbConnector.insert_new_jobs_with_different_fold()
+
 
             if validation_loss == 'None':
                 validation_loss = None
@@ -96,9 +94,13 @@ if __name__ == "__main__":
             setup_logging(log_path=log_path)
             setup_random_seed(random_state=random_state)
             logger = logging.getLogger('Experiment')
-            logger.info("DB config filePath {}".format(config_file_path))
-            logger.info("Arguments {}".format(arguments))
-            logger.info("Job Description {}".format(print_dictionary(dbConnector.job_description)))
+            logger.info(f"DB config filePath {config_file_path}")
+            logger.info(f"Arguments {arguments}")
+            logger.info(f"Job Description {print_dictionary(dbConnector.job_description)}")
+            if job_id == 1:
+                logger.info(f"Inserting new jobs into {schema}")
+                dbConnector.insert_new_jobs_different_configurations()
+                dbConnector.insert_new_jobs_with_different_fold()
             duration = get_duration_seconds(duration)
             dataset_params['random_state'] = random_state
             dataset_params['fold_id'] = fold_id
