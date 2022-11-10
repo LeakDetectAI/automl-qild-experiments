@@ -26,9 +26,10 @@ class MineMIEstimator(MIEstimatorBase):
         self.n_hidden = n_hidden
         self.n_units = n_units
         self.loss_function = loss_function
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("gpu" if torch.cuda.is_available() else "cpu")
         self.logger.info(f"device {self.device}")
         print((f"device {self.device}"))
+        print(torch.cuda.is_available())
         self.optimizer = None
         self.stat_net = None
         self.dataset_properties = None

@@ -14,7 +14,7 @@ from keras import backend as K
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, \
     ExtraTreesClassifier
 from sklearn.linear_model import RidgeClassifier, SGDClassifier
-from sklearn.metrics import roc_auc_score, f1_score, accuracy_score, matthews_corrcoef, \
+from sklearn.metrics import f1_score, accuracy_score, matthews_corrcoef, \
     mutual_info_score
 from sklearn.svm import LinearSVC
 from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
@@ -26,7 +26,7 @@ from tensorflow.python.client.session import Session
 from experiments.contants import *
 from pycilt.baseline import MajorityVoting
 from pycilt.bayes_predictor import BayesPredictor
-from pycilt.mi_bounds import *
+from pycilt.metrics import *
 from pycilt.mi_estimators import MineMIEstimator, GMMMIEstimator, PCSoftmaxMIEstimator
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.synthetic_data_generator import SyntheticDatasetGenerator
@@ -56,19 +56,13 @@ mi_estimators = {'gmm_mi_estimator': GMMMIEstimator,
                  'softmax_mi_estimator': PCSoftmaxMIEstimator,
                  'pc_softmax_mi_estimator': PCSoftmaxMIEstimator}
 learners = {**classifiers, **mi_estimators}
-def instance_informedness(y_true, y_pred):
-    tp = np.logical_and(y_true, y_pred).sum()
-    tn = np.logical_and(np.logical_not(y_true), np.logical_not(y_pred)).sum()
-    cp = np.array(y_true).sum()
-    cn = np.logical_not(y_true).sum()
-    inf = np.nansum([tp / cp, tn / cn, -1])
-    return inf
+
 
 
 classification_metrics = {
     ACCURACY: accuracy_score,
     F_SCORE: f1_score,
-    AUC_SCORE: roc_auc_score,
+    AUC_SCORE: auc_score,
     MCC: matthews_corrcoef,
     INFORMEDNESS: instance_informedness,
     MISCORE: mutual_info_score,

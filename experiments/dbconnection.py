@@ -547,6 +547,7 @@ class DBConnector(metaclass=ABCMeta):
             del job["job_id"]
             del job["job_allocated_time"]
             del job['job_end_time']
+            job['evaluation_time'] = 0
             self.logger.info("###########################################################")
             self.logger.info(print_dictionary(job))
             for n_classes in classes:

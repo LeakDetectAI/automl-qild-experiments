@@ -24,8 +24,12 @@ from datetime import datetime
 import h5py
 import numpy as np
 from docopt import docopt
+from sklearn.dummy import DummyClassifier
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold
+
 from experiments.bayes_search_utils import update_params, log_callback, get_scores
-from experiments.contants import AUC_SCORE, EMI, F_SCORE
+from experiments.contants import EMI, F_SCORE
 from experiments.dbconnection import DBConnector
 from experiments.util import get_duration_seconds, get_dataset_reader, create_search_space, setup_logging, \
     setup_random_seed, create_directory_safely, learners, lp_metric_dict, convert_learner_params, duration_till_now, \
@@ -35,15 +39,13 @@ from pycilt.bayes_search import BayesSearchCV
 from pycilt.mi_estimators.mi_base_class import MIEstimatorBase
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.utils import print_dictionary
-from sklearn.dummy import DummyClassifier
-from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 LOGS_FOLDER = 'logs'
 RESULT_FOLDER = 'results'
 EXPERIMENTS = 'experiments'
 OPTIMIZER_FOLDER = 'optimizers'
+
 
 if __name__ == "__main__":
     start = datetime.now()
@@ -79,6 +81,9 @@ if __name__ == "__main__":
             validation_loss = dbConnector.job_description["validation_loss"]
             hash_value = dbConnector.job_description["hash_value"]
             LEARNING_PROBLEM = learning_problem.lower()
+            if job_id == 1:
+                dbConnector.insert_new_jobs_different_configurations()
+                dbConnector.insert_new_jobs_with_different_fold()
 
             if validation_loss == 'None':
                 validation_loss = None
@@ -174,39 +179,18 @@ if __name__ == "__main__":
             for name, evaluation_metric in lp_metric_dict[learning_problem].items():
                 if name == EMI:
                     metric_loss = estimated_mi
-                    if np.isnan(metric_loss):
-                        results[name] = "\'Infinity\'"
-                    else:
-                        results[name] = f"{np.around(metric_loss, 4)}"
                 else:
-                    predictions = y_pred
-                    if name == AUC_SCORE:
-                        if n_classes > 2:
-                            try:
-                                metric_loss = evaluation_metric(y_true, p_pred, multi_class='ovr')
-                            except Exception as e:
-                                logger.error(f"Exception: {str(e)}")
-                                try:
-                                    logger.error(f"Appliying normalization to avoid exception")
-                                    p_pred = normalize(p_pred, axis=1)
-                                    metric_loss = evaluation_metric(y_true, p_pred, multi_class='ovr')
-                                except Exception as e:
-                                    logger.error(f"After normallization Exception: {str(e)}")
-                                    logger.error(f"Setting Auc to nan")
-                                    metric_loss = np.nan
-                        else:
-                            metric_loss = evaluation_metric(y_true, p_pred)
-                    elif name == F_SCORE:
+                    if name == F_SCORE:
                         if n_classes > 2:
                             metric_loss = evaluation_metric(y_true, y_pred, average='macro')
                         else:
                             metric_loss = evaluation_metric(y_true, y_pred)
                     else:
                         metric_loss = evaluation_metric(y_true, y_pred)
-                    if np.isnan(metric_loss) or np.isinf(metric_loss):
-                        results[name] = "\'Infinity\'"
-                    else:
-                        results[name] = f"{np.around(metric_loss, 4)}"
+                if np.isnan(metric_loss) or np.isinf(metric_loss):
+                    results[name] = "\'Infinity\'"
+                else:
+                    results[name] = f"{np.around(metric_loss, 4)}"
                     # if CONFUSION_MATRIX == name:
                     #    tn, fp, fn, tp = metric_loss.ravel()
                     #   results['TN'] = "{0:.4f}".format(tn)
