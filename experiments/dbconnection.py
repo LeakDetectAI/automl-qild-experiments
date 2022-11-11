@@ -40,6 +40,21 @@ class DBConnector(metaclass=ABCMeta):
             raise ValueError(
                 "File does not exist for the configuration of the database"
             )
+        self.current_hash_values = self.create_current_job_list()
+
+    def create_current_job_list(self):
+        avail_jobs = "{}.avail_jobs".format(self.schema)
+        self.init_connection()
+        select_job = f"SELECT * FROM {avail_jobs} ORDER  BY {avail_jobs}.job_id"
+        self.cursor_db.execute(select_job)
+        jobs_check = self.cursor_db.fetchall()
+        self.close_connection()
+        current_hash_values = []
+        for job_c in jobs_check:
+            job_c = dict(job_c)
+            hash_value = self.get_hash_value_for_job(job_c)
+            current_hash_values.append(hash_value)
+        return current_hash_values
 
     def init_connection(self, cursor_factory=DictCursor):
         self.connection = psycopg2.connect(**self.connect_params)
@@ -476,12 +491,10 @@ class DBConnector(metaclass=ABCMeta):
 
         return new_job_id
 
-    def check_exists(self, job, select_job):
-        self.cursor_db.execute(select_job)
-        jobs_check = self.cursor_db.fetchall()
-        for job_c in jobs_check:
-            job_c = dict(job_c)
-            if self.get_hash_value_for_job(job_c) == self.get_hash_value_for_job(job):
+    def check_exists(self, job):
+        hash_value_new = self.get_hash_value_for_job(job)
+        for hash_value_existing in self.current_hash_values:
+            if hash_value_existing == hash_value_new:
                 return True
         return False
 
@@ -492,7 +505,6 @@ class DBConnector(metaclass=ABCMeta):
 
         self.cursor_db.execute(select_job)
         jobs_all = self.cursor_db.fetchall()
-        self.close_connection()
         for job in jobs_all:
             job = dict(job)
             del job["job_id"]
@@ -516,8 +528,7 @@ class DBConnector(metaclass=ABCMeta):
                         values = "%s"
                     else:
                         values = values + ", %s"
-                self.init_connection()
-                condition = self.check_exists(job, f"SELECT * FROM {avail_jobs} ORDER  BY {avail_jobs}.job_id")
+                condition = self.check_exists(job)
                 if not condition:
                     insert_result = f"INSERT INTO {avail_jobs} ({columns}) VALUES ({values}) RETURNING job_id"
                     self.logger.info("Inserting results: {} {}".format(insert_result, values_str))
@@ -525,13 +536,14 @@ class DBConnector(metaclass=ABCMeta):
                     id_of_new_row = self.cursor_db.fetchone()[0]
                     if self.cursor_db.rowcount == 1:
                         self.logger.info("Results inserted for the job {}".format(id_of_new_row))
-                self.close_connection()
+                    self.connection.commit()
+        self.close_connection()
 
-    def insert_new_jobs_different_configurations(self, dataset="synthetic"):
+    def insert_new_jobs_different_configurations(self, dataset="synthetic", max_job_id=13):
         self.init_connection()
         avail_jobs = "{}.avail_jobs".format(self.schema)
         select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND " \
-                     f"{avail_jobs}.fold_id =0 ORDER  BY {avail_jobs}.job_id"
+                     f"{avail_jobs}.fold_id =0 and {avail_jobs}.job_id<{max_job_id} ORDER  BY {avail_jobs}.job_id"
 
         self.cursor_db.execute(select_job)
         jobs_all = self.cursor_db.fetchall()
@@ -539,7 +551,6 @@ class DBConnector(metaclass=ABCMeta):
         classes = np.arange(2, 11)
         # flip_ys_fine = np.arange(0.0, 1.01, .01)
         flip_ys_broad = np.arange(0.0, 1.01, .05)
-        self.close_connection()
         for job in jobs_all:
             job = dict(job)
             del job["job_id"]
@@ -569,8 +580,7 @@ class DBConnector(metaclass=ABCMeta):
                                 str_values = "%s"
                             else:
                                 str_values = str_values + ", %s"
-                        self.init_connection()
-                        condition = self.check_exists(job, f"SELECT * FROM {avail_jobs} ORDER  BY {avail_jobs}.job_id")
+                        condition = self.check_exists(job)
                         if not condition:
                             insert_result = f"INSERT INTO {avail_jobs} ({columns}) VALUES ({str_values}) RETURNING job_id"
                             self.cursor_db.execute(insert_result, tuple(values_str))
@@ -578,9 +588,10 @@ class DBConnector(metaclass=ABCMeta):
                             self.logger.info("Inserting results: {} {}".format(insert_result, values_str))
                             if self.cursor_db.rowcount == 1:
                                 self.logger.info(f"Results inserted for the job {id_of_new_row}")
+                            self.connection.commit()
                         else:
                             self.logger.info(f"Job already exist")
-                        self.close_connection()
+        self.close_connection()
 
     def get_hash_value_for_job(self, job):
         keys = [
@@ -592,7 +603,7 @@ class DBConnector(metaclass=ABCMeta):
             "hp_ranges",
             "inner_folds",
             "validation_loss",
-            "dataset",
+            "dataset"
         ]
         hash_string = ""
         for k in keys:

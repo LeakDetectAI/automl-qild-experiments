@@ -18,5 +18,9 @@ if __name__ == "__main__":
     for schema in [CLASSIFICATION, MUTUAL_INFORMATION]:
         logger.info(f"Inserting new jobs into {schema}")
         dbConnector = DBConnector(config_file_path=config_file_path, is_gpu=False, schema=schema)
-        dbConnector.insert_new_jobs_different_configurations()
+        if schema == CLASSIFICATION:
+            max_job_id = 13
+        if schema == MUTUAL_INFORMATION:
+            max_job_id = 5
+        dbConnector.insert_new_jobs_different_configurations(max_job_id=max_job_id)
         dbConnector.insert_new_jobs_with_different_fold()

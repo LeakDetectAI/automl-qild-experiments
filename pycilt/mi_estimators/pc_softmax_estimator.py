@@ -67,6 +67,7 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
             if verbose and epoch % 10 == 0:
                 _, predicted = torch.max(preds_, 1)
                 correct += (predicted == tensor_y).sum().item()
+                print(f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {100 * correct / tensor_y.size(0)} %')
                 self.logger.error(f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {100 * correct / tensor_y.size(0)} %')
         return self
 
@@ -78,7 +79,7 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
             a_label = a_label.to(self.device).squeeze()
             test_ = self.class_net(a_data, dataset_prop)
             _, predicted = torch.max(test_, 1)
-        return predicted
+        return predicted.detach().numpy()
 
     """
     def score(self, X, y, sample_weight=None, verbose=0):
@@ -110,7 +111,7 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
         for ite_idx, (a_data, a_label) in enumerate(test_dataloader):
             a_data = a_data.to(self.device)
             test_ = self.class_net(a_data, dataset_prop)
-        return test_
+        return test_.detach().numpy()
 
     def decision_function(self, X, verbose=0):
         y = np.random.choice(self.n_classes, X.shape[0])
@@ -118,7 +119,7 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
         for ite_idx, (a_data, a_label) in enumerate(test_dataloader):
             a_data = a_data.to(self.device)
             test_ = self.class_net(a_data, dataset_prop)
-        return test_
+        return test_.detach().numpy()
 
     def estimate_mi(self, X, y, verbose=0):
         dataset_prop, test_dataset = self.pytorch_tensor_dataset(X, y, batch_size=1)

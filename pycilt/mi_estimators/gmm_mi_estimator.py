@@ -52,7 +52,12 @@ class GMMMIEstimator(MIEstimatorBase):
         if self.best_model_idx is not None:
             self.best_model = copy.deepcopy(self.models[self.best_model_idx])
             idx = np.where(self.best_model.get_info()['delta'].values < 0)
-            self.round = idx[0][0] - 1
+            try:
+                self.logger.info(self.best_model.get_info())
+                self.logger.info(f"Indexses {idx}")
+                self.round = idx[0][0] - 1
+            except IndexError as e:
+                self.round = 0
             X_new = self.best_model.transform(X, rd=self.round)
             self.cls_model = LogisticRegression()
             self.cls_model.fit(X_new, y)
