@@ -68,7 +68,8 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
                 _, predicted = torch.max(preds_, 1)
                 correct += (predicted == tensor_y).sum().item()
                 print(f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {100 * correct / tensor_y.size(0)} %')
-                self.logger.error(f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {100 * correct / tensor_y.size(0)} %')
+                self.logger.error(
+                    f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {100 * correct / tensor_y.size(0)} %')
         return self
 
     def predict(self, X, verbose=0):
