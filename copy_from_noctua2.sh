@@ -1,0 +1,2 @@
+rsync -avz -P --rsh="ssh -o StrictHostKeyChecking=no -l prithag" --exclude=".git" n2login1.ab2021.pc2.uni-paderborn.de:/scratch/hpc-prf-autosca/prithag/information-leakage-techniques/experiments/mutual_information/ ~/git/information-leakage-techniques/experiments/mutual_information/
+rsync -avz -P --rsh="ssh -o StrictHostKeyChecking=no -l prithag" --exclude=".git" n2login1.ab2021.pc2.uni-paderborn.de:/scratch/hpc-prf-autosca/prithag/information-leakage-techniques/experiments/classification/ ~/git/information-leakage-techniques/experiments/classification/

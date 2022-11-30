@@ -167,7 +167,7 @@ class DBConnector(metaclass=ABCMeta):
         self.cursor_db.execute(select_job)
         job_ids = [j for i in self.cursor_db.fetchall() for j in i]
         job_ids.sort()
-        print("jobs available {}".format(job_ids))
+        #print("jobs available {}".format(job_ids))
         while self.job_description is None:
             try:
                 job_id = job_ids[0]
@@ -182,52 +182,34 @@ class DBConnector(metaclass=ABCMeta):
                 self.job_description["hash_value"] = hash_value
 
                 start = datetime.now()
-                update_job = """UPDATE {} set hash_value = %s, job_allocated_time = %s WHERE job_id = %s""".format(
-                    avail_jobs
-                )
+                update_job = f"""UPDATE {avail_jobs} set hash_value = %s, job_allocated_time = %s WHERE job_id = %s"""
                 self.cursor_db.execute(update_job, (hash_value, start, job_id))
-                select_job = """SELECT * FROM {0} WHERE {0}.job_id = {1} AND {0}.interrupted = {2} FOR UPDATE""".format(
-                    running_jobs, job_id, True
-                )
+                select_job = f"""SELECT * FROM {running_jobs} WHERE {running_jobs}.job_id = {job_id} AND {running_jobs}.interrupted = {True} FOR UPDATE"""
                 self.cursor_db.execute(select_job)
                 count_ = len(self.cursor_db.fetchall())
                 if count_ == 0:
-                    insert_job = """INSERT INTO {0} (job_id, cluster_id ,finished, interrupted) 
-                                    VALUES ({1}, {2},FALSE, FALSE)""".format(
-                        running_jobs, job_id, cluster_id
-                    )
+                    insert_job = f"""INSERT INTO {running_jobs} (job_id, cluster_id ,finished, interrupted) 
+                                    VALUES ({job_id}, {cluster_id},FALSE, FALSE)"""
                     self.cursor_db.execute(insert_job)
                     if self.cursor_db.rowcount == 1:
-                        print("The job {} is inserted".format(job_id))
+                        print(f"The job {job_id} is inserted")
                 else:
-                    print(
-                        "Job with job_id {} present in the updating and row locked".format(
-                            job_id
-                        )
-                    )
-                    update_job = """UPDATE {} set cluster_id = %s, interrupted = %s WHERE job_id = %s""".format(
-                        running_jobs
+                    print(f"Job with job_id {job_id} present in the updating and row locked")
+                    update_job = f"""UPDATE {running_jobs} set cluster_id = %s, interrupted = %s WHERE job_id = %s""".format(
+
                     )
                     self.cursor_db.execute(update_job, (cluster_id, "FALSE", job_id))
                     if self.cursor_db.rowcount == 1:
-                        print("The job {} is updated".format(job_id))
+                        print(f"The job {job_id} is updated")
 
                 self.close_connection()
             except psycopg2.IntegrityError as e:
-                print(
-                    "IntegrityError for the job {}, already assigned to another node error {}".format(
-                        job_id, str(e)
-                    )
-                )
+                print(f"IntegrityError for the job {job_id}, already assigned to another node error {str(e)}")
                 self.job_description = None
                 job_ids.remove(job_id)
                 self.connection.rollback()
             except (ValueError, IndexError) as e:
-                print(
-                    "Error as the all jobs are already assigned to another nodes {}".format(
-                        str(e)
-                    )
-                )
+                print(f"Error as the all jobs are already assigned to another nodes {str(e)}")
                 break
 
     def mark_running_job_finished(self, job_id, start, **kwargs):
@@ -256,14 +238,8 @@ class DBConnector(metaclass=ABCMeta):
         self.cursor_db.execute("select to_regclass(%s)", [results_table])
         is_table_exist = bool(self.cursor_db.fetchone()[0])
         if not is_table_exist:
-            self.logger.info(
-                "Table {} does not exist creating with columns {}".format(
-                    results_table, columns
-                )
-            )
-            create_command = "CREATE TABLE {} (job_id INTEGER PRIMARY KEY, cluster_id INTEGER NOT NULL)".format(
-                results_table
-            )
+            self.logger.info(f"Table {results_table} does not exist creating with columns {columns}")
+            create_command = f"CREATE TABLE {results_table} (job_id INTEGER PRIMARY KEY, cluster_id INTEGER NOT NULL)"
             self.cursor_db.execute(create_command)
             for column in results.keys():
                 if column not in ["job_id", "cluster_id"]:
@@ -276,22 +252,14 @@ class DBConnector(metaclass=ABCMeta):
             self.init_connection(cursor_factory=None)
 
         try:
-            insert_result = "INSERT INTO {0} ({1}) VALUES ({2})".format(
-                results_table, columns, values_str
-            )
+            insert_result = f"INSERT INTO {results_table} ({columns}) VALUES ({values_str})"
             self.logger.info("Inserting results: {}".format(insert_result))
             self.cursor_db.execute(insert_result)
             if self.cursor_db.rowcount == 1:
-                self.logger.info(
-                    "Results inserted for the job {}".format(results["job_id"])
-                )
+                self.logger.info(f"Results inserted for the job {results['job_id']}")
         except psycopg2.IntegrityError as e:
             self.logger.info(print_dictionary(results))
-            self.logger.info(
-                "IntegrityError for the job {0}, results already inserted to another node error {1}".format(
-                    results["job_id"], str(e)
-                )
-            )
+            self.logger.info(f"IntegrityError for the job {results['job_id']}, results already inserted to another node error {str(e)}")
             self.connection.rollback()
             update_str = ""
             values_tuples = []
@@ -311,16 +279,14 @@ class DBConnector(metaclass=ABCMeta):
             self.cursor_db.execute(select_job)
             old_results = self.cursor_db.fetchone()
 
-            update_result = "UPDATE {0} set {1} where job_id= %s ".format(
-                results_table, update_str
-            )
+            update_result = "UPDATE {0} set {1} where job_id= %s ".format(results_table, update_str)
             self.logger.info(update_result)
             values_tuples.append(results["job_id"])
-            self.logger.info("values {}".format(tuple(values_tuples)))
+            self.logger.info(f"Values {tuple(values_tuples)}")
             self.cursor_db.execute(update_result, tuple(values_tuples))
             if self.cursor_db.rowcount == 1:
-                self.logger.info("The job {} is updated".format(results["job_id"]))
-            self.logger.info("Old results {}, New Results {}".format(old_results, results))
+                self.logger.info(f"The job {results['job_id']} is updated")
+            self.logger.info(f"Old results {old_results}, New Results {results}")
         self.close_connection()
 
     def append_error_string_in_running_job(self, job_id, error_message, **kwargs):

@@ -4,21 +4,21 @@
 #SBATCH -n 1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
-#SBATCH -A hpc-prf-obal
+#SBATCH -A hpc-prf-autosca
 #SBATCH -t 10:00:00
 #SBATCH -p normal
-#SBATCH -o /scratch/hpc-prf-obal/prithag/clusterout/%x-%j
-#SBATCH -e /scratch/hpc-prf-obal/prithag/clusterout/%x-%j
+#SBATCH -o /scratch/hpc-prf-autosca/prithag/clusterout/%x-%j
+#SBATCH -e /scratch/hpc-prf-autosca/prithag/clusterout/%x-%j
 
-cd $PFS_FOLDER/information-leakage-techniques/
+cd $PFS_FOLDERA/information-leakage-techniques/
 module reset
 module load system singularity
-export IMG_FILE=$PFS_FOLDER/information-leakage-techniques/singularity/pycilt.sif
-export SCRIPT_FILE=$PFS_FOLDER/information-leakage-techniques/insert_jobs.py
+export IMG_FILE=$PFS_FOLDERA/information-leakage-techniques/singularity/pycilt.sif
+export SCRIPT_FILE=$PFS_FOLDERA/information-leakage-techniques/insert_jobs.py
 
 
 module list
-singularity exec -B $PFS_FOLDER/information-leakage-techniques/ --nv $IMG_FILE pipenv run python $SCRIPT_FILE
+singularity exec -B $PFS_FOLDERA/information-leakage-techniques/ --nv $IMG_FILE pipenv run python $SCRIPT_FILE
 
 exit 0
 ~

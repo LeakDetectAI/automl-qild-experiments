@@ -46,7 +46,7 @@ From: nvidia/cuda:11.2.0-cudnn8-devel-ubuntu18.04
 
 %environment
     export KERAS_BACKEND=tensorflow
-    export PFS_FOLDER=/scratch/hpc-prf-obal/prithag/
+    export PFS_FOLDERA=/scratch/hpc-prf-autosca/prithag/
     export MKL_THREADING_LAYER=GNU
     export PIPENV_VENV_IN_PROJECT=1
     export LANG=C.UTF-8

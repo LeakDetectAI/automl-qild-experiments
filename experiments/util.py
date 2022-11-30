@@ -62,9 +62,9 @@ learners = {**classifiers, **mi_estimators}
 classification_metrics = {
     ACCURACY: accuracy_score,
     F_SCORE: f1_score,
-    AUC_SCORE: auc_score,
+    #AUC_SCORE: auc_score,
     MCC: matthews_corrcoef,
-    INFORMEDNESS: instance_informedness,
+    #INFORMEDNESS: instance_informedness,
     MISCORE: mutual_info_score,
     SANTHIUB: santhi_vardi_upper_bound,
     HELLMANUB: helmann_raviv_upper_bound,
@@ -151,11 +151,21 @@ def setup_logging(log_path=None, level=logging.INFO):
         dirname = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
         dirname = os.path.dirname(dirname)
         log_path = os.path.join(dirname, "logs", "logs.log")
-    create_directory_safely(log_path, True)
+
+    # log = logging.getLogger()  # root logger
+    # for hdlr in log.handlers[:]:  # remove all old handlers
+    #    log.removeHandler(hdlr)
+    #
+    # fileh = logging.FileHandler(log_path, 'a')
+    # formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)-8s %(message)s')
+    # fileh.setFormatter(formatter)
+    # fileh.setLevel(level)
+    # log.addHandler(fileh)
+    # log.setLevel(level)
     logging.basicConfig(filename=log_path, level=level,
                         format='%(asctime)s %(name)s %(levelname)-8s %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
-    logger = logging.getLogger("SetupLogger")
+                        datefmt='%Y-%m-%d %H:%M:%S', force=True)
+    logger = logging.getLogger("SetupLogging")  # root logger
     logger.info("log file path: {}".format(log_path))
     logging.getLogger("matplotlib").setLevel(logging.ERROR)
     logging.getLogger("tensorflow").setLevel(logging.ERROR)

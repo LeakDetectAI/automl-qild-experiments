@@ -9,10 +9,12 @@ from .mi_base_class import MIEstimatorBase
 
 
 class GMMMIEstimator(MIEstimatorBase):
-    def __init__(self, n_classes, input_dim, y_cat=False, max_num_components=0, reg_covar=1e-06, random_state=42):
+    def __init__(self, n_classes, input_dim, n_models=20, y_cat=False, max_num_components=0, reg_covar=1e-06,
+                 random_state=42):
         super().__init__(n_classes=n_classes, input_dim=input_dim, random_state=random_state)
         self.y_cat = y_cat
         self.max_num_components = max_num_components
+        self.n_models = n_models
         if max_num_components == 0:
             self.num_comps = [2, 5, 10, 15, 20]
         else:
@@ -28,7 +30,7 @@ class GMMMIEstimator(MIEstimatorBase):
 
     def fit(self, X, y, verbose=0, **kwd):
         self.models = []
-        for i, val_size in enumerate(np.linspace(0.20, 0.80, num=30)):
+        for i, val_size in enumerate(np.linspace(0.20, 0.80, num=self.n_models)):
             try:
                 gmm = get_gmm(X, y, y_cat=self.y_cat, num_comps=self.num_comps, val_size=val_size,
                               reg_covar=self.reg_covar, random_state=self.random_state)
@@ -100,7 +102,7 @@ class GMMMIEstimator(MIEstimatorBase):
             mi_hats.append(mi_mean)
 
         mi_hats = np.array(mi_hats)
-        if len(mi_hats) > 0:
+        if len(mi_hats) > 3:
             n = int(len(self.models) / 3)
             mi_hats = mi_hats[np.argpartition(mi_hats, -n)[-n:]]
 

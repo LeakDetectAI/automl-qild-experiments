@@ -96,5 +96,12 @@ create table results.mutual_information
 
 alter table mutual_information.avail_jobs add column evaluation_time double precision;
 alter table classification.avail_jobs add column evaluation_time double precision;
-
+ALTER SEQUENCE mutual_information.running_jobs_running_id_seq RESTART WITH 1;
+ALTER SEQUENCE classification.running_jobs_running_id_seq RESTART WITH 1;
+UPDATE classification.avail_jobs set evaluation_time=0, job_allocated_time=NULL, job_end_time=NULL where true;
+UPDATE mutual_information.avail_jobs set evaluation_time=0, job_allocated_time=NULL, job_end_time=NULL where true;
+DELETE from mutual_information.running_jobs where true;
+DELETE from classification.running_jobs where true;
+DELETE from results.classification where true;
+DELETE from results.mutual_information where true;
 rm logs/* optimizers/* results/*
