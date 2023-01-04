@@ -8,7 +8,7 @@ MAINTAINER = 'Pritha Gupta and Jan Drees'
 MAINTAINER_EMAIL = 'prithag@mail.uni-paderborn.de'
 VERSION = "1.0"
 LICENSE = "Apache"
-DOWNLOAD_URL = "https://git.cs.uni-paderborn.de/autosca/py-sca.git"
+DOWNLOAD_URL = "https://github.com/prithagupta/information-leakage-techniques/"
 PROJECT_ROOT = dirname(realpath(__file__))
 REQUIREMENTS_FILE = join(PROJECT_ROOT, 'requirements.txt')
 
