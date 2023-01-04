@@ -19,7 +19,9 @@ export SCRIPT_FILE=$PFS_FOLDERA/information-leakage-techniques/cluster_script.py
 
 
 module list
-singularity exec -B $PFS_FOLDERA/information-leakage-techniques/ --nv $IMG_FILE pipenv run python $SCRIPT_FILE --cindex=$SLURM_JOB_ID --isgpu=0 --schema="classification"
+#echo "singularity exec -B $PFS_FOLDERA/information-leakage-techniques/ --nv $IMG_FILE pipenv run python $SCRIPT_FILE --cindex=$SLURM_JOB_ID --isgpu=0"
+#singularity exec -B $PFS_FOLDERA/information-leakage-techniques/ --nv $IMG_FILE pipenv run python $SCRIPT_FILE --cindex=$SLURM_JOB_ID --isgpu=0 --schema="mutual_information"
+singularity exec -B $PFS_FOLDERA/information-leakage-techniques/ --nv $IMG_FILE poetry run python $SCRIPT_FILE --cindex=$SLURM_JOB_ID --isgpu=0 --schema="mutual_information"
 
 exit 0
 ~

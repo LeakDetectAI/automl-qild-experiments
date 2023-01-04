@@ -75,7 +75,6 @@ def fanos_lower_bound(y_true, y_pred):
     acc = accuracy_score(y_true, y_pred)
     pe = 1 - acc
     T = np.log(n_classes - 1) / np.log(n_classes)
-
     l = np.log2(n_classes) * (1 - pe * T) - bin_ce(pe)
     return l
 

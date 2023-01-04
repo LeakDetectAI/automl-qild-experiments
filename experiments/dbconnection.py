@@ -23,13 +23,14 @@ class NpEncoder(json.JSONEncoder):
             return obj.tolist()
         return super(NpEncoder, self).default(obj)
 class DBConnector(metaclass=ABCMeta):
-    def __init__(self, config_file_path, is_gpu=False, schema="master", **kwargs):
+    def __init__(self, config_file_path, is_gpu=False, schema="master", create_hash_list=False, **kwargs):
         self.logger = logging.getLogger("DBConnector")
         self.is_gpu = is_gpu
         self.schema = schema
         self.job_description = None
         self.connection = None
         self.cursor_db = None
+        self.create_hash_list = create_hash_list
         if os.path.isfile(config_file_path):
             config_file = open(config_file_path, "r")
             config = config_file.read().replace("\n", "")
@@ -40,7 +41,10 @@ class DBConnector(metaclass=ABCMeta):
             raise ValueError(
                 "File does not exist for the configuration of the database"
             )
-        self.current_hash_values = self.create_current_job_list()
+        if create_hash_list:
+            self.current_hash_values = self.create_current_job_list()
+        else:
+            self.current_hash_values = []
 
     def create_current_job_list(self):
         avail_jobs = "{}.avail_jobs".format(self.schema)
@@ -156,14 +160,12 @@ class DBConnector(metaclass=ABCMeta):
     def fetch_job_arguments(self, cluster_id):
         self.add_jobs_in_avail_which_failed()
         self.init_connection()
-        avail_jobs = "{}.avail_jobs".format(self.schema)
-        running_jobs = "{}.running_jobs".format(self.schema)
-        select_job = """SELECT job_id FROM {0} row WHERE (is_gpu = {2})AND 
-                        NOT EXISTS(SELECT job_id FROM {1} r WHERE r.interrupted = FALSE 
-                        AND r.job_id = row.job_id)""".format(
-            avail_jobs, running_jobs, self.is_gpu
-        )
-
+        avail_jobs = f"{self.schema}.avail_jobs"
+        running_jobs = f"{self.schema}.running_jobs"
+        select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu})AND 
+                        NOT EXISTS(SELECT job_id FROM {running_jobs} r WHERE r.interrupted = FALSE 
+                        AND r.job_id = row.job_id)"""
+        print(select_job)
         self.cursor_db.execute(select_job)
         job_ids = [j for i in self.cursor_db.fetchall() for j in i]
         job_ids.sort()

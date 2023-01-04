@@ -130,7 +130,7 @@ if __name__ == "__main__":
                         n_jobs = 10
                 else:
                     n_jobs = 10
-                if learner == BayesPredictor or issubclass(learner, DummyClassifier):
+                if learner == BayesPredictor or issubclass(learner, DummyClassifier) or learner == AutoSklearn2Classifier:
                     if learner == BayesPredictor:
                         learner_params = {'dataset_obj': dataset_reader}
                         estimator = learner(**learner_params)
@@ -182,7 +182,7 @@ if __name__ == "__main__":
                 f.create_dataset('scores', data=p_pred)
                 f.create_dataset('predictions', data=y_pred)
                 f.create_dataset('ground_truth', data=y_true)
-                f.create_dataset('confusion_matrix', data=confusion_matrix(y_true, y_true))
+                f.create_dataset('confusion_matrix', data=confusion_matrix(y_true, y_pred))
                 f.close()
 
                 results = {'job_id': str(job_id), 'cluster_id': str(cluster_id)}

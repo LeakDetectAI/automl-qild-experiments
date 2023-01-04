@@ -8,7 +8,7 @@ From: nvidia/cuda:11.2.0-cudnn8-devel-ubuntu18.04
 
     apt-get install -y ssh-client make build-essential wget bzip2 ca-certificates curl git ffmpeg openssl \
     libssl-dev libreadline6-dev libbz2-dev libsqlite3-dev libncurses5-dev libncursesw5-dev llvm \
-    tk-dev libffi-dev libdb-dev libexpat1-dev libpq-dev libedit-dev zlib1g-dev liblzma-dev libgdbm-dev libmpdec-dev \
+    tk-dev libffi-dev libdb-dev libexpat1-dev libpq libpq-dev libedit-dev zlib1g-dev liblzma-dev libgdbm-dev libmpdec-dev \
     vim-tiny inkscape jed libsm6 libxext-dev libxrender1 lmodern netcat tzdata xz-utils unzip gcc
 
     # python3.9.2 from source
