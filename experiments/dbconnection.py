@@ -463,6 +463,7 @@ class DBConnector(metaclass=ABCMeta):
         hash_value_new = self.get_hash_value_for_job(job)
         for hash_value_existing in self.current_hash_values:
             if hash_value_existing == hash_value_new:
+                print(hash_value_existing, hash_value_new)
                 return True
         return False
 
@@ -512,7 +513,7 @@ class DBConnector(metaclass=ABCMeta):
         self.init_connection()
         avail_jobs = "{}.avail_jobs".format(self.schema)
         select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND " \
-                     f"{avail_jobs}.fold_id =0 and {avail_jobs}.job_id<{max_job_id} ORDER  BY {avail_jobs}.job_id"
+                     f"{avail_jobs}.fold_id =0 and {avail_jobs}.job_id<={max_job_id} ORDER  BY {avail_jobs}.job_id"
 
         self.cursor_db.execute(select_job)
         jobs_all = self.cursor_db.fetchall()

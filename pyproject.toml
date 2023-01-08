@@ -7,7 +7,7 @@ authors = ["Pritha Gupta <prithag@mail.uni-paderborn.de>"]
 [tool.poetry.dependencies]
 python =  ">=3.9.2,<3.11"
 numpy = "==1.22.4"
-scikit-learn = "==1.1.1"
+scikit-learn = ">=0.24.0,<0.25.0"
 scikit-optimize = ">=0.9.0"
 h5py = ">=3.1.0"
 pandas = ">=1.1.5"
@@ -25,6 +25,7 @@ docopt = "==0.6.2"
 dill = ">=0.3.6"
 infoselect = "==1.0.2"
 tqdm = "==4.64.1"
+auto-sklearn = ">=0.15.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

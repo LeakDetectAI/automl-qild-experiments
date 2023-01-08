@@ -34,6 +34,7 @@ from experiments.dbconnection import DBConnector
 from experiments.util import get_duration_seconds, get_dataset_reader, create_search_space, setup_logging, \
     setup_random_seed, create_directory_safely, learners, lp_metric_dict, convert_learner_params, duration_till_now, \
     seconds_to_time
+from autosklearn.experimental.askl2 import AutoSklearn2Classifier
 from pycilt.bayes_predictor import BayesPredictor
 from pycilt.bayes_search import BayesSearchCV
 from pycilt.mi_estimators import GMMMIEstimator
@@ -130,17 +131,27 @@ if __name__ == "__main__":
                         n_jobs = 10
                 else:
                     n_jobs = 10
+                learner_params['time_left_for_this_task'] = 18000
                 if learner == BayesPredictor or issubclass(learner, DummyClassifier) or learner == AutoSklearn2Classifier:
                     if learner == BayesPredictor:
                         learner_params = {'dataset_obj': dataset_reader}
                         estimator = learner(**learner_params)
                         estimator.fit(X_train, y_train)
                         y_true, y_pred, p_pred = estimator.get_bayes_predictor_scores()
-                    else:
+                    elif issubclass(learner, DummyClassifier):
                         estimator = learner(**learner_params)
                         estimator.fit(X_train, y_train)
                         p_pred, y_pred = get_scores(X, estimator)
                         y_true = np.copy(y)
+                    else:
+                        del learner_params['random_state']
+                        estimator = learner(**learner_params)
+                        estimator.fit(X_train, y_train)
+                        config = estimator.get_configuration_space(X_train, y_train)
+                        estimator.fit_pipeline(X_train, y_train, config=config, X_test=X_test, y_test=y_test)
+                        p_pred, y_pred = get_scores(X_test, estimator)
+                        y_true = np.copy(y_test)
+
                 else:
                     inner_cv_iterator = StratifiedKFold(n_splits=n_inner_folds, shuffle=True, random_state=random_state)
                     search_space = create_search_space(hp_ranges)

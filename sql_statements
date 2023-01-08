@@ -104,4 +104,7 @@ DELETE from mutual_information.running_jobs where true;
 DELETE from classification.running_jobs where true;
 DELETE from results.classification where true;
 DELETE from results.mutual_information where true;
+SELECT COUNT(*) from mutual_information.running_jobs group by finished;
+SELECT COUNT(*) FROM mutual_information.avail_jobs row WHERE (is_gpu = False) AND NOT EXISTS(SELECT job_id FROM mutual_information.running_jobs r WHERE r.interrupted = FALSE AND r.job_id = row.job_id);
+SELECT COUNT(*) FROM mutual_information.avail_jobs
 rm logs/* optimizers/* results/*

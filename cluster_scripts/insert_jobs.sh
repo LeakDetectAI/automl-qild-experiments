@@ -18,7 +18,8 @@ export SCRIPT_FILE=$PFS_FOLDERA/information-leakage-techniques/insert_jobs.py
 
 
 module list
-singularity exec -B $PFS_FOLDERA/information-leakage-techniques/ --nv $IMG_FILE pipenv run python $SCRIPT_FILE
+#singularity exec -B $PFS_FOLDERA/information-leakage-techniques/ --nv $IMG_FILE pipenv run python $SCRIPT_FILE
+singularity exec -B $PFS_FOLDERA/information-leakage-techniques/ --nv $IMG_FILE poetry run python $SCRIPT_FILE
 
 exit 0
 ~

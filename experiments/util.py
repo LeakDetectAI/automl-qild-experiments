@@ -30,6 +30,7 @@ from pycilt.metrics import *
 from pycilt.mi_estimators import MineMIEstimator, GMMMIEstimator, PCSoftmaxMIEstimator
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.synthetic_data_generator import SyntheticDatasetGenerator
+from autosklearn.experimental.askl2 import AutoSklearn2Classifier
 
 __all__ = ["get_dataset_reader", "duration_till_now", "time_from_now", "get_dataset_reader", "create_search_space",
            "create_directory_safely", "setup_logging", "setup_random_seed", "check_file_exists"]
@@ -48,7 +49,8 @@ classifiers = {MULTI_LAYER_PERCEPTRON: MultiLayerPerceptron,
                ADA_BOOST_CLASSIFIER: AdaBoostClassifier,
                GRADIENT_BOOSTING_CLASSIFICATION: GradientBoostingClassifier,
                BAYES_PREDICTOR: BayesPredictor,
-               MAJORITY_VOTING: MajorityVoting
+               MAJORITY_VOTING: MajorityVoting,
+               AUTO_SKLEARN: AutoSklearn2Classifier
                }
 
 mi_estimators = {'gmm_mi_estimator': GMMMIEstimator,
