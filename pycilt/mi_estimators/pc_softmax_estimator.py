@@ -66,7 +66,7 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
                 self.optimizer.step()
                 sum_loss += loss
                 running_loss += loss.item()
-            self.final_loss += sum_loss
+            self.final_loss += float(sum_loss.detach().numpy())
             if verbose and epoch % 10 == 0:
                 _, predicted = torch.max(preds_, 1)
                 correct += (predicted == tensor_y).sum().item()
@@ -89,9 +89,11 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
     def score(self, X, y, sample_weight=None, verbose=0):
         y_pred = self.predict(X, verbose=0)
         acc = np.mean(y == y_pred)
+        self.logger.info(f"Accuracy {acc}")
         self.logger.info(f"Loss {self.final_loss}")
         if np.isnan(self.final_loss) or np.isinf(self.final_loss):
             acc = 0.0
+        self.logger.info(f"Accuracy {acc}")
         return acc
 
     # def score(self, X, y, sample_weight=None, verbose=0):

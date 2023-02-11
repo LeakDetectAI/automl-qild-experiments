@@ -51,7 +51,7 @@ class MineMIEstimator(MIEstimatorBase):
         tensor_xy_tilde = torch.tensor(xy_tilde, dtype=torch.float32)
         return tensor_xy, tensor_xy_tilde
 
-    def fit(self, X, y, epochs=50000, verbose=0, **kwd):
+    def fit(self, X, y, epochs=10000, verbose=0, **kwd):
         MON_FREQ = epochs // 10
         # Monitoring
         MON_ITER = epochs // 50
@@ -103,7 +103,7 @@ class MineMIEstimator(MIEstimatorBase):
         return y_pred
 
     def score(self, X, y, sample_weight=None, verbose=0):
-        mi = self.estimate_mi(X=X, y=y, verbose=verbose)
+        mi = self.estimate_mi(X=X, y=y, verbose=verbose, MON_ITER=10)
         self.logger.info(f"Loss {self.final_loss}")
         if np.isnan(self.final_loss) or np.isinf(self.final_loss):
             mi = 0.0
@@ -127,8 +127,7 @@ class MineMIEstimator(MIEstimatorBase):
                 scores = np.hstack((scores, score))
         return scores
 
-    def estimate_mi(self, X, y, verbose=0):
-        MON_ITER = 1000
+    def estimate_mi(self, X, y, verbose=0, MON_ITER=1000):
         mi_hats = []
         for iter_ in range(MON_ITER):
             xy, xy_tilde = self.pytorch_tensor_dataset(X, y, i=iter_)

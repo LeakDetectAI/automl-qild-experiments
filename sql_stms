@@ -51,3 +51,4 @@ FROM results.automl results
 
 alter table results.automl_agg
     owner to autoscaadmin;
+UPDATE mutual_information_new.avail_jobs SET fit_params = fit_params::jsonb || '{"epochs":1000}' WHERE learner = 'mine_mi_estimator';

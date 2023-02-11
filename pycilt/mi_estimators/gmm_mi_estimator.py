@@ -80,8 +80,10 @@ class GMMMIEstimator(MIEstimatorBase):
         if self.best_model is not None:
             X = self.best_model.transform(X, rd=self.round)
             score = self.cls_model.score(X=X, y=y)
+            self.logger.info(f"self.best_model is not None total {len(self.models)}")
         else:
             score = 0.0
+            self.logger.info("self.best_model is None")
         return score
 
     def predict_proba(self, X, verbose=0):
