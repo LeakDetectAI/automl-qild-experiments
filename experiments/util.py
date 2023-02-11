@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import tensorflow as tf
 import torch
+from autosklearn.estimators import AutoSklearnClassifier
 from keras import backend as K
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, \
     ExtraTreesClassifier
@@ -30,7 +31,6 @@ from pycilt.metrics import *
 from pycilt.mi_estimators import MineMIEstimator, GMMMIEstimator, PCSoftmaxMIEstimator
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.synthetic_data_generator import SyntheticDatasetGenerator
-from autosklearn.experimental.askl2 import AutoSklearn2Classifier
 
 __all__ = ["get_dataset_reader", "duration_till_now", "time_from_now", "get_dataset_reader", "create_search_space",
            "create_directory_safely", "setup_logging", "setup_random_seed", "check_file_exists"]
@@ -50,7 +50,7 @@ classifiers = {MULTI_LAYER_PERCEPTRON: MultiLayerPerceptron,
                GRADIENT_BOOSTING_CLASSIFICATION: GradientBoostingClassifier,
                BAYES_PREDICTOR: BayesPredictor,
                MAJORITY_VOTING: MajorityVoting,
-               AUTO_SKLEARN: AutoSklearn2Classifier
+               AUTO_SKLEARN: AutoSklearnClassifier
                }
 
 mi_estimators = {'gmm_mi_estimator': GMMMIEstimator,
@@ -71,12 +71,14 @@ classification_metrics = {
     SANTHIUB: santhi_vardi_upper_bound,
     HELLMANUB: helmann_raviv_upper_bound,
     FANOSLB: fanos_lower_bound,
-    FANOS_ADJUSTEDLB: fanos_adjusted_lower_bound
+    FANOS_ADJUSTEDLB: fanos_adjusted_lower_bound,
 }
 mi_metrics = {
     EMI: None,
 }
-lp_metric_dict = {CLASSIFICATION: classification_metrics, MUTUAL_INFORMATION: {**mi_metrics, **classification_metrics}}
+lp_metric_dict = {AUTO_ML: classification_metrics, CLASSIFICATION: classification_metrics,
+                  MUTUAL_INFORMATION: {**mi_metrics, **classification_metrics},
+                  MUTUAL_INFORMATION_NEW: {**mi_metrics, **classification_metrics}}
 
 
 def get_duration_seconds(duration):

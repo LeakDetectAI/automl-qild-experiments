@@ -463,7 +463,6 @@ class DBConnector(metaclass=ABCMeta):
         hash_value_new = self.get_hash_value_for_job(job)
         for hash_value_existing in self.current_hash_values:
             if hash_value_existing == hash_value_new:
-                print(hash_value_existing, hash_value_new)
                 return True
         return False
 
@@ -553,6 +552,7 @@ class DBConnector(metaclass=ABCMeta):
                         condition = self.check_exists(job)
                         if not condition:
                             insert_result = f"INSERT INTO {avail_jobs} ({columns}) VALUES ({str_values}) RETURNING job_id"
+                            print(insert_result)
                             self.cursor_db.execute(insert_result, tuple(values_str))
                             id_of_new_row = self.cursor_db.fetchone()[0]
                             self.logger.info("Inserting results: {} {}".format(insert_result, values_str))

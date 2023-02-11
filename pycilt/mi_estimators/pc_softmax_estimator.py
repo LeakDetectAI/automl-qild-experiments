@@ -30,6 +30,7 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
         self.optimizer = None
         self.class_net = None
         self.dataset_properties = None
+        self.final_loss = 0
 
     def pytorch_tensor_dataset(self, X, y, batch_size=32):
         y_l, counts = np.unique(y, return_counts=True)
@@ -44,13 +45,14 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
 
     def fit(self, X, y, epochs=50, verbose=0, **kwd):
         self.class_net = ClassNet(in_dim=self.input_dim, out_dim=self.n_classes, n_hidden=self.n_hidden,
-                                  n_units=self.n_units, is_pc_softmax=self.is_pc_softmax)
+                                  n_units=self.n_units, device=self.device, is_pc_softmax=self.is_pc_softmax)
         self.class_net.apply(init)
         self.class_net.to(self.device)
         self.optimizer = self.optimizer_cls(self.class_net.parameters(), **self._optimizer_config)
 
         dataset_prop, tra_dataloader = self.pytorch_tensor_dataset(X, y)
         self.dataset_properties = dataset_prop
+        self.final_loss = 0
         for epoch in range(1, epochs + 1):
             correct = 0
             running_loss = 0.0
@@ -64,12 +66,14 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
                 self.optimizer.step()
                 sum_loss += loss
                 running_loss += loss.item()
+            self.final_loss += sum_loss
             if verbose and epoch % 10 == 0:
                 _, predicted = torch.max(preds_, 1)
                 correct += (predicted == tensor_y).sum().item()
                 print(f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {100 * correct / tensor_y.size(0)} %')
                 self.logger.error(
                     f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {100 * correct / tensor_y.size(0)} %')
+        self.logger.info(f"Loss {self.final_loss}")
         return self
 
     def predict(self, X, verbose=0):
@@ -82,29 +86,16 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
             _, predicted = torch.max(test_, 1)
         return predicted.detach().numpy()
 
-    """
     def score(self, X, y, sample_weight=None, verbose=0):
-        dataset_prop, test_dataloader = self.pytorch_tensor_dataset(X, y)
-        correct = 0
-        total = 0
-        total_loss = 0
-        for ite_idx, (a_data, a_label) in enumerate(test_dataloader):
-            a_data = a_data.to(self.device)
-            a_label = a_label.to(self.device).squeeze()
-            test_ = self.class_net(a_data, dataset_prop)
-            loss = self.loss_function(test_, a_label)
-            _, predicted = torch.max(test_, 1)
-            total += a_label.size(0)
-            correct += (predicted == a_label).sum().item()
-            total_loss += loss
+        y_pred = self.predict(X, verbose=0)
+        acc = np.mean(y == y_pred)
+        self.logger.info(f"Loss {self.final_loss}")
+        if np.isnan(self.final_loss) or np.isinf(self.final_loss):
+            acc = 0.0
+        return acc
 
-        self.logger.info(f'Accuracy on test: {100 * correct / len(y)} %')
-        self.logger.info(f'Total loss on test: {total_loss / len(y)} %')
-        return correct / len(y)
-    """
-
-    def score(self, X, y, sample_weight=None, verbose=0):
-        return self.estimate_mi(X=X, y=y, verbose=verbose)
+    # def score(self, X, y, sample_weight=None, verbose=0):
+    #     return self.estimate_mi(X=X, y=y, verbose=verbose)
 
     def predict_proba(self, X, verbose=0):
         y = np.random.choice(self.n_classes, X.shape[0])
@@ -132,7 +123,7 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
             test_ = self.class_net(a_data, dataset_prop)
 
             if self.is_pc_softmax:
-                a_softmax = torch.flatten(own_softmax(test_, dataset_prop))[int_label]
+                a_softmax = torch.flatten(own_softmax(test_, dataset_prop, self.device))[int_label]
             else:
                 a_softmax = torch.flatten(torch.softmax(test_, dim=-1))[int_label]
             if self.is_pc_softmax:

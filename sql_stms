@@ -1,0 +1,53 @@
+SELECT COUNT(*) from automl.running_jobs group by finished;
+DELETE from automl.running_jobs where finished=False;
+SELECT COUNT(*) FROM automl.avail_jobs row WHERE (is_gpu = False) AND NOT EXISTS(SELECT job_id FROM automl.running_jobs r WHERE r.interrupted = FALSE AND r.job_id = row.job_id);
+SELECT COUNT(*) FROM results.automl;
+SELECT * from automl.avail_jobs;
+
+ALTER SEQUENCE automl.running_jobs_running_id_seq RESTART WITH 1;
+
+create view results.automl_agg
+            (job_id, cluster_id, f1score, accuracy, mathewscorrelationcoefficient, santhivardyupperbound,
+             hellmanravivupperbound, fanoslowerbound, fanosadjustedlowerbound, estimatedmutualinformationscore, fold_id,
+             dataset, learner, experiment_schema, experiment_table, dataset_params, fit_params, learner_params,
+             hp_ranges, hp_iters, is_gpu, seed, inner_folds, duration, learning_problem, validation_loss, hash_value,
+             job_allocated_time, job_end_time, evaluation_time, n_classes, n_features, flip_y)
+as
+SELECT results.job_id,
+       results.cluster_id,
+       results.f1score,
+       results.accuracy,
+       results.mathewscorrelationcoefficient,
+       results.santhivardyupperbound,
+       results.hellmanravivupperbound,
+       results.fanoslowerbound,
+       results.fanosadjustedlowerbound,
+       results.estimatedmutualinformationscore,
+       jobs.fold_id,
+       jobs.dataset,
+       jobs.learner,
+       jobs.experiment_schema,
+       jobs.experiment_table,
+       jobs.dataset_params,
+       jobs.fit_params,
+       jobs.learner_params,
+       jobs.hp_ranges,
+       jobs.hp_iters,
+       jobs.is_gpu,
+       jobs.seed,
+       jobs.inner_folds,
+       jobs.duration,
+       jobs.learning_problem,
+       jobs.validation_loss,
+       jobs.hash_value,
+       jobs.job_allocated_time,
+       jobs.job_end_time,
+       jobs.evaluation_time,
+       (jobs.dataset_params ->> 'n_classes'::text)::integer       AS n_classes,
+       (jobs.dataset_params ->> 'n_features'::text)::integer      AS n_features,
+       (jobs.dataset_params ->> 'flip_y'::text)::double precision AS flip_y
+FROM results.automl results
+         JOIN automl.avail_jobs jobs USING (job_id);
+
+alter table results.automl_agg
+    owner to autoscaadmin;

@@ -23,6 +23,7 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
         self.logger = logging.getLogger(name=MultiLayerPerceptron.__name__)
         self.input_dim = input_dim
         self.n_classes = n_classes
+        self.classes_ = np.arange(0, self.n_classes)
         self.n_units = n_units
         self.n_hidden = n_hidden
         self.batch_normalization = batch_normalization

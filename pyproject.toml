@@ -5,7 +5,7 @@ description = ""
 authors = ["Pritha Gupta <prithag@mail.uni-paderborn.de>"]
 
 [tool.poetry.dependencies]
-python =  ">=3.9.2,<3.11"
+python =  ">=3.8,<3.11"
 numpy = "==1.22.4"
 scikit-learn = ">=0.24.0,<0.25.0"
 scikit-optimize = ">=0.9.0"

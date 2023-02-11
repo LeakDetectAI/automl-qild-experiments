@@ -9,7 +9,7 @@ from .mi_base_class import MIEstimatorBase
 
 
 class GMMMIEstimator(MIEstimatorBase):
-    def __init__(self, n_classes, input_dim, n_models=20, y_cat=False, max_num_components=0, reg_covar=1e-06,
+    def __init__(self, n_classes, input_dim, max_num_components=0, n_models=10, y_cat=False, reg_covar=1e-06,
                  random_state=42):
         super().__init__(n_classes=n_classes, input_dim=input_dim, random_state=random_state)
         self.y_cat = y_cat
@@ -41,11 +41,15 @@ class GMMMIEstimator(MIEstimatorBase):
             except Exception as e:
                 self.logger.info(f"Model {i} was not valid {val_size.round(2)}")
 
-        gmm = get_gmm(X, y, random_state=self.random_state)
-        select = SelectVars(gmm, selection_mode='backward')
-        select.fit(X, y, verbose=verbose, eps=np.finfo(np.float32).eps)
-        self.models.append(select)
-        self.logger.info(f"Default Model trained with validation data {0.33}")
+        try:
+            gmm = get_gmm(X, y, y_cat=self.y_cat, num_comps=self.num_comps, val_size=val_size,
+                          reg_covar=self.reg_covar, random_state=self.random_state)
+            select = SelectVars(gmm, selection_mode='backward')
+            select.fit(X, y, verbose=verbose, eps=np.finfo(np.float32).eps)
+            self.models.append(select)
+            self.logger.info(f"Default Model trained with validation data {0.33}")
+        except Exception as e:
+            self.logger.info(f"Default Model was not valid with validation data {0.33}")
         self.create_best_model(X, y, verbose=verbose, **kwd)
         return self
 
@@ -73,7 +77,12 @@ class GMMMIEstimator(MIEstimatorBase):
         return self.cls_model.predict(X=X)
 
     def score(self, X, y, sample_weight=None, verbose=0):
-        return self.estimate_mi(X, y, verbose=verbose)
+        if self.best_model is not None:
+            X = self.best_model.transform(X, rd=self.round)
+            score = self.cls_model.score(X=X, y=y)
+        else:
+            score = 0.0
+        return score
 
     def predict_proba(self, X, verbose=0):
         if self.best_model is not None:
@@ -102,10 +111,6 @@ class GMMMIEstimator(MIEstimatorBase):
             mi_hats.append(mi_mean)
 
         mi_hats = np.array(mi_hats)
-        if len(mi_hats) > 3:
-            n = int(len(self.models) / 3)
-            mi_hats = mi_hats[np.argpartition(mi_hats, -n)[-n:]]
-
         mi_estimated = np.nanmean(mi_hats)
         if np.isnan(mi_estimated) or np.isinf(mi_estimated):
             self.logger.error(f'Setting MI to 0')

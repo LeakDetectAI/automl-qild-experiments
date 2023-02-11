@@ -32,6 +32,7 @@ class MineMIEstimator(MIEstimatorBase):
         self.stat_net = None
         self.dataset_properties = None
         self.label_binarizer = None
+        self.final_loss = 0
 
     def pytorch_tensor_dataset(self, X, y, i=2):
         seed = self.random_state.randint(2 ** 31, dtype="uint32") + i
@@ -65,6 +66,7 @@ class MineMIEstimator(MIEstimatorBase):
         self.stat_net.to(self.device)
         self.optimizer = self.optimizer_cls(self.stat_net.parameters(), **self._optimizer_config)
         all_estimates = []
+        sum_loss = 0
         for iter_ in tqdm(range(epochs), total=epochs, desc='iteration'):
             self.stat_net.zero_grad()
             # print(f"iter {iter_}, y {y}")
@@ -75,6 +77,7 @@ class MineMIEstimator(MIEstimatorBase):
             loss = train_div.mul_(-1.)
             loss.backward()
             self.optimizer.step()
+            sum_loss += loss
             if (iter_ % MON_FREQ == 0) or (iter_ + 1 == epochs):
                 with torch.no_grad():
                     mi_hats = []
@@ -90,6 +93,8 @@ class MineMIEstimator(MIEstimatorBase):
                         print(f'iter: {iter_}, MI hat: {mi_hat}')
                     self.logger.info(f'iter: {iter_}, MI hat: {mi_hat}')
                     all_estimates.append(dict(iter_=iter_, mi_hat=mi_hat))
+        self.final_loss = sum_loss.detach().numpy()[0]
+        self.logger.info(f"Loss {self.final_loss}")
         return self
 
     def predict(self, X, verbose=0):
@@ -98,7 +103,11 @@ class MineMIEstimator(MIEstimatorBase):
         return y_pred
 
     def score(self, X, y, sample_weight=None, verbose=0):
-        return self.estimate_mi(X=X, y=y, verbose=verbose)
+        mi = self.estimate_mi(X=X, y=y, verbose=verbose)
+        self.logger.info(f"Loss {self.final_loss}")
+        if np.isnan(self.final_loss) or np.isinf(self.final_loss):
+            mi = 0.0
+        return mi
 
     def predict_proba(self, X, verbose=0):
         scores = self.decision_function(X=X, verbose=verbose)

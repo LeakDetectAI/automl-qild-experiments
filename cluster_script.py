@@ -23,6 +23,7 @@ from datetime import datetime
 
 import h5py
 import numpy as np
+from autosklearn.estimators import AutoSklearnClassifier
 from docopt import docopt
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import confusion_matrix
@@ -34,10 +35,9 @@ from experiments.dbconnection import DBConnector
 from experiments.util import get_duration_seconds, get_dataset_reader, create_search_space, setup_logging, \
     setup_random_seed, create_directory_safely, learners, lp_metric_dict, convert_learner_params, duration_till_now, \
     seconds_to_time
-from autosklearn.experimental.askl2 import AutoSklearn2Classifier
 from pycilt.bayes_predictor import BayesPredictor
 from pycilt.bayes_search import BayesSearchCV
-from pycilt.mi_estimators import GMMMIEstimator
+from pycilt.mi_estimators import GMMMIEstimator, PCSoftmaxMIEstimator, MineMIEstimator
 from pycilt.mi_estimators.mi_base_class import MIEstimatorBase
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.utils import print_dictionary
@@ -125,14 +125,15 @@ if __name__ == "__main__":
                 learner_params = convert_learner_params(learner_params)
                 learner_params['random_state'] = random_state
                 logger.info(f"Time Taken till now: {seconds_to_time(duration_till_now(start))}  seconds")
+
                 if learner == MultiLayerPerceptron or issubclass(learner, MIEstimatorBase):
                     n_jobs = 1
                     if learner == GMMMIEstimator:
                         n_jobs = 10
                 else:
                     n_jobs = 10
-                learner_params['time_left_for_this_task'] = 18000
-                if learner == BayesPredictor or issubclass(learner, DummyClassifier) or learner == AutoSklearn2Classifier:
+                if learner == BayesPredictor or issubclass(learner,
+                                                           DummyClassifier) or learner == AutoSklearnClassifier:
                     if learner == BayesPredictor:
                         learner_params = {'dataset_obj': dataset_reader}
                         estimator = learner(**learner_params)
@@ -144,13 +145,24 @@ if __name__ == "__main__":
                         p_pred, y_pred = get_scores(X, estimator)
                         y_true = np.copy(y)
                     else:
+                        import shutil
+
+                        learner_params['tmp_folder'] = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM,
+                                                                    OPTIMIZER_FOLDER, hash_value)
+                        if os.path.exists(learner_params['tmp_folder']):
+                            logger.info(f"Removing the existing directory {learner_params['tmp_folder']} ")
+                            shutil.rmtree(learner_params['tmp_folder'])
                         del learner_params['random_state']
                         estimator = learner(**learner_params)
                         estimator.fit(X_train, y_train)
                         config = estimator.get_configuration_space(X_train, y_train)
-                        estimator.fit_pipeline(X_train, y_train, config=config, X_test=X_test, y_test=y_test)
+                        # estimator.fit_pipeline(X_train, y_train, config=config, X_test=X_test, y_test=y_test)
                         p_pred, y_pred = get_scores(X_test, estimator)
                         y_true = np.copy(y_test)
+                        setup_logging(log_path=log_path)
+                        logger.info(f"Best ensemble {estimator.leaderboard()}")
+                        logger.info(f"Test Scores: {estimator.cv_results_['mean_test_score']}")
+                        logger.info(f"Best Model {estimator.show_models()}")
 
                 else:
                     inner_cv_iterator = StratifiedKFold(n_splits=n_inner_folds, shuffle=True, random_state=random_state)
@@ -178,8 +190,18 @@ if __name__ == "__main__":
                     learner_params = update_params(bayes_search, search_keys, learner_params, logger)
                     if learner == GMMMIEstimator:
                         del learner_params['n_models']
-                    estimator = learner(**learner_params)
-                    estimator.fit(X_train, y_train)
+                    if learner == MineMIEstimator or learner == PCSoftmaxMIEstimator:
+                        estimator = learner(**learner_params)
+                        for _ in range(10):
+                            estimator.fit(X_train, y_train)
+                            logger.info(f"Final Loss {estimator.final_loss}")
+                            if not (np.isnan(estimator.final_loss) or np.isinf(estimator.final_loss)):
+                                continue
+                            else:
+                                logger.info("Final Loss NAN train again")
+                    else:
+                        estimator = learner(**learner_params)
+                        estimator.fit(X_train, y_train)
                     p_pred, y_pred = get_scores(X_test, estimator)
                     y_true = np.copy(y_test)
                 if issubclass(learner, MIEstimatorBase):
@@ -211,7 +233,10 @@ if __name__ == "__main__":
                     if np.isnan(metric_loss) or np.isinf(metric_loss):
                         results[name] = "\'Infinity\'"
                     else:
-                        results[name] = f"{np.around(metric_loss, 4)}"
+                        if np.around(metric_loss, 4) == 0.0:
+                            results[name] = f"{metric_loss}"
+                        else:
+                            results[name] = f"{np.around(metric_loss, 4)}"
                         # if CONFUSION_MATRIX == name:
                         #    tn, fp, fn, tp = metric_loss.ravel()
                         #   results['TN'] = "{0:.4f}".format(tn)

@@ -10,7 +10,10 @@ from pycilt.utils import normalize
 
 
 def bin_ce(p_e):
-    p_e = p_e + 1e-200
+    if p_e == 0:
+        p_e = p_e + np.finfo(np.float32).eps
+    if p_e == 1.0:
+        p_e = p_e - np.finfo(np.float32).eps
     be = -p_e * np.log2(p_e) - (1 - p_e) * np.log2(1 - p_e)
     return be
 

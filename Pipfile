@@ -29,5 +29,5 @@ infoselect = "==1.0.2"
 tqdm = "==4.64.1"
 
 [requires] # Here goes your required Python version.
-python_version = "3.9.2"
+python_version = ">=3.8"
 
