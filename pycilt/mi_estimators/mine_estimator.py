@@ -93,12 +93,12 @@ class MineMIEstimator(MIEstimatorBase):
                     if verbose:
                         print(f'iter: {iter_}, MI hat: {mi_hat}')
                     self.logger.info(f'iter: {iter_}, MI hat: {mi_hat}')
-                    all_estimates.append(mi_hat=mi_hat)
+                    all_estimates.append(mi_hat)
         self.final_loss = sum_loss.detach().numpy()[0]
         mis = np.array(all_estimates)
         n = int(len(all_estimates) / 2)
         self.mi_val = np.nanmean(mis[np.argpartition(mis, -n)[-n:]])
-        self.logger.info(f"Loss {self.final_loss} MI Val: {self.mi_val}")
+        self.logger.info(f"Fit Loss {self.final_loss} MI Val: {self.mi_val}")
         return self
 
     def predict(self, X, verbose=0):
@@ -110,7 +110,7 @@ class MineMIEstimator(MIEstimatorBase):
         #mi = self.estimate_mi(X=X, y=y, verbose=verbose, MON_ITER=10)
         mi = self.mi_val
         self.logger.info(f"Loss {self.final_loss} MI Val: {self.mi_val}")
-        if np.isnan(self.final_loss) or np.isinf(self.final_loss):
+        if np.isnan(mi) or np.isinf(mi):
             mi = 0.0
         return mi
 

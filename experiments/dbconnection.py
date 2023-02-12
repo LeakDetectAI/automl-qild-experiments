@@ -182,9 +182,7 @@ class DBConnector(metaclass=ABCMeta):
                 self.job_description = self.cursor_db.fetchone()
                 if turn_filter_on:
                     learner = self.job_description['learner']
-                    if self.schema == MUTUAL_INFORMATION_NEW and learner in ['mine_mi_estimator',
-                                                                             'softmax_mi_estimator',
-                                                                             'pc_softmax_mi_estimator']:
+                    if self.schema == MUTUAL_INFORMATION_NEW and learner in ['softmax_mi_estimator']:
                         self.job_description = None
                         del job_ids[0]
                         continue
