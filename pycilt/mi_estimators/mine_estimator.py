@@ -33,6 +33,7 @@ class MineMIEstimator(MIEstimatorBase):
         self.dataset_properties = None
         self.label_binarizer = None
         self.final_loss = 0
+        self.mi_val = 0
 
     def pytorch_tensor_dataset(self, X, y, i=2):
         seed = self.random_state.randint(2 ** 31, dtype="uint32") + i
@@ -51,7 +52,7 @@ class MineMIEstimator(MIEstimatorBase):
         tensor_xy_tilde = torch.tensor(xy_tilde, dtype=torch.float32)
         return tensor_xy, tensor_xy_tilde
 
-    def fit(self, X, y, epochs=10000, verbose=0, **kwd):
+    def fit(self, X, y, epochs=2000, verbose=0, **kwd):
         MON_FREQ = epochs // 10
         # Monitoring
         MON_ITER = epochs // 50
@@ -92,9 +93,12 @@ class MineMIEstimator(MIEstimatorBase):
                     if verbose:
                         print(f'iter: {iter_}, MI hat: {mi_hat}')
                     self.logger.info(f'iter: {iter_}, MI hat: {mi_hat}')
-                    all_estimates.append(dict(iter_=iter_, mi_hat=mi_hat))
+                    all_estimates.append(mi_hat=mi_hat)
         self.final_loss = sum_loss.detach().numpy()[0]
-        self.logger.info(f"Loss {self.final_loss}")
+        mis = np.array(all_estimates)
+        n = int(len(all_estimates) / 2)
+        self.mi_val = np.nanmean(mis[np.argpartition(mis, -n)[-n:]])
+        self.logger.info(f"Loss {self.final_loss} MI Val: {self.mi_val}")
         return self
 
     def predict(self, X, verbose=0):
@@ -103,8 +107,9 @@ class MineMIEstimator(MIEstimatorBase):
         return y_pred
 
     def score(self, X, y, sample_weight=None, verbose=0):
-        mi = self.estimate_mi(X=X, y=y, verbose=verbose, MON_ITER=10)
-        self.logger.info(f"Loss {self.final_loss}")
+        #mi = self.estimate_mi(X=X, y=y, verbose=verbose, MON_ITER=10)
+        mi = self.mi_val
+        self.logger.info(f"Loss {self.final_loss} MI Val: {self.mi_val}")
         if np.isnan(self.final_loss) or np.isinf(self.final_loss):
             mi = 0.0
         return mi

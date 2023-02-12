@@ -9,10 +9,11 @@ import numpy as np
 import psycopg2
 from psycopg2.extras import DictCursor
 
+from experiments.contants import MUTUAL_INFORMATION_NEW
 from experiments.util import get_duration_seconds, duration_till_now
 from pycilt.utils import print_dictionary
 
-
+turn_filter_on = True
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.integer):
@@ -81,7 +82,7 @@ class DBConnector(metaclass=ABCMeta):
         )
         self.cursor_db.execute(select_job)
         all_jobs = self.cursor_db.fetchall()
-        print("Running jobs are ".format(all_jobs))
+        print(f"Running jobs are {all_jobs}")
         self.close_connection()
         for job in all_jobs:
             date_time = job["job_allocated_time"]
@@ -179,6 +180,14 @@ class DBConnector(metaclass=ABCMeta):
                 )
                 self.cursor_db.execute(select_job)
                 self.job_description = self.cursor_db.fetchone()
+                if turn_filter_on:
+                    learner = self.job_description['learner']
+                    if self.schema == MUTUAL_INFORMATION_NEW and learner in ['mine_mi_estimator',
+                                                                             'softmax_mi_estimator',
+                                                                             'pc_softmax_mi_estimator']:
+                        self.job_description = None
+                        del job_ids[0]
+                        continue
                 print(print_dictionary(self.job_description))
                 hash_value = self.get_hash_value_for_job(self.job_description)
                 self.job_description["hash_value"] = hash_value

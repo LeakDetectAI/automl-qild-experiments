@@ -70,9 +70,9 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
             if verbose and epoch % 10 == 0:
                 _, predicted = torch.max(preds_, 1)
                 correct += (predicted == tensor_y).sum().item()
-                print(f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {100 * correct / tensor_y.size(0)} %')
-                self.logger.error(
-                    f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {100 * correct / tensor_y.size(0)} %')
+                accuracy = 100 * correct / tensor_y.size(0)
+                print(f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {accuracy} %')
+                self.logger.error(f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {accuracy} %')
         self.logger.info(f"Loss {self.final_loss}")
         return self
 
@@ -89,12 +89,15 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
     def score(self, X, y, sample_weight=None, verbose=0):
         y_pred = self.predict(X, verbose=0)
         acc = np.mean(y == y_pred)
+        mi_pred = self.estimate_mi(X, y, verbose=0)
         self.logger.info(f"Accuracy {acc}")
         self.logger.info(f"Loss {self.final_loss}")
-        if np.isnan(self.final_loss) or np.isinf(self.final_loss):
+        if mi_pred == 0.0 or np.isnan(self.final_loss) or np.isinf(self.final_loss):
             acc = 0.0
-        self.logger.info(f"Accuracy {acc}")
-        return acc
+        s_pred = self.predict_proba(X, verbose=0)
+        pyx = ((s_pred * np.log2(s_pred)).sum(axis=1)).mean()
+        self.logger.info(f"Accuracy {acc} pyx {pyx} MI {mi_pred}")
+        return -self.final_loss
 
     # def score(self, X, y, sample_weight=None, verbose=0):
     #     return self.estimate_mi(X=X, y=y, verbose=verbose)
@@ -104,7 +107,7 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
         dataset_prop, test_dataloader = self.pytorch_tensor_dataset(X, y, batch_size=X.shape[0])
         for ite_idx, (a_data, a_label) in enumerate(test_dataloader):
             a_data = a_data.to(self.device)
-            test_ = self.class_net(a_data, dataset_prop)
+            test_ = self.class_net.score(a_data, dataset_prop)
         return test_.detach().numpy()
 
     def decision_function(self, X, verbose=0):
@@ -112,10 +115,10 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
         dataset_prop, test_dataloader = self.pytorch_tensor_dataset(X, y, batch_size=X.shape[0])
         for ite_idx, (a_data, a_label) in enumerate(test_dataloader):
             a_data = a_data.to(self.device)
-            test_ = self.class_net(a_data, dataset_prop)
+            test_ = self.class_net.score(a_data, dataset_prop)
         return test_.detach().numpy()
 
-    def estimate_mi(self, X, y, verbose=0):
+    def estimate_mi(self, X, y, verbose=1):
         dataset_prop, test_dataset = self.pytorch_tensor_dataset(X, y, batch_size=1)
         self.logger.info('MI estimation. ')
         softmax_list = []
@@ -123,15 +126,24 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
             int_label = a_label.cpu().item()
             a_data = a_data.unsqueeze(0).to(self.device)
             test_ = self.class_net(a_data, dataset_prop)
-
+            test_1 = self.class_net.score(a_data, dataset_prop)
             if self.is_pc_softmax:
                 a_softmax = torch.flatten(own_softmax(test_, dataset_prop, self.device))[int_label]
             else:
                 a_softmax = torch.flatten(torch.softmax(test_, dim=-1))[int_label]
+            softmax = math.log(a_softmax.cpu().item())
             if self.is_pc_softmax:
-                softmax_list.append(math.log(a_softmax.cpu().item()))
+                softmax_list.append(softmax)
             else:
-                softmax_list.append(math.log(a_softmax.cpu().item()) + math.log(len(dataset_prop)))
+                softmax_list.append(softmax + math.log(len(dataset_prop)))
+            if verbose != 0:
+                self.logger.info("####################################################################################")
+                self.logger.info(f"Score {test_1.detach().numpy()}, Test Score {test_.detach().numpy()}")
+                self.logger.info(f"Data {a_data} Label {a_label}")
+                self.logger.info(f"a_softmax {a_softmax} Label {a_label}")
+                self.logger.info(f"Log Softmax {softmax} Log M {math.log(len(dataset_prop))} Label {int_label}")
+                self.logger.info("####################################################################################")
+
         mi_estimated = np.nanmean(softmax_list)
         self.logger.error(f'Estimated MI: {mi_estimated}')
         if np.isnan(mi_estimated) or np.isinf(mi_estimated):

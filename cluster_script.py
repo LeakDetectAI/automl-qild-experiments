@@ -23,6 +23,7 @@ from datetime import datetime
 
 import h5py
 import numpy as np
+import torch
 from autosklearn.estimators import AutoSklearnClassifier
 from docopt import docopt
 from sklearn.dummy import DummyClassifier
@@ -187,6 +188,7 @@ if __name__ == "__main__":
                         bayes_search.fit(X_train, y_train, groups=None, callback=callback, **fit_params)
                     except Exception as e:
                         logger.info(f"Exception {str(e)}")
+                    logger.info("Fitting the model with best parameters")
                     learner_params = update_params(bayes_search, search_keys, learner_params, logger)
                     if learner == GMMMIEstimator:
                         del learner_params['n_models']
@@ -196,7 +198,7 @@ if __name__ == "__main__":
                             estimator.fit(X_train, y_train)
                             logger.info(f"Final Loss {estimator.final_loss}")
                             if not (np.isnan(estimator.final_loss) or np.isinf(estimator.final_loss)):
-                                continue
+                                break
                             else:
                                 logger.info("Final Loss NAN train again")
                     else:

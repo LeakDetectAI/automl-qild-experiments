@@ -34,6 +34,14 @@ class ClassNet(nn.Module):
             x_in = torch.log(F.softmax(x_in, dim=1) + 1e-6)
         return x_in
 
+    def score(self, x_in, label_proportions):
+        x_in = torch.relu(self.input(x_in))
+        for i, hidden in enumerate(self.hidden_layers):
+            x_in = torch.relu(hidden(x_in))
+        x_in = self.output(x_in)
+        x_in = F.softmax(x_in, dim=1)
+        return x_in
+
 
 class StatNet(nn.Module):
     def __init__(self, in_dim, cls_enc=1, n_units=100, n_hidden=1):

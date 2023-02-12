@@ -20,7 +20,9 @@ if __name__ == "__main__":
         dbConnector = DBConnector(config_file_path=config_file_path, is_gpu=False, schema=schema, create_hash_list=True)
         if schema == CLASSIFICATION:
             max_job_id = 12
-        if schema == MUTUAL_INFORMATION or schema == MUTUAL_INFORMATION_NEW:
+        if schema == MUTUAL_INFORMATION:
+            max_job_id = 4
+        if schema == MUTUAL_INFORMATION_NEW:
             max_job_id = 4
         if schema == AUTO_ML:
             max_job_id = 1
