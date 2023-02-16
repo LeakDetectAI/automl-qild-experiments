@@ -31,6 +31,7 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
         self.class_net = None
         self.dataset_properties = None
         self.final_loss = 0
+        self.mi_val = 0
 
     def pytorch_tensor_dataset(self, X, y, batch_size=32):
         y_l, counts = np.unique(y, return_counts=True)
@@ -73,7 +74,8 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
                 accuracy = 100 * correct / tensor_y.size(0)
                 print(f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {accuracy} %')
                 self.logger.error(f'For Epoch: {epoch} Running loss: {running_loss} Accuracy: {accuracy} %')
-        self.logger.info(f"Fit Loss {self.final_loss}")
+        self.mi_val = self.estimate_mi(X, y, verbose=0)
+        self.logger.info(f"Fit Loss {self.final_loss} MI Val: {self.mi_val}")
         return self
 
     def predict(self, X, verbose=0):
@@ -89,12 +91,10 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
     def score(self, X, y, sample_weight=None, verbose=0):
         y_pred = self.predict(X, verbose=0)
         acc = np.mean(y == y_pred)
-        mi_pred = self.estimate_mi(X, y, verbose=0)
-        if mi_pred == 0.0 or np.isnan(self.final_loss) or np.isinf(self.final_loss):
+        if np.isnan(self.final_loss) or np.isinf(self.final_loss):
             acc = 0.0
         s_pred = self.predict_proba(X, verbose=0)
         pyx = ((s_pred * np.log2(s_pred)).sum(axis=1)).mean()
-
         dataset_prop, test_dataloader = self.pytorch_tensor_dataset(X, y, batch_size=X.shape[0])
         val_loss = 0
         for ite_idx, (a_data, a_label) in enumerate(test_dataloader):
@@ -103,7 +103,7 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
             a_label = a_label.to(self.device).squeeze()
             loss = self.loss_function(preds_, a_label)
             val_loss += loss
-        self.logger.info(f"Loss {self.final_loss} Accuracy {acc} pyx {pyx} MI {mi_pred} Val loss {val_loss}")
+        self.logger.info(f"Loss {self.final_loss} Accuracy {acc} pyx {pyx} MI {self.mi_val} Val loss {val_loss}")
         return -val_loss
 
     # def score(self, X, y, sample_weight=None, verbose=0):
@@ -159,4 +159,6 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
             if verbose != 0:
                 self.logger.error(f'Setting MI to 0')
             mi_estimated = 0
+        if self.mi_val - mi_estimated > .01:
+            mi_estimated = self.mi_val
         return mi_estimated

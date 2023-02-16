@@ -13,6 +13,7 @@ from experiments.contants import MUTUAL_INFORMATION_NEW
 from experiments.util import get_duration_seconds, duration_till_now
 from pycilt.utils import print_dictionary
 
+LEARNERS = ['softmax_mi_estimator', 'pc_softmax_mi_estimator']
 turn_filter_on = True
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -182,7 +183,7 @@ class DBConnector(metaclass=ABCMeta):
                 self.job_description = self.cursor_db.fetchone()
                 if turn_filter_on:
                     learner = self.job_description['learner']
-                    if self.schema == MUTUAL_INFORMATION_NEW and learner in ['softmax_mi_estimator']:
+                    if self.schema == MUTUAL_INFORMATION_NEW and learner in LEARNERS:
                         self.job_description = None
                         del job_ids[0]
                         continue

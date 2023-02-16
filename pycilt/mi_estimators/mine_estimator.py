@@ -91,12 +91,12 @@ class MineMIEstimator(MIEstimatorBase):
                         mi_hats.append(eval_div.cpu().numpy())
                     mi_hat = np.mean(mi_hats)
                     if verbose:
-                        print(f'iter: {iter_}, MI hat: {mi_hat}')
-                    self.logger.info(f'iter: {iter_}, MI hat: {mi_hat}')
+                        print(f'iter: {iter_}, MI hat: {mi_hat} Loss: {loss.detach().numpy()[0]}')
+                    self.logger.info(f'iter: {iter_}, MI hat: {mi_hat} Loss: {loss.detach().numpy()[0]}')
                     all_estimates.append(mi_hat)
         self.final_loss = sum_loss.detach().numpy()[0]
         mis = np.array(all_estimates)
-        n = int(len(all_estimates) / 2)
+        n = int(len(all_estimates) / 3)
         self.mi_val = np.nanmean(mis[np.argpartition(mis, -n)[-n:]])
         self.logger.info(f"Fit Loss {self.final_loss} MI Val: {self.mi_val}")
         return self
@@ -125,7 +125,7 @@ class MineMIEstimator(MIEstimatorBase):
             y = np.zeros(X.shape[0]) + n_class
             xy, xy_tilde = self.pytorch_tensor_dataset(X, y, i=0)
             score = self.stat_net(xy).detach().numpy()
-            self.logger.info(f"Class {n_class} scores {score.flatten()}")
+            # self.logger.info(f"Class {n_class} scores {score.flatten()}")
             if scores is None:
                 scores = score
             else:
@@ -151,4 +151,6 @@ class MineMIEstimator(MIEstimatorBase):
             self.logger.error(f'Setting MI to 0')
             mi_estimated = 0
         self.logger.info(f'Estimated MIs: {mi_hats} Mean {mi_estimated}')
+        if self.mi_val - mi_estimated > .01:
+            mi_estimated = self.mi_val
         return mi_estimated

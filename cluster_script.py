@@ -23,7 +23,6 @@ from datetime import datetime
 
 import h5py
 import numpy as np
-import torch
 from autosklearn.estimators import AutoSklearnClassifier
 from docopt import docopt
 from sklearn.dummy import DummyClassifier
@@ -81,7 +80,7 @@ if __name__ == "__main__":
                 dataset_params = dbConnector.job_description["dataset_params"]
                 learner_name = dbConnector.job_description["learner"]
                 fit_params = dbConnector.job_description["fit_params"]
-                learner_params = dbConnector.job_description["learner_params"]
+                learner_params_db = dbConnector.job_description["learner_params"]
                 duration = dbConnector.job_description["duration"]
                 hp_iters = int(dbConnector.job_description["hp_iters"])
                 hp_ranges = dbConnector.job_description["hp_ranges"]
@@ -123,7 +122,7 @@ if __name__ == "__main__":
                 create_directory_safely(optimizers_file_path, True)
 
                 learner = learners[learner_name]
-                learner_params = convert_learner_params(learner_params)
+                learner_params = convert_learner_params(learner_params_db)
                 learner_params['random_state'] = random_state
                 logger.info(f"Time Taken till now: {seconds_to_time(duration_till_now(start))}  seconds")
 
@@ -133,8 +132,8 @@ if __name__ == "__main__":
                         n_jobs = 10
                 else:
                     n_jobs = 10
-                if learner == BayesPredictor or issubclass(learner,
-                                                           DummyClassifier) or learner == AutoSklearnClassifier:
+                if learner == BayesPredictor or issubclass(learner, DummyClassifier) \
+                        or learner == AutoSklearnClassifier:
                     if learner == BayesPredictor:
                         learner_params = {'dataset_obj': dataset_reader}
                         estimator = learner(**learner_params)
@@ -147,7 +146,6 @@ if __name__ == "__main__":
                         y_true = np.copy(y)
                     else:
                         import shutil
-
                         learner_params['tmp_folder'] = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM,
                                                                     OPTIMIZER_FOLDER, hash_value)
                         if os.path.exists(learner_params['tmp_folder']):
@@ -168,13 +166,11 @@ if __name__ == "__main__":
                 else:
                     inner_cv_iterator = StratifiedKFold(n_splits=n_inner_folds, shuffle=True, random_state=random_state)
                     search_space = create_search_space(hp_ranges)
-                    learner_params['random_state'] = random_state
                     if learner == MultiLayerPerceptron or issubclass(learner, MIEstimatorBase):
                         learner_params = {**learner_params, **dict(input_dim=input_dim, n_classes=n_classes)}
                     if learner == GMMMIEstimator:
-                        learner_params['n_models'] = 2
+                        learner_params['n_models'] = 4
                     estimator = learner(**learner_params)
-
                     bayes_search_params = dict(estimator=estimator, search_spaces=search_space, n_iter=hp_iters,
                                                scoring=validation_loss, n_jobs=n_jobs, cv=inner_cv_iterator,
                                                error_score=0, random_state=random_state,
@@ -190,6 +186,7 @@ if __name__ == "__main__":
                         logger.info(f"Exception {str(e)}")
                     logger.info("Fitting the model with best parameters")
                     learner_params = update_params(bayes_search, search_keys, learner_params, logger)
+                    logger.info(f"Setting the best parameters {print_dictionary(learner_params)}")
                     if learner == GMMMIEstimator:
                         del learner_params['n_models']
                     if learner == MineMIEstimator or learner == PCSoftmaxMIEstimator:
