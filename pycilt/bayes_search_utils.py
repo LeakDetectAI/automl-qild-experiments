@@ -1,6 +1,8 @@
 import numpy as np
+from sklearn.linear_model import RidgeClassifier, SGDClassifier
+from sklearn.svm import LinearSVC
 
-from pycilt.utils import print_dictionary
+from pycilt.utils import print_dictionary, sigmoid
 
 
 def get_parameters(optimizers, search_keys):
@@ -21,7 +23,7 @@ def update_params(bayes_search, search_keys, params, logger):
     params.update(best_params)
     params_str = print_dictionary(best_params, sep='\t')
     logger.info(f"Best parameters are: {params_str} with Accuracy/MI of: {-best_loss}\n")
-    return params
+    return best_loss, params
 
 
 def log_callback(logger, parameters):
@@ -46,10 +48,13 @@ def get_scores(X, estimator):
         pred_prob = estimator.decision_function(X)
     # logger.info("Predict Probability shape {}, {}".format(pred_prob.shape, y_test.shape))
     if len(pred_prob.shape) == 2 and pred_prob.shape[-1] > 1:
-        if pred_prob.shape[-1] == 2:
-            p_pred = pred_prob[:, 1]
-        else:
-            p_pred = pred_prob
+        p_pred = pred_prob
     else:
         p_pred = pred_prob.flatten()
+
+    if isinstance(estimator, SGDClassifier) or isinstance(estimator, LinearSVC) or isinstance(estimator,
+                                                                                              RidgeClassifier):
+        p_pred = sigmoid(p_pred)
+        if len(p_pred.shape) == 1:
+            p_pred = np.hstack(((1 - p_pred)[:, None], p_pred[:, None]))
     return p_pred, y_pred

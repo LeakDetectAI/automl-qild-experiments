@@ -24,6 +24,9 @@ def softmax(x, axis=1):
     lse = logsumexp(x, axis=axis)
     return np.exp(x - lse)
 
+def sigmoid(x):
+    x = 1.0 / (1.0 + np.exp(-x))
+    return x
 
 def normalize(x, axis=1):
     """

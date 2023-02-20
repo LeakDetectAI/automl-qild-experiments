@@ -27,16 +27,17 @@ from autosklearn.estimators import AutoSklearnClassifier
 from docopt import docopt
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold
+from sklearn.model_selection import StratifiedShuffleSplit
 
-from experiments.bayes_search_utils import update_params, log_callback, get_scores
-from experiments.contants import EMI, F_SCORE
+from pycilt.bayes_search_utils import update_params, log_callback, get_scores
+from experiments.contants import *
 from experiments.dbconnection import DBConnector
 from experiments.util import get_duration_seconds, get_dataset_reader, create_search_space, setup_logging, \
     setup_random_seed, create_directory_safely, learners, lp_metric_dict, convert_learner_params, duration_till_now, \
-    seconds_to_time
+    seconds_to_time, calibrators, calibrator_params
 from pycilt.bayes_predictor import BayesPredictor
 from pycilt.bayes_search import BayesSearchCV
+from pycilt.metrics import probability_calibration
 from pycilt.mi_estimators import GMMMIEstimator, PCSoftmaxMIEstimator, MineMIEstimator
 from pycilt.mi_estimators.mi_base_class import MIEstimatorBase
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
@@ -101,6 +102,8 @@ if __name__ == "__main__":
                 setup_logging(log_path=log_path)
                 setup_random_seed(random_state=random_state)
                 logger = logging.getLogger('Experiment')
+                print(lp_metric_dict[learning_problem].keys())
+
                 logger.info(f"DB config filePath {config_file_path}")
                 logger.info(f"Arguments {arguments}")
                 logger.info(f"Job Description {print_dictionary(dbConnector.job_description)}")
@@ -164,7 +167,8 @@ if __name__ == "__main__":
                         logger.info(f"Best Model {estimator.show_models()}")
 
                 else:
-                    inner_cv_iterator = StratifiedKFold(n_splits=n_inner_folds, shuffle=True, random_state=random_state)
+                    #inner_cv_iterator = StratifiedKFold(n_splits=n_inner_folds, shuffle=True, random_state=random_state)
+                    inner_cv_iterator = StratifiedShuffleSplit(n_splits=n_inner_folds, test_size=0.10, random_state=random_state)
                     search_space = create_search_space(hp_ranges)
                     if learner == MultiLayerPerceptron or issubclass(learner, MIEstimatorBase):
                         learner_params = {**learner_params, **dict(input_dim=input_dim, n_classes=n_classes)}
@@ -185,7 +189,7 @@ if __name__ == "__main__":
                     except Exception as e:
                         logger.info(f"Exception {str(e)}")
                     logger.info("Fitting the model with best parameters")
-                    learner_params = update_params(bayes_search, search_keys, learner_params, logger)
+                    best_loss, learner_params = update_params(bayes_search, search_keys, learner_params, logger)
                     logger.info(f"Setting the best parameters {print_dictionary(learner_params)}")
                     if learner == GMMMIEstimator:
                         del learner_params['n_models']
@@ -193,8 +197,9 @@ if __name__ == "__main__":
                         estimator = learner(**learner_params)
                         for _ in range(10):
                             estimator.fit(X_train, y_train)
+                            ll = estimator.final_loss
                             logger.info(f"Final Loss {estimator.final_loss}")
-                            if not (np.isnan(estimator.final_loss) or np.isinf(estimator.final_loss)):
+                            if not (np.isnan(ll) or np.isinf(ll)):
                                 break
                             else:
                                 logger.info("Final Loss NAN train again")
@@ -205,10 +210,14 @@ if __name__ == "__main__":
                     y_true = np.copy(y_test)
                 if issubclass(learner, MIEstimatorBase):
                     estimated_mi = estimator.estimate_mi(X, y)
+                    if learner == MineMIEstimator:
+                        logger.info(f"Best Loss {-best_loss}")
+                        estimated_mi = np.max([estimated_mi, -best_loss])
                 else:
                     estimated_mi = 0
                 result_file = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, RESULT_FOLDER, f"{hash_value}.h5")
                 logger.info(f"Result file {result_file}")
+
                 create_directory_safely(result_file, True)
                 f = h5py.File(result_file, 'w')
                 f.create_dataset('scores', data=p_pred)
@@ -216,34 +225,48 @@ if __name__ == "__main__":
                 f.create_dataset('ground_truth', data=y_true)
                 f.create_dataset('confusion_matrix', data=confusion_matrix(y_true, y_pred))
                 f.close()
-
                 results = {'job_id': str(job_id), 'cluster_id': str(cluster_id)}
-                for name, evaluation_metric in lp_metric_dict[learning_problem].items():
-                    if name == EMI:
+
+                for metric_name, evaluation_metric in lp_metric_dict[learning_problem].items():
+                    if LOG_LOSS_MI_ESTIMATION in metric_name or PC_SOFTMAX_MI_ESTIMATION in metric_name:
+                        calibrator_technique = None
+                        for key in calibrators.keys():
+                            if key in metric_name:
+                                calibrator_technique = key
+                        if calibrator_technique is not None:
+                            calibrator = calibrators[calibrator_technique]
+                            c_params = calibrator_params[calibrator_technique]
+                            calibrator = calibrator(**c_params)
+                            p_pred_cal = probability_calibration(X_train, y_train, X_test, estimator, calibrator)
+                            metric_loss = evaluation_metric(y_test, p_pred_cal)
+                        else:
+                            metric_loss = evaluation_metric(y_true, p_pred)
+                    elif metric_name in [MCMC_LOG_LOSS, MCMC_MI_ESTIMATION, MCMC_PC_SOFTMAX, MCMC_SOFTMAX]:
+                        if learner != BayesPredictor:
+                            metric_loss = np.nan
+                        else:
+                            metric_loss = dataset_reader.get_bayes_mi(metric_name)
+
+                    elif metric_name == EMI:
                         metric_loss = estimated_mi
                     else:
-                        if name == F_SCORE:
+                        if metric_name == F_SCORE:
                             if n_classes > 2:
                                 metric_loss = evaluation_metric(y_true, y_pred, average='macro')
                             else:
                                 metric_loss = evaluation_metric(y_true, y_pred)
                         else:
                             metric_loss = evaluation_metric(y_true, y_pred)
+
                     if np.isnan(metric_loss) or np.isinf(metric_loss):
-                        results[name] = "\'Infinity\'"
+                        results[metric_name] = "\'Infinity\'"
                     else:
                         if np.around(metric_loss, 4) == 0.0:
-                            results[name] = f"{metric_loss}"
+                            results[metric_name] = f"{metric_loss}"
                         else:
-                            results[name] = f"{np.around(metric_loss, 4)}"
-                        # if CONFUSION_MATRIX == name:
-                        #    tn, fp, fn, tp = metric_loss.ravel()
-                        #   results['TN'] = "{0:.4f}".format(tn)
-                        #   results['FP'] = "{0:.4f}".format(fp)
-                        #   results['FN'] = "{0:.4f}".format(fn)
-                        #   results['TP'] = "{0:.4f}".format(tp)
-                    logger.info(f"Out of sample error {name} : {metric_loss}")
-                    print(f"Out of sample error {name} : {metric_loss}")
+                            results[metric_name] = f"{np.around(metric_loss, 4)}"
+                    logger.info(f"Out of sample error {metric_name} : {metric_loss}")
+                    print(f"Out of sample error {metric_name} : {metric_loss}")
                 dbConnector.insert_results(experiment_schema=experiment_schema, experiment_table=experiment_table,
                                            results=results)
                 dbConnector.mark_running_job_finished(job_id, start)

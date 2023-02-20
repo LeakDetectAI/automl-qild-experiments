@@ -1,10 +1,14 @@
 import logging
+import math
 from abc import ABCMeta
 
 import numpy as np
 from scipy.stats import multivariate_normal
 from scipy.stats import ortho_group
 from sklearn.utils import check_random_state, shuffle
+
+from experiments.contants import *
+from pycilt.utils import softmax
 
 
 def pdf(dist, x):
@@ -76,7 +80,7 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
 
     def get_prob_flip_y_given_x(self, X, class_label):
         prob_y_given_x = (1 - self.flip_y) * self.get_prob_y_given_x(X, class_label) + (
-                    self.flip_y * (1 / self.n_classes))
+                self.flip_y * (1 / self.n_classes))
         return prob_y_given_x
 
     def get_prob_x_given_flip_y(self, X, class_label):
@@ -132,7 +136,7 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
                 self.logger.info(f"np.mean(choices) {np.mean(choices)}")
                 uni, counts = np.unique(y, return_counts=True)
                 self.logger.info(f"Flipping {uni, counts}")
-                self.logger.info(f"Flipping Ratio {uni, counts/np.sum(counts)}")
+                self.logger.info(f"Flipping Ratio {uni, counts / np.sum(counts)}")
             else:
                 y = y_old
         return X, y
@@ -155,7 +159,7 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
                     x_y_prob = self.get_prob_flip_y_given_x(X=data, class_label=k_class)
                     a_log_x_prob = (x_y_prob / self.flip_y_prob[k_class])
                     # print(x_y_prob)
-                prob_list = np.nanmean(np.log(a_log_x_prob))
+                prob_list = np.nanmean(np.log2(a_log_x_prob))
                 # print(prob_list)
                 nter = nter + 1
                 if nter >= 100:
@@ -192,52 +196,51 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
         mi = mi_bp + mi_pp
         return mi
 
-    def get_estimated_mi_bounds(self):
-        mi = 0
-        joint = 0
-        for kclass1 in range(self.n_classes):
-            mvn = self.get_prob_dist_x_given_y(kclass1)
-            # print(self.y_prob[i]*mvn.entropy())
-            mi += self.y_prob[kclass1] * mvn.entropy()
-            # print(self.y_prob[i]*(-np.log(self.y_prob[i]) + mvn.entropy()))
+    def bayes_predictor_pc_softmax_mi(self):
+        X, y = self.generate_dataset()
+        y_pred = np.zeros((X.shape[0], self.n_classes))
+        for k_class in self.class_labels:
+            if self.flip_y == 0.0:
+                y_pred[:, k_class] = self.get_prob_y_given_x(X=X, class_label=k_class)
+            else:
+                y_pred[:, k_class] = self.get_prob_flip_y_given_x(X=X, class_label=k_class)
 
-            joint += -self.y_prob[kclass1] * np.log(self.y_prob[kclass1]) + self.y_prob[kclass1] * mvn.entropy()
-        mi_upper = joint - mi
-        print(f"MI upper bound H(X|Y) {mi} H(x) {joint} MI {mi_upper}")
+        y_pred[y_pred == 0] = np.finfo(float).eps
+        y_pred[y_pred == 1] = 1 - np.finfo(float).eps
+        classes, counts = np.unique(y, return_counts=True)
+        pys = counts / np.sum(counts)
 
-        joint = []
-        mi = 0
-        for kclass1 in range(self.n_classes):
-            w_i = self.y_prob[kclass1]
-            mvn = self.get_prob_dist_x_given_y(kclass1)
-            mi += self.y_prob[kclass1] * mvn.entropy()
-            joint_mi = 0
-            for kclass2 in range(self.n_classes):
-                mvn2 = self.get_prob_dist_x_given_y(kclass2)
-                w_j = self.y_prob[kclass2]
+        normal_softmaxes = softmax(y_pred)
+        pc_softmax_mis = []
+        softmax_mis = []
+        x_exp = np.exp(y_pred)
+        weighted_x_exp = x_exp * pys
+        # weighted_x_exp = x_exp
+        x_exp_sum = np.sum(weighted_x_exp, axis=1, keepdims=True)
+        pc_softmaxes = x_exp / x_exp_sum
+        for i, y_t in enumerate(y):
+            mi = np.log2(pc_softmaxes[i, int(y_t)])
+            # print("########################################################################")
+            # print(f"y_t {y_t} mi {mi} pc_softmaxes {pc_softmaxes[i]} y_pred {y_pred[i]}")
+            pc_softmax_mis.append(mi)
 
-                def integrand(*args):
-                    input_arr = [x for x in args]
-                    p1 = pdf(mvn, input_arr)
-                    p2 = pdf(mvn2, input_arr)
-                    return p1 * p2
+            mi = np.log2(normal_softmaxes[i, int(y_t)]) + np.log2(self.n_classes)
+            # print(f"y_t {y_t} mi {mi} normal_softmaxes {normal_softmaxes[i]} y_pred {y_pred[i]} LogM {np.log(self.n_classes)}")
+            softmax_mis.append(mi)
+        # print(pc_softmax_mis, softmax_mis)
+        pc_softmax_emi = np.nanmean(pc_softmax_mis)
+        softmax_emi = np.nanmean(softmax_mis)
+        return softmax_emi, pc_softmax_emi
 
-                ranges = [[-np.inf, np.inf] for i in range(self.n_features)]
-                # integration = integrate.nquad(integrand, ranges)
-                value = multivariate_normal(mean=self.means[kclass2],
-                                            cov=self.covariances[kclass1] + self.covariances[kclass2],
-                                            seed=self.seeds[kclass1] + self.seeds[kclass2]).pdf(self.means[kclass1])
-                # print(f"Overlap between MVNs {kclass1} {kclass2} Integration {integration[0]} Value {value}")
-                joint_mi += w_j * value
-                # if kclass1 == kclass2:
-                # joint_mi+=w_j*value
-                # else:
-                # joint_mi+=w_j*integration[0]
-                # joint_mi+=w_j*integrate.romberg(integrand, ranges)[0]
-            # print(f"Classs {kclass1} Joint MI {joint_mi}")
-            joint.append(-w_i * np.log(joint_mi))
-        mi_lower = np.sum(joint) - mi
-        if mi_lower > mi_upper:
-            mi_lower = mi_upper
-        print(f"MI lower bound H(X|Y) {mi} H(x) {np.sum(joint)} MI {np.sum(joint) - mi}")
-        return mi_upper, mi_lower
+    def get_bayes_mi(self, metric_name):
+        if metric_name == MCMC_LOG_LOSS:
+            return self.bayes_predictor_mi()
+        if metric_name == MCMC_MI_ESTIMATION:
+            return self.calculate_mi()
+        softmax_emi, pc_softmax_emi = self.bayes_predictor_pc_softmax_mi()
+        if metric_name == MCMC_PC_SOFTMAX:
+            return  pc_softmax_emi
+        if metric_name == MCMC_SOFTMAX:
+            return softmax_emi
+
+

@@ -13,8 +13,10 @@ from experiments.contants import MUTUAL_INFORMATION_NEW
 from experiments.util import get_duration_seconds, duration_till_now
 from pycilt.utils import print_dictionary
 
-LEARNERS = ['softmax_mi_estimator', 'pc_softmax_mi_estimator']
+LEARNERS = ['gmm_mi_estimator', 'gmm_mi_estimator_s', 'gmm_mi_estimator_more_instances', 'mine_mi_estimator']
 turn_filter_on = True
+
+
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.integer):
@@ -24,6 +26,8 @@ class NpEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return super(NpEncoder, self).default(obj)
+
+
 class DBConnector(metaclass=ABCMeta):
     def __init__(self, config_file_path, is_gpu=False, schema="master", create_hash_list=False, **kwargs):
         self.logger = logging.getLogger("DBConnector")
@@ -83,7 +87,7 @@ class DBConnector(metaclass=ABCMeta):
         )
         self.cursor_db.execute(select_job)
         all_jobs = self.cursor_db.fetchall()
-        print(f"Running jobs are {all_jobs}")
+        # print(f"Running jobs are {all_jobs}")
         self.close_connection()
         for job in all_jobs:
             date_time = job["job_allocated_time"]
@@ -164,29 +168,32 @@ class DBConnector(metaclass=ABCMeta):
         self.init_connection()
         avail_jobs = f"{self.schema}.avail_jobs"
         running_jobs = f"{self.schema}.running_jobs"
-        select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu})AND 
-                        NOT EXISTS(SELECT job_id FROM {running_jobs} r WHERE r.interrupted = FALSE 
-                        AND r.job_id = row.job_id)"""
+        if turn_filter_on and self.schema == MUTUAL_INFORMATION_NEW:
+            select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu}) AND 
+                             learner=any(array{LEARNERS}) AND NOT EXISTS(SELECT job_id 
+                             FROM {running_jobs} r WHERE r.interrupted = FALSE AND r.job_id = row.job_id)"""
+        else:
+            select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu}) AND 
+                                    NOT EXISTS(SELECT job_id FROM {running_jobs} r WHERE r.interrupted = FALSE 
+                                    AND r.job_id = row.job_id)"""
         print(select_job)
         self.cursor_db.execute(select_job)
         job_ids = [j for i in self.cursor_db.fetchall() for j in i]
         job_ids.sort()
-        #print("jobs available {}".format(job_ids))
+        print(f"jobs available {job_ids}")
         while self.job_description is None:
             try:
                 job_id = job_ids[0]
                 print("Job selected : {}".format(job_id))
-                select_job = "SELECT * FROM {0} WHERE {0}.job_id = {1}".format(
-                    avail_jobs, job_id
-                )
+                select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.job_id = {job_id}"
                 self.cursor_db.execute(select_job)
                 self.job_description = self.cursor_db.fetchone()
-                if turn_filter_on:
-                    learner = self.job_description['learner']
-                    if self.schema == MUTUAL_INFORMATION_NEW and learner in LEARNERS:
-                        self.job_description = None
-                        del job_ids[0]
-                        continue
+                # if turn_filter_on:
+                #    learner = self.job_description['learner']
+                #   if self.schema == MUTUAL_INFORMATION_NEW and learner in LEARNERS:
+                #       self.job_description = None
+                #        del job_ids[0]
+                #        continue
                 print(print_dictionary(self.job_description))
                 hash_value = self.get_hash_value_for_job(self.job_description)
                 self.job_description["hash_value"] = hash_value
@@ -560,7 +567,6 @@ class DBConnector(metaclass=ABCMeta):
                         condition = self.check_exists(job)
                         if not condition:
                             insert_result = f"INSERT INTO {avail_jobs} ({columns}) VALUES ({str_values}) RETURNING job_id"
-                            print(insert_result)
                             self.cursor_db.execute(insert_result, tuple(values_str))
                             id_of_new_row = self.cursor_db.fetchone()[0]
                             self.logger.info("Inserting results: {} {}".format(insert_result, values_str))

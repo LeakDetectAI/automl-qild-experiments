@@ -16,7 +16,7 @@ class GMMMIEstimator(MIEstimatorBase):
         self.max_num_components = max_num_components
         self.n_models = n_models
         if max_num_components == 0:
-            self.num_comps = [2, 5, 10, 15, 20]
+            self.num_comps = list(np.arange(2, 20, 3))
         else:
             self.num_comps = list(np.arange(2, self.max_num_components, 3))
         self.reg_covar = reg_covar

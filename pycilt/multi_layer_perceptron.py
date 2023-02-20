@@ -10,6 +10,7 @@ from keras.utils import to_categorical
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import accuracy_score
 from sklearn.utils import check_random_state
+from sklearn.utils import class_weight
 from tensorflow import optimizers
 
 from .layers import NormalizedDense
@@ -83,6 +84,8 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
         return y
 
     def fit(self, X, y, epochs=50, batch_size=32, callbacks=None, validation_split=0.1, verbose=0, **kwd):
+        class_weights = class_weight.compute_class_weight('balanced', classes=np.unique(y), y=y)
+        class_weights = dict(enumerate(class_weights))
         self._construct_layers(
             kernel_regularizer=self.kernel_regularizer,
             kernel_initializer=self.kernel_initializer,
@@ -97,8 +100,8 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
                 callbacks.append(er)
             else:
                 callbacks = [er]
-        self.model.fit(x=X, y=y, batch_size=batch_size, verbose=verbose,
-                       validation_split=validation_split, epochs=epochs, callbacks=callbacks)
+        self.model.fit(x=X, y=y, batch_size=batch_size, class_weight=class_weights, validation_split=validation_split,
+                       epochs=epochs, callbacks=callbacks, verbose=verbose)
 
         return self
 

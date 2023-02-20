@@ -12,6 +12,8 @@ import tensorflow as tf
 import torch
 from autosklearn.estimators import AutoSklearnClassifier
 from keras import backend as K
+from netcal.binning import IsotonicRegression, HistogramBinning
+from netcal.scaling import LogisticCalibration, BetaCalibration, TemperatureScaling
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, \
     ExtraTreesClassifier
 from sklearn.linear_model import RidgeClassifier, SGDClassifier
@@ -53,7 +55,19 @@ classifiers = {MULTI_LAYER_PERCEPTRON: MultiLayerPerceptron,
                AUTO_SKLEARN: AutoSklearnClassifier
                }
 
+calibrators = {ISOTONIC_REGRESSION: IsotonicRegression,
+               PLATT_SCALING: LogisticCalibration,
+               HISTOGRAM_BINNING: HistogramBinning,
+               BETA_CALIBRATION: BetaCalibration,
+               TEMPERATURE_SCALING: TemperatureScaling}
+calibrator_params = {ISOTONIC_REGRESSION: {'detection': False, 'independent_probabilities': False},
+                     PLATT_SCALING: {'temperature_only': False, 'method': 'mle'},
+                     HISTOGRAM_BINNING: {'detection': False, 'independent_probabilities': False},
+                     BETA_CALIBRATION: {'detection': False, 'independent_probabilities': False},
+                     TEMPERATURE_SCALING: {'detection': False, 'independent_probabilities': False}}
 mi_estimators = {'gmm_mi_estimator': GMMMIEstimator,
+                 'gmm_mi_estimator_more_instances': GMMMIEstimator,
+                 'gmm_mi_estimator_s': GMMMIEstimator,
                  'mine_mi_estimator': MineMIEstimator,
                  'softmax_mi_estimator': PCSoftmaxMIEstimator,
                  'pc_softmax_mi_estimator': PCSoftmaxMIEstimator}
@@ -64,19 +78,39 @@ learners = {**classifiers, **mi_estimators}
 classification_metrics = {
     ACCURACY: accuracy_score,
     F_SCORE: f1_score,
-    #AUC_SCORE: auc_score,
+    # AUC_SCORE: auc_score,
     MCC: matthews_corrcoef,
-    #INFORMEDNESS: instance_informedness,
+    # INFORMEDNESS: instance_informedness,
     MISCORE: mutual_info_score,
     SANTHIUB: santhi_vardi_upper_bound,
     HELLMANUB: helmann_raviv_upper_bound,
     FANOSLB: fanos_lower_bound,
-    FANOS_ADJUSTEDLB: fanos_adjusted_lower_bound,
+    FANOS_ADJUSTEDLB: fanos_adjusted_lower_bound
 }
+mi_estimation_metrics = {
+    MCMC_MI_ESTIMATION: None,
+    MCMC_LOG_LOSS: None,
+    MCMC_PC_SOFTMAX: None,
+    MCMC_SOFTMAX: None,
+    MID_POINT_MI_ESTIMATION: mid_point_mi,
+    LOG_LOSS_MI_ESTIMATION: log_loss_estimation,
+    LOG_LOSS_MI_ESTIMATION_ISOTONIC_REGRESSION: log_loss_estimation,
+    LOG_LOSS_MI_ESTIMATION_PLATT_SCALING: log_loss_estimation,
+    LOG_LOSS_MI_ESTIMATION_BETA_CALIBRATION: log_loss_estimation,
+    LOG_LOSS_MI_ESTIMATION_TEMPERATURE_SCALING: log_loss_estimation,
+    LOG_LOSS_MI_ESTIMATION_HISTOGRAM_BINNING: log_loss_estimation,
+    PC_SOFTMAX_MI_ESTIMATION: pc_softmax_estimation,
+    PC_SOFTMAX_MI_ESTIMATION_ISOTONIC_REGRESSION: pc_softmax_estimation,
+    PC_SOFTMAX_MI_ESTIMATION_PLATT_SCALING: pc_softmax_estimation,
+    PC_SOFTMAX_MI_ESTIMATION_BETA_CALIBRATION: pc_softmax_estimation,
+    PC_SOFTMAX_MI_ESTIMATION_TEMPERATURE_SCALING: pc_softmax_estimation,
+    PC_SOFTMAX_MI_ESTIMATION_HISTOGRAM_BINNING: pc_softmax_estimation}
+
 mi_metrics = {
     EMI: None,
 }
-lp_metric_dict = {AUTO_ML: classification_metrics, CLASSIFICATION: classification_metrics,
+lp_metric_dict = {AUTO_ML: {**classification_metrics, **mi_estimation_metrics},
+                  CLASSIFICATION: {**classification_metrics, **mi_estimation_metrics},
                   MUTUAL_INFORMATION: {**mi_metrics, **classification_metrics},
                   MUTUAL_INFORMATION_NEW: {**mi_metrics, **classification_metrics}}
 

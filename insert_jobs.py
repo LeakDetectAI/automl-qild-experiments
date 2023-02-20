@@ -23,7 +23,7 @@ if __name__ == "__main__":
         if schema == MUTUAL_INFORMATION:
             max_job_id = 4
         if schema == MUTUAL_INFORMATION_NEW:
-            max_job_id = 4
+            max_job_id = 6
         if schema == AUTO_ML:
             max_job_id = 1
 

@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils import check_random_state
 
+from pycilt.bayes_search_utils import get_scores
 from pycilt.utils import normalize
 
 
@@ -50,22 +51,6 @@ class BayesPredictor(BaseEstimator, ClassifierMixin):
         prob_predictions = normalize(prob_predictions, axis=1)
         return prob_predictions
 
-    def get_scores(self, X):
-        y_pred = self.predict(X)
-        try:
-            pred_prob = self.predict_proba(X)
-        except:
-            pred_prob = self.decision_function(X)
-        # logger.info("Predict Probability shape {}, {}".format(pred_prob.shape, y_test.shape))
-        if len(pred_prob.shape) == 2 and pred_prob.shape[-1] > 1:
-            if pred_prob.shape[-1] == 2:
-                p_pred = pred_prob[:, 1]
-            else:
-                p_pred = pred_prob
-        else:
-            p_pred = pred_prob.flatten()
-        return p_pred, y_pred
-
     def get_bayes_predictor_scores(self):
         max_acc = -np.inf
         y_true = None
@@ -79,7 +64,7 @@ class BayesPredictor(BaseEstimator, ClassifierMixin):
                 self.logger.info(f"Accuracy of Bayes Predictor is {acc_bp}")
                 max_acc = acc_bp
                 y_true = np.copy(y)
-                p_pred, y_pred = self.get_scores(X)
+                p_pred, y_pred = get_scores(X, self)
         return y_true, y_pred, p_pred
 
     def decision_function(self, X, verbose=0):

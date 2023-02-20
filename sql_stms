@@ -57,3 +57,5 @@ ALTER SEQUENCE mutual_information_new.running_jobs_running_id_seq RESTART WITH 1
 ALTER SEQUENCE mutual_information_new.avail_jobs_job_id_seq RESTART WITH 5;
 DELETE from mutual_information_new.avail_jobs where job_id>4;
 DELETE from results.mutual_information_new where true;
+
+

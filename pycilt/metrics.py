@@ -4,8 +4,10 @@ import numpy as np
 from sklearn.metrics import accuracy_score, roc_auc_score
 
 __all__ = ['bin_ce', 'helmann_raviv_function', 'helmann_raviv_upper_bound', 'santhi_vardi_upper_bound',
-           'fanos_lower_bound', 'fanos_adjusted_lower_bound', 'auc_score', 'instance_informedness']
+           'fanos_lower_bound', 'fanos_adjusted_lower_bound', 'auc_score', 'instance_informedness',
+           'pc_softmax_estimation', 'log_loss_estimation', 'mid_point_mi']
 
+from pycilt.bayes_search_utils import get_scores
 from pycilt.utils import normalize
 
 
@@ -118,3 +120,65 @@ def instance_informedness(y_true, y_pred):
     cn = np.logical_not(y_true).sum()
     inf = np.nansum([tp / cp, tn / cn, -1])
     return inf
+
+
+def probability_calibration(X_train, y_train, X_test, classifier, calibrator):
+    y_pred_train, _ = get_scores(X_train, classifier)
+    y_pred_test, _ = get_scores(X_test, classifier)
+    if len(y_pred_train.shape) == 1:
+        y_pred_train = np.hstack(((1 - y_pred_train)[:, None], y_pred_train[:, None]))
+    if len(y_pred_test.shape) == 1:
+        y_pred_test = np.hstack(((1 - y_pred_test)[:, None], y_pred_test[:, None]))
+    calibrator.fit(y_pred_train, y_train)
+    y_pred_cal = calibrator.transform(y_pred_test)
+    if len(y_pred_cal.shape) == 1:
+        print(type(calibrator))
+        print(y_pred_cal[0:3], y_pred_test[0:3])
+        y_pred_cal = np.hstack(((1 - y_pred_cal)[:, None], y_pred_cal[:, None]))
+    return y_pred_cal
+
+
+def get_entropy_y(y_true):
+    classes, counts = np.unique(y_true, return_counts=True)
+    pys = counts / np.sum(counts)
+    mi_pp = 0
+    for k_class, py in zip(classes, pys):
+        mi_pp += -py * np.log2(py)
+    return mi_pp
+
+
+def pc_softmax_estimation(y_true, y_pred):
+    y_pred[y_pred == 0] = np.finfo(float).eps
+    y_pred[y_pred == 1] = 1 - np.finfo(float).eps
+    classes, counts = np.unique(y_true, return_counts=True)
+    pys = counts / np.sum(counts)
+    mis = []
+    x_exp = np.exp(y_pred)
+    weighted_x_exp = x_exp * pys
+    # weighted_x_exp = x_exp
+    x_exp_sum = np.sum(weighted_x_exp, axis=1, keepdims=True)
+    own_softmax = x_exp / x_exp_sum
+    for i, y_t in enumerate(y_true):
+        softmax = own_softmax[i, int(y_t)]
+        mis.append(np.log2(softmax))
+    estimated_mi = np.nanmean(mis)
+    return estimated_mi
+
+
+def log_loss_estimation(y_true, y_pred):
+    y_pred[y_pred == 0] = np.finfo(float).eps
+    y_pred[y_pred == 1] = 1 - np.finfo(float).eps
+    mi_pp = get_entropy_y(y_true)
+    if len(y_pred.shape) == 1:
+        pyx = (y_pred * np.log2(y_pred) + (1 - y_pred) * np.log2(1 - y_pred))
+    else:
+        pyx = (y_pred * np.log2(y_pred)).sum(axis=1)
+    mi_bp = pyx.mean()
+    mi = mi_bp + mi_pp
+    return mi
+
+
+def mid_point_mi(y_true, y_pred):
+    mid_point = helmann_raviv_upper_bound(y_true, y_pred) + fanos_lower_bound(y_true, y_pred)
+    mid_point = mid_point / 2.0
+    return mid_point
