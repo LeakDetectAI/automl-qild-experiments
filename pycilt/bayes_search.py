@@ -6,6 +6,8 @@ from sklearn.utils import check_random_state
 from skopt import BayesSearchCV as BayesSearchCVSK
 from skopt.utils import eval_callbacks, point_asdict
 
+from pycilt.utils import log_exception_error
+
 
 class BayesSearchCV(BayesSearchCVSK):
     def __init__(
@@ -85,7 +87,8 @@ class BayesSearchCV(BayesSearchCVSK):
         # Instantiate optimizers for all the search spaces.
         try:
             optimizers, optim_results = dill.load(open(self.optimizers_file_path, "rb"))
-        except Exception as e:
+        except Exception as error:
+            log_exception_error(self.logger, error)
             self.logger.error(f"No such file or directory: {self.optimizers_file_path}")
             optimizers = None
             optim_results = []
@@ -121,10 +124,11 @@ class BayesSearchCV(BayesSearchCVSK):
                 n_points_adjusted = min(n_iter, n_points)
                 iter_idx += n_points
                 self.logger.info(f"The {iter_idx + n_finished}th parameter values are being tested")
-                optim_result = self._step(
-                    search_space, optimizer,
-                    evaluate_candidates, n_points=n_points_adjusted
-                )
+                try:
+                    optim_result = self._step(search_space, optimizer, evaluate_candidates, n_points=n_points_adjusted)
+                except Exception as error:
+                    log_exception_error(self.logger, error)
+                    self.logger.info(f"Cannot evaluate the points {n_points_adjusted}")
                 n_iter -= n_points
                 if eval_callbacks(callbacks, optim_result):
                     break

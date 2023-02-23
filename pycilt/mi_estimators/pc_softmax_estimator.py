@@ -140,9 +140,9 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
             else:
                 a_softmax = torch.flatten(torch.softmax(test_, dim=-1))[int_label]
             if self.is_pc_softmax:
-                softmax_list.append(math.log(a_softmax.cpu().item()))
+                softmax_list.append(math.log2(a_softmax.cpu().item()))
             else:
-                softmax_list.append(math.log(a_softmax.cpu().item()) + math.log(len(dataset_prop)))
+                softmax_list.append(math.log2(a_softmax.cpu().item()) + math.log2(len(dataset_prop)))
             if verbose != 0:
                 self.logger.info("####################################################################################")
                 self.logger.info(f"Score {test_1.detach().numpy()}, Test Score {test_.detach().numpy()}")
@@ -161,4 +161,5 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
             mi_estimated = 0
         if self.mi_val - mi_estimated > .01:
             mi_estimated = self.mi_val
+        mi_estimated = np.max([mi_estimated, 0.0])
         return mi_estimated

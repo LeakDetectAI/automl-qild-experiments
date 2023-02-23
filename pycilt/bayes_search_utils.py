@@ -1,7 +1,8 @@
 import numpy as np
+import sklearn
 from sklearn.linear_model import RidgeClassifier, SGDClassifier
 from sklearn.svm import LinearSVC
-
+from packaging import version
 from pycilt.utils import print_dictionary, sigmoid
 
 
@@ -20,6 +21,10 @@ def get_parameters(optimizers, search_keys):
 
 def update_params(bayes_search, search_keys, params, logger):
     best_loss, best_params = get_parameters(bayes_search.optimizers_, search_keys)
+    if version.parse(sklearn.__version__) < version.parse("0.25.0"):
+        if 'criterion' in best_params.keys():
+            if best_params['criterion'] == 'squared_error':
+                best_params['criterion'] = 'mse'
     params.update(best_params)
     params_str = print_dictionary(best_params, sep='\t')
     logger.info(f"Best parameters are: {params_str} with Accuracy/MI of: {-best_loss}\n")

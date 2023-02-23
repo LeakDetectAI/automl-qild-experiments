@@ -1,5 +1,4 @@
 import logging
-import math
 from abc import ABCMeta
 
 import numpy as np
@@ -181,15 +180,10 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
                 y_pred[:, k_class] = self.get_prob_y_given_x(X=X, class_label=k_class)
             else:
                 y_pred[:, k_class] = self.get_prob_flip_y_given_x(X=X, class_label=k_class)
-        marg_x = self.get_prob_fn_margx()
-        p_x_marg = marg_x(X).sum(axis=0)
         y_pred[y_pred == 0] = np.finfo(float).eps
         y_pred[y_pred == 1] = 1 - np.finfo(float).eps
         pyx = (y_pred * np.log2(y_pred)).sum(axis=1)
-        if self.flip_y < 0.2:
-            mi_bp = (pyx * p_x_marg).mean()
-        else:
-            mi_bp = (pyx).mean()
+        mi_bp = pyx.mean()
         mi_pp = 0
         for k_class in self.class_labels:
             mi_pp += -self.flip_y_prob[k_class] * np.log2(self.flip_y_prob[k_class])
@@ -233,14 +227,15 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
         return softmax_emi, pc_softmax_emi
 
     def get_bayes_mi(self, metric_name):
+        mi = 0
         if metric_name == MCMC_LOG_LOSS:
-            return self.bayes_predictor_mi()
+            mi = self.bayes_predictor_mi()
         if metric_name == MCMC_MI_ESTIMATION:
-            return self.calculate_mi()
+            mi = self.calculate_mi()
         softmax_emi, pc_softmax_emi = self.bayes_predictor_pc_softmax_mi()
         if metric_name == MCMC_PC_SOFTMAX:
-            return  pc_softmax_emi
+            mi = pc_softmax_emi
         if metric_name == MCMC_SOFTMAX:
-            return softmax_emi
-
-
+            mi = softmax_emi
+        mi = np.max([mi, 0.0])
+        return mi

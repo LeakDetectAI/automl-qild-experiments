@@ -21,6 +21,7 @@ import sys
 import traceback
 from datetime import datetime
 
+import dill
 import h5py
 import numpy as np
 from autosklearn.estimators import AutoSklearnClassifier
@@ -29,26 +30,23 @@ from sklearn.dummy import DummyClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import StratifiedShuffleSplit
 
-from pycilt.bayes_search_utils import update_params, log_callback, get_scores
 from experiments.contants import *
 from experiments.dbconnection import DBConnector
-from experiments.util import get_duration_seconds, get_dataset_reader, create_search_space, setup_logging, \
-    setup_random_seed, create_directory_safely, learners, lp_metric_dict, convert_learner_params, duration_till_now, \
-    seconds_to_time, calibrators, calibrator_params
+from experiments.util import *
 from pycilt.bayes_predictor import BayesPredictor
 from pycilt.bayes_search import BayesSearchCV
+from pycilt.bayes_search_utils import update_params, log_callback, get_scores
 from pycilt.metrics import probability_calibration
 from pycilt.mi_estimators import GMMMIEstimator, PCSoftmaxMIEstimator, MineMIEstimator
 from pycilt.mi_estimators.mi_base_class import MIEstimatorBase
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
-from pycilt.utils import print_dictionary
+from pycilt.utils import print_dictionary, log_exception_error
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 LOGS_FOLDER = 'logs'
 RESULT_FOLDER = 'results'
 EXPERIMENTS = 'experiments'
 OPTIMIZER_FOLDER = 'optimizers'
-
 
 if __name__ == "__main__":
     start = datetime.now()
@@ -64,7 +62,7 @@ if __name__ == "__main__":
     os.environ["HIP_LAUNCH_BLOCKING"] = "1"
     os.environ["CUDA_LAUNCH_BLOCKING"] = "2"
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    for i in range(10):
+    for i in range(100):
         dbConnector.job_description = None
         if 'CCS_REQID' in os.environ.keys():
             cluster_id = int(os.environ['CCS_REQID'])
@@ -148,17 +146,17 @@ if __name__ == "__main__":
                         p_pred, y_pred = get_scores(X, estimator)
                         y_true = np.copy(y)
                     else:
-                        import shutil
-                        learner_params['tmp_folder'] = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM,
-                                                                    OPTIMIZER_FOLDER, hash_value)
-                        if os.path.exists(learner_params['tmp_folder']):
-                            logger.info(f"Removing the existing directory {learner_params['tmp_folder']} ")
-                            shutil.rmtree(learner_params['tmp_folder'])
                         del learner_params['random_state']
-                        estimator = learner(**learner_params)
-                        estimator.fit(X_train, y_train)
-                        config = estimator.get_configuration_space(X_train, y_train)
-                        # estimator.fit_pipeline(X_train, y_train, config=config, X_test=X_test, y_test=y_test)
+                        learner_params['time_left_for_this_task'] = 60
+                        estimator = get_automl_learned_estimator(optimizers_file_path, logger)
+                        if estimator is None:
+                            estimator = learner(**learner_params)
+                            estimator.fit(X_train, y_train)
+                            config = estimator.get_configuration_space(X_train, y_train)
+                            # estimator.fit_pipeline(X_train, y_train, config=config, X_test=X_test, y_test=y_test)
+                            dill.dump(estimator, open(optimizers_file_path, "wb"))
+                        else:
+                            logger.info("AutoML pipeline trained and reusing it")
                         p_pred, y_pred = get_scores(X_test, estimator)
                         y_true = np.copy(y_test)
                         setup_logging(log_path=log_path)
@@ -167,9 +165,11 @@ if __name__ == "__main__":
                         logger.info(f"Best Model {estimator.show_models()}")
 
                 else:
-                    #inner_cv_iterator = StratifiedKFold(n_splits=n_inner_folds, shuffle=True, random_state=random_state)
-                    inner_cv_iterator = StratifiedShuffleSplit(n_splits=n_inner_folds, test_size=0.10, random_state=random_state)
-                    search_space = create_search_space(hp_ranges)
+                    # inner_cv_iterator = StratifiedKFold(n_splits=n_inner_folds, shuffle=True, random_state=random_state)
+                    inner_cv_iterator = StratifiedShuffleSplit(n_splits=n_inner_folds, test_size=0.10,
+                                                               random_state=random_state)
+                    search_space = create_search_space(hp_ranges, logger)
+                    logger.info(f"search_space {search_space}")
                     if learner == MultiLayerPerceptron or issubclass(learner, MIEstimatorBase):
                         learner_params = {**learner_params, **dict(input_dim=input_dim, n_classes=n_classes)}
                     if learner == GMMMIEstimator:
@@ -186,8 +186,9 @@ if __name__ == "__main__":
                     callback = log_callback(logger, search_keys)
                     try:
                         bayes_search.fit(X_train, y_train, groups=None, callback=callback, **fit_params)
-                    except Exception as e:
-                        logger.info(f"Exception {str(e)}")
+                    except Exception as error:
+                        log_exception_error(logger, error)
+                        logger.error("Cannot fit the Bayes SearchCV ")
                     logger.info("Fitting the model with best parameters")
                     best_loss, learner_params = update_params(bayes_search, search_keys, learner_params, logger)
                     logger.info(f"Setting the best parameters {print_dictionary(learner_params)}")
@@ -198,7 +199,7 @@ if __name__ == "__main__":
                         for _ in range(10):
                             estimator.fit(X_train, y_train)
                             ll = estimator.final_loss
-                            logger.info(f"Final Loss {estimator.final_loss}")
+                            logger.info(f"Final Loss {ll}")
                             if not (np.isnan(ll) or np.isinf(ll)):
                                 break
                             else:
@@ -237,16 +238,19 @@ if __name__ == "__main__":
                             calibrator = calibrators[calibrator_technique]
                             c_params = calibrator_params[calibrator_technique]
                             calibrator = calibrator(**c_params)
-                            p_pred_cal = probability_calibration(X_train, y_train, X_test, estimator, calibrator)
-                            metric_loss = evaluation_metric(y_test, p_pred_cal)
+                            try:
+                                p_pred_cal = probability_calibration(X_train, y_train, X_test, estimator, calibrator,
+                                                                     logger)
+                                metric_loss = evaluation_metric(y_test, p_pred_cal)
+                            except Exception as error:
+                                log_exception_error(logger, error)
+                                logger.error("Error while calibrating the probabilities setting mi using non"
+                                             " calibrated probabilities")
+                                metric_loss = evaluation_metric(y_test, p_pred)
                         else:
                             metric_loss = evaluation_metric(y_true, p_pred)
                     elif metric_name in [MCMC_LOG_LOSS, MCMC_MI_ESTIMATION, MCMC_PC_SOFTMAX, MCMC_SOFTMAX]:
-                        if learner != BayesPredictor:
-                            metric_loss = np.nan
-                        else:
-                            metric_loss = dataset_reader.get_bayes_mi(metric_name)
-
+                        metric_loss = dataset_reader.get_bayes_mi(metric_name)
                     elif metric_name == EMI:
                         metric_loss = estimated_mi
                     else:

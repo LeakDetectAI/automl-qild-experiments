@@ -1,11 +1,14 @@
 import logging
 
 import numpy as np
+from sklearn.linear_model import SGDClassifier, RidgeClassifier
 from sklearn.metrics import accuracy_score, roc_auc_score
 
 __all__ = ['bin_ce', 'helmann_raviv_function', 'helmann_raviv_upper_bound', 'santhi_vardi_upper_bound',
            'fanos_lower_bound', 'fanos_adjusted_lower_bound', 'auc_score', 'instance_informedness',
            'pc_softmax_estimation', 'log_loss_estimation', 'mid_point_mi']
+
+from sklearn.svm import LinearSVC
 
 from pycilt.bayes_search_utils import get_scores
 from pycilt.utils import normalize
@@ -122,7 +125,7 @@ def instance_informedness(y_true, y_pred):
     return inf
 
 
-def probability_calibration(X_train, y_train, X_test, classifier, calibrator):
+def probability_calibration(X_train, y_train, X_test, classifier, calibrator, logger):
     y_pred_train, _ = get_scores(X_train, classifier)
     y_pred_test, _ = get_scores(X_test, classifier)
     if len(y_pred_train.shape) == 1:
@@ -132,8 +135,8 @@ def probability_calibration(X_train, y_train, X_test, classifier, calibrator):
     calibrator.fit(y_pred_train, y_train)
     y_pred_cal = calibrator.transform(y_pred_test)
     if len(y_pred_cal.shape) == 1:
-        print(type(calibrator))
-        print(y_pred_cal[0:3], y_pred_test[0:3])
+        logger.info(f"Calibration Type {type(calibrator).__name__}")
+        logger.info(f"Calibrated Class 1 Probs {y_pred_cal[0:3]} \n Original Probs {y_pred_test[0:3]}")
         y_pred_cal = np.hstack(((1 - y_pred_cal)[:, None], y_pred_cal[:, None]))
     return y_pred_cal
 
@@ -162,6 +165,7 @@ def pc_softmax_estimation(y_true, y_pred):
         softmax = own_softmax[i, int(y_t)]
         mis.append(np.log2(softmax))
     estimated_mi = np.nanmean(mis)
+    estimated_mi = np.max([estimated_mi, 0.0])
     return estimated_mi
 
 
@@ -175,10 +179,12 @@ def log_loss_estimation(y_true, y_pred):
         pyx = (y_pred * np.log2(y_pred)).sum(axis=1)
     mi_bp = pyx.mean()
     mi = mi_bp + mi_pp
+    mi = np.max([mi, 0.0])
     return mi
 
 
 def mid_point_mi(y_true, y_pred):
     mid_point = helmann_raviv_upper_bound(y_true, y_pred) + fanos_lower_bound(y_true, y_pred)
     mid_point = mid_point / 2.0
+    mid_point = np.max([mid_point, 0.0])
     return mid_point

@@ -153,4 +153,5 @@ class MineMIEstimator(MIEstimatorBase):
         self.logger.info(f'Estimated MIs: {mi_hats} Mean {mi_estimated}')
         if self.mi_val - mi_estimated > .01:
             mi_estimated = self.mi_val
+        mi_estimated = np.max([mi_estimated, 0.0]) * np.log2(np.e)
         return mi_estimated

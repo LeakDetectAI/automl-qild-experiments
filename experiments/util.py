@@ -27,15 +27,21 @@ from tensorflow.core.protobuf.config_pb2 import ConfigProto
 from tensorflow.python.client.session import Session
 
 from experiments.contants import *
+import dill
 from pycilt.baseline import MajorityVoting
 from pycilt.bayes_predictor import BayesPredictor
 from pycilt.metrics import *
 from pycilt.mi_estimators import MineMIEstimator, GMMMIEstimator, PCSoftmaxMIEstimator
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.synthetic_data_generator import SyntheticDatasetGenerator
-
-__all__ = ["get_dataset_reader", "duration_till_now", "time_from_now", "get_dataset_reader", "create_search_space",
-           "create_directory_safely", "setup_logging", "setup_random_seed", "check_file_exists"]
+from packaging import version
+import sklearn
+__all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_estimators", "get_dataset_reader",
+           "learners", "classification_metrics", "mi_estimation_metrics", "mi_metrics", "lp_metric_dict",
+           "get_duration_seconds", "duration_till_now", "time_from_now", "get_dataset_reader", "seconds_to_time",
+           "time_from_now", "create_search_space", "get_dataset_reader", "convert_learner_params",
+           "create_directory_safely", "setup_logging", "setup_random_seed", "check_file_exists",
+           "get_automl_learned_estimator"]
 
 datasets = {
     SYNTHETIC_DATASET: SyntheticDatasetGenerator,
@@ -72,8 +78,6 @@ mi_estimators = {'gmm_mi_estimator': GMMMIEstimator,
                  'softmax_mi_estimator': PCSoftmaxMIEstimator,
                  'pc_softmax_mi_estimator': PCSoftmaxMIEstimator}
 learners = {**classifiers, **mi_estimators}
-
-
 
 classification_metrics = {
     ACCURACY: accuracy_score,
@@ -129,6 +133,7 @@ def duration_till_now(start):
 def seconds_to_time(target_time_sec):
     return str(timedelta(seconds=target_time_sec))
 
+
 def time_from_now(target_time_sec):
     base_datetime = datetime.now()
     delta = timedelta(seconds=target_time_sec)
@@ -142,7 +147,7 @@ def get_dataset_reader(dataset_name, dataset_params):
     return dataset_func
 
 
-def create_search_space(hp_ranges):
+def create_search_space(hp_ranges, logger):
     def isint(v):
         return type(v) is int
 
@@ -157,7 +162,10 @@ def create_search_space(hp_ranges):
 
     search_space = {}
     for key, value in hp_ranges.items():
-        print(key, value)
+        logger.info(f"Before key {key} value {value}")
+        if version.parse(sklearn.__version__) < version.parse("0.25.0"):
+            if key == 'criterion' and 'squared_error' in value:
+                value = ["friedman_mse", "mse"]
         if isint(value[0]) and isint(value[1]):
             search_space[key] = Integer(value[0], value[1])
         if isfloat(value[0]) and isfloat(value[1]):
@@ -165,13 +173,16 @@ def create_search_space(hp_ranges):
                 search_space[key] = Real(value[0], value[1], prior=value[2])
         if (isbool(value[0]) and isbool(value[1])) or (isstr(value[0]) and isstr(value[1])):
             search_space[key] = Categorical(value)
+        logger.info(f"key {key} value {value}")
     return search_space
+
 
 def convert_learner_params(params):
     for key, value in params.items():
         if value == 'None':
             params[key] = None
     return params
+
 
 def create_directory_safely(path, is_file_path=False):
     try:
@@ -257,3 +268,12 @@ def check_file_exists(file_path):
         print("Error: provided file path '%s' does not exist!" % file_path)
         sys.exit(-1)
     return
+
+
+def get_automl_learned_estimator(optimizers_file_path, logger):
+    try:
+        estimator = dill.load(open(optimizers_file_path, "rb"))
+    except Exception as e:
+        logger.error(f"No such file or directory: {optimizers_file_path}")
+        estimator = None
+    return estimator

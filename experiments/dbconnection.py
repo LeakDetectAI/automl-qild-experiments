@@ -180,7 +180,7 @@ class DBConnector(metaclass=ABCMeta):
         self.cursor_db.execute(select_job)
         job_ids = [j for i in self.cursor_db.fetchall() for j in i]
         job_ids.sort()
-        print(f"jobs available {job_ids}")
+        print(f"jobs available {np.array(job_ids)[:10]}")
         while self.job_description is None:
             try:
                 job_id = job_ids[0]

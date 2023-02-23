@@ -1,4 +1,5 @@
 import sys
+import traceback
 import warnings
 
 import numpy as np
@@ -93,3 +94,11 @@ class Standardize(object):
         X = self.transform(X)
         return X
 
+
+def log_exception_error(logger, e):
+    if hasattr(e, 'message'):
+        message = e.message
+    else:
+        message = e
+    logger.error(traceback.format_exc())
+    logger.error(message)
