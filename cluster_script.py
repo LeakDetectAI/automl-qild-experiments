@@ -62,7 +62,7 @@ if __name__ == "__main__":
     os.environ["HIP_LAUNCH_BLOCKING"] = "1"
     os.environ["CUDA_LAUNCH_BLOCKING"] = "2"
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    for i in range(100):
+    for i in range(20):
         dbConnector.job_description = None
         if 'CCS_REQID' in os.environ.keys():
             cluster_id = int(os.environ['CCS_REQID'])
@@ -113,7 +113,7 @@ if __name__ == "__main__":
                 X, y = dataset_reader.generate_dataset()
                 input_dim = X.shape[-1]
                 n_classes = len(np.unique(y))
-                sss = StratifiedShuffleSplit(n_splits=1, test_size=0.33, random_state=0)
+                sss = StratifiedShuffleSplit(n_splits=1, test_size=0.30, random_state=0)
                 train_index, test_index = list(sss.split(X, y))[0]
                 X_train, X_test = X[train_index], X[test_index]
                 y_train, y_test = y[train_index], y[test_index]
@@ -147,14 +147,16 @@ if __name__ == "__main__":
                         y_true = np.copy(y)
                     else:
                         del learner_params['random_state']
-                        learner_params['time_left_for_this_task'] = 60
+                        #learner_params['time_left_for_this_task'] = 60
                         estimator = get_automl_learned_estimator(optimizers_file_path, logger)
                         if estimator is None:
+                            logger.info("AutoML pipeline not trained and training it")
                             estimator = learner(**learner_params)
                             estimator.fit(X_train, y_train)
                             config = estimator.get_configuration_space(X_train, y_train)
                             # estimator.fit_pipeline(X_train, y_train, config=config, X_test=X_test, y_test=y_test)
                             dill.dump(estimator, open(optimizers_file_path, "wb"))
+                            logger.info("AutoML pipeline trained and saving the model")
                         else:
                             logger.info("AutoML pipeline trained and reusing it")
                         p_pred, y_pred = get_scores(X_test, estimator)
@@ -172,8 +174,6 @@ if __name__ == "__main__":
                     logger.info(f"search_space {search_space}")
                     if learner == MultiLayerPerceptron or issubclass(learner, MIEstimatorBase):
                         learner_params = {**learner_params, **dict(input_dim=input_dim, n_classes=n_classes)}
-                    if learner == GMMMIEstimator:
-                        learner_params['n_models'] = 4
                     estimator = learner(**learner_params)
                     bayes_search_params = dict(estimator=estimator, search_spaces=search_space, n_iter=hp_iters,
                                                scoring=validation_loss, n_jobs=n_jobs, cv=inner_cv_iterator,
@@ -192,8 +192,6 @@ if __name__ == "__main__":
                     logger.info("Fitting the model with best parameters")
                     best_loss, learner_params = update_params(bayes_search, search_keys, learner_params, logger)
                     logger.info(f"Setting the best parameters {print_dictionary(learner_params)}")
-                    if learner == GMMMIEstimator:
-                        del learner_params['n_models']
                     if learner == MineMIEstimator or learner == PCSoftmaxMIEstimator:
                         estimator = learner(**learner_params)
                         for _ in range(10):

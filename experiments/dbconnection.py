@@ -13,7 +13,8 @@ from experiments.contants import MUTUAL_INFORMATION_NEW
 from experiments.util import get_duration_seconds, duration_till_now
 from pycilt.utils import print_dictionary
 
-LEARNERS = ['gmm_mi_estimator', 'gmm_mi_estimator_s', 'gmm_mi_estimator_more_instances', 'mine_mi_estimator']
+LEARNERS = ['gmm_mi_estimator', 'gmm_mi_estimator_s', 'gmm_mi_estimator_more_instances',
+            'gmm_mi_estimator_more_instances_s', 'mine_mi_estimator']
 turn_filter_on = True
 
 

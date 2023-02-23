@@ -43,6 +43,8 @@ __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_es
            "create_directory_safely", "setup_logging", "setup_random_seed", "check_file_exists",
            "get_automl_learned_estimator"]
 
+from pycilt.utils import log_exception_error
+
 datasets = {
     SYNTHETIC_DATASET: SyntheticDatasetGenerator,
 }
@@ -74,6 +76,7 @@ calibrator_params = {ISOTONIC_REGRESSION: {'detection': False, 'independent_prob
 mi_estimators = {'gmm_mi_estimator': GMMMIEstimator,
                  'gmm_mi_estimator_more_instances': GMMMIEstimator,
                  'gmm_mi_estimator_s': GMMMIEstimator,
+                 'gmm_mi_estimator_more_instances_s': GMMMIEstimator,
                  'mine_mi_estimator': MineMIEstimator,
                  'softmax_mi_estimator': PCSoftmaxMIEstimator,
                  'pc_softmax_mi_estimator': PCSoftmaxMIEstimator}
@@ -227,8 +230,6 @@ def setup_random_seed(random_state=1234):
     # logger.info('Seed value: {}'.format(seed))
     logger = logging.getLogger("Setup Logging")
     random_state = check_random_state(random_state)
-    seed = random_state.randint(2 ** 31, dtype="uint32")
-    os.environ['PYTHONHASHSEED'] = str(seed)
 
     seed = random_state.randint(2 ** 31, dtype="uint32")
     torch.manual_seed(seed)
@@ -273,7 +274,8 @@ def check_file_exists(file_path):
 def get_automl_learned_estimator(optimizers_file_path, logger):
     try:
         estimator = dill.load(open(optimizers_file_path, "rb"))
-    except Exception as e:
+    except Exception as error:
+        log_exception_error(logger, error)
         logger.error(f"No such file or directory: {optimizers_file_path}")
         estimator = None
     return estimator
