@@ -21,21 +21,20 @@ import sys
 import traceback
 from datetime import datetime
 
-import dill
 import h5py
 import numpy as np
-from autosklearn.estimators import AutoSklearnClassifier
 from docopt import docopt
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import StratifiedShuffleSplit
 
-from experiments.contants import *
 from experiments.dbconnection import DBConnector
-from experiments.util import *
+from experiments.utils import *
+from pycilt.automl import AutoGluonClassifier, AutoTabPFNClassifier
 from pycilt.bayes_predictor import BayesPredictor
 from pycilt.bayes_search import BayesSearchCV
 from pycilt.bayes_search_utils import update_params, log_callback, get_scores
+from pycilt.contants import *
 from pycilt.metrics import probability_calibration
 from pycilt.mi_estimators import GMMMIEstimator, PCSoftmaxMIEstimator, MineMIEstimator
 from pycilt.mi_estimators.mi_base_class import MIEstimatorBase
@@ -62,7 +61,7 @@ if __name__ == "__main__":
     os.environ["HIP_LAUNCH_BLOCKING"] = "1"
     os.environ["CUDA_LAUNCH_BLOCKING"] = "2"
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    for i in range(20):
+    for i in range(10):
         dbConnector.job_description = None
         if 'CCS_REQID' in os.environ.keys():
             cluster_id = int(os.environ['CCS_REQID'])
@@ -108,10 +107,11 @@ if __name__ == "__main__":
                 duration = get_duration_seconds(duration)
                 dataset_params['random_state'] = random_state
                 dataset_params['fold_id'] = fold_id
-
+                if 'more_instances' in learner_name:
+                    dataset_params["samples_per_class"] = 250 * dataset_params["n_features"]
                 dataset_reader = get_dataset_reader(dataset_name, dataset_params)
                 X, y = dataset_reader.generate_dataset()
-                input_dim = X.shape[-1]
+                n_features = X.shape[-1]
                 n_classes = len(np.unique(y))
                 sss = StratifiedShuffleSplit(n_splits=1, test_size=0.30, random_state=0)
                 train_index, test_index = list(sss.split(X, y))[0]
@@ -133,8 +133,8 @@ if __name__ == "__main__":
                         n_jobs = 10
                 else:
                     n_jobs = 10
-                if learner == BayesPredictor or issubclass(learner, DummyClassifier) \
-                        or learner == AutoSklearnClassifier:
+                if learner in [BayesPredictor, AutoGluonClassifier, AutoTabPFNClassifier] \
+                        or issubclass(learner, DummyClassifier):
                     if learner == BayesPredictor:
                         learner_params = {'dataset_obj': dataset_reader}
                         estimator = learner(**learner_params)
@@ -146,26 +146,16 @@ if __name__ == "__main__":
                         p_pred, y_pred = get_scores(X, estimator)
                         y_true = np.copy(y)
                     else:
-                        del learner_params['random_state']
-                        #learner_params['time_left_for_this_task'] = 60
-                        estimator = get_automl_learned_estimator(optimizers_file_path, logger)
-                        if estimator is None:
-                            logger.info("AutoML pipeline not trained and training it")
-                            estimator = learner(**learner_params)
-                            estimator.fit(X_train, y_train)
-                            config = estimator.get_configuration_space(X_train, y_train)
-                            # estimator.fit_pipeline(X_train, y_train, config=config, X_test=X_test, y_test=y_test)
-                            dill.dump(estimator, open(optimizers_file_path, "wb"))
-                            logger.info("AutoML pipeline trained and saving the model")
-                        else:
-                            logger.info("AutoML pipeline trained and reusing it")
-                        p_pred, y_pred = get_scores(X_test, estimator)
-                        y_true = np.copy(y_test)
-                        setup_logging(log_path=log_path)
-                        logger.info(f"Best ensemble {estimator.leaderboard()}")
-                        logger.info(f"Test Scores: {estimator.cv_results_['mean_test_score']}")
-                        logger.info(f"Best Model {estimator.show_models()}")
-
+                        if learner == AutoGluonClassifier:
+                            folder = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, OPTIMIZER_FOLDER,
+                                                  f"{hash_value}")
+                            os.mkdir(folder)
+                            learner_params = {**learner_params, **dict(n_features=n_features, n_classes=n_classes)}
+                            learner_params['output_folder'] = folder
+                        estimator = learner(**learner_params)
+                        estimator.fit(X_train, y_train)
+                        p_pred, y_pred = get_scores(X, estimator)
+                        y_true = np.copy(y)
                 else:
                     # inner_cv_iterator = StratifiedKFold(n_splits=n_inner_folds, shuffle=True, random_state=random_state)
                     inner_cv_iterator = StratifiedShuffleSplit(n_splits=n_inner_folds, test_size=0.10,
@@ -173,7 +163,7 @@ if __name__ == "__main__":
                     search_space = create_search_space(hp_ranges, logger)
                     logger.info(f"search_space {search_space}")
                     if learner == MultiLayerPerceptron or issubclass(learner, MIEstimatorBase):
-                        learner_params = {**learner_params, **dict(input_dim=input_dim, n_classes=n_classes)}
+                        learner_params = {**learner_params, **dict(n_features=n_features, n_classes=n_classes)}
                     estimator = learner(**learner_params)
                     bayes_search_params = dict(estimator=estimator, search_spaces=search_space, n_iter=hp_iters,
                                                scoring=validation_loss, n_jobs=n_jobs, cv=inner_cv_iterator,
@@ -243,7 +233,7 @@ if __name__ == "__main__":
                             except Exception as error:
                                 log_exception_error(logger, error)
                                 logger.error("Error while calibrating the probabilities setting mi using non"
-                                             " calibrated probabilities")
+                                             "calibrated probabilities")
                                 metric_loss = evaluation_metric(y_test, p_pred)
                         else:
                             metric_loss = evaluation_metric(y_true, p_pred)

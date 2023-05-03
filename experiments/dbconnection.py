@@ -9,13 +9,13 @@ import numpy as np
 import psycopg2
 from psycopg2.extras import DictCursor
 
-from experiments.contants import MUTUAL_INFORMATION_NEW
-from experiments.util import get_duration_seconds, duration_till_now
+from experiments.utils import get_duration_seconds, duration_till_now
+from pycilt.contants import MUTUAL_INFORMATION_NEW
 from pycilt.utils import print_dictionary
 
-LEARNERS = ['gmm_mi_estimator', 'gmm_mi_estimator_s', 'gmm_mi_estimator_more_instances',
-            'gmm_mi_estimator_more_instances_s', 'mine_mi_estimator']
-turn_filter_on = True
+LEARNERS = ['gmm_mi_estimator', 'gmm_mi_estimator_more_instances', 'gmm_mi_estimator_true',
+            'gmm_mi_estimator_more_instances_true']
+turn_filter_on = False
 
 
 class NpEncoder(json.JSONEncoder):
@@ -277,7 +277,8 @@ class DBConnector(metaclass=ABCMeta):
                 self.logger.info(f"Results inserted for the job {results['job_id']}")
         except psycopg2.IntegrityError as e:
             self.logger.info(print_dictionary(results))
-            self.logger.info(f"IntegrityError for the job {results['job_id']}, results already inserted to another node error {str(e)}")
+            self.logger.info(
+                f"IntegrityError for the job {results['job_id']}, results already inserted to another node error {str(e)}")
             self.connection.rollback()
             update_str = ""
             values_tuples = []
@@ -592,8 +593,9 @@ class DBConnector(metaclass=ABCMeta):
         ]
         hash_string = ""
         for k in keys:
-            hash_string = hash_string + str(k) + ":" + str(job[k])
+            if k in job.keys():
+                hash_string = hash_string + str(k) + ":" + str(job[k])
         hash_object = hashlib.sha1(hash_string.encode())
         hex_dig = hash_object.hexdigest()
-        #self.logger.info(   "Job_id {} Hash_string {}".format(job.get("job_id", None), str(hex_dig)))
+        # self.logger.info(   "Job_id {} Hash_string {}".format(job.get("job_id", None), str(hex_dig)))
         return str(hex_dig)

@@ -17,12 +17,12 @@ from .layers import NormalizedDense
 
 
 class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
-    def __init__(self, input_dim, n_classes, n_hidden=10, n_units=100, batch_normalization=True, activation='relu',
+    def __init__(self, n_features, n_classes, n_hidden=10, n_units=100, batch_normalization=True, activation='relu',
                  loss_function='categorical_crossentropy', metrics=['accuracy'], optimizer_str='sgd',
                  reg_strength=1e-4, kernel_initializer="lecun_normal", learning_rate=0.001,
                  early_stopping=False, model_save_path='', random_state=None, **kwargs):
         self.logger = logging.getLogger(name=MultiLayerPerceptron.__name__)
-        self.input_dim = input_dim
+        self.n_features = n_features
         self.n_classes = n_classes
         self.classes_ = np.arange(0, self.n_classes)
         self.n_units = n_units
@@ -49,7 +49,7 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
         self.output_node = Dense(
             1, activation="sigmoid", kernel_regularizer=self.kernel_regularizer
         )
-        self.input = Input(shape=self.input_dim, dtype='float32')
+        self.input = Input(shape=self.n_features, dtype='float32')
         if self.batch_normalization:
             self.hidden_layers = [
                 NormalizedDense(self.n_units, name="hidden_{}".format(x), **kwargs)

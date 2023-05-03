@@ -65,4 +65,148 @@ DELETE from results.mutual_information_new where true;
 ALTER SEQUENCE mutual_information_new.running_jobs_running_id_seq RESTART WITH 1;
 ALTER SEQUENCE mutual_information_new.avail_jobs_job_id_seq RESTART WITH 7;
 
+DELETE from mutual_information_new.avail_jobs where job_id>4;
+DELETE from mutual_information_new.running_jobs where true;
+ALTER SEQUENCE mutual_information_new.running_jobs_running_id_seq RESTART WITH 1;
+ALTER SEQUENCE mutual_information_new.avail_jobs_job_id_seq RESTART WITH 10;
+DELETE from results.mutual_information_new where True
+DELETE FROM classification.avail_jobs a USING classification.avail_jobs b WHERE a.job_id < b.job_id AND a.hash_value = b.hash_value;
 
+create view results.automl_agg
+            (job_id, cluster_id, f1score, accuracy, mathewscorrelationcoefficient, santhivardyupperbound,
+             hellmanravivupperbound, fanoslowerbound, fanosadjustedlowerbound, estimatedmutualinformationscore,
+             mcmcbayesmi, mcmcloglossbayesmi, mcmcpcsoftmaxbayesmi, mcmcsoftmaxbayesmi, midpointmi, loglossmi,
+             loglossmiisotonicregression, loglossmiplattscaling, loglossmibetacalibration, loglossmitemperaturescaling,
+             loglossmihistogrambinnin, pcsoftmaxmi, pcsoftmaxmiisotonicregression, pcsoftmaxmiplattscaling,
+             pcsoftmaxmibetacalibration, pcsoftmaxmitemperaturescaling, pcsoftmaxmihistogrambinning, fold_id, dataset,
+             learner, experiment_schema, experiment_table, dataset_params, fit_params, learner_params, hp_ranges,
+             hp_iters, is_gpu, seed, inner_folds, duration, learning_problem, validation_loss, hash_value,
+             job_allocated_time, job_end_time, evaluation_time, n_classes, n_features, flip_y)
+as
+SELECT results.job_id,
+       results.cluster_id,
+       results.f1score,
+       results.accuracy,
+       results.mathewscorrelationcoefficient,
+       results.santhivardyupperbound,
+       results.hellmanravivupperbound,
+       results.fanoslowerbound,
+       results.fanosadjustedlowerbound,
+       results.estimatedmutualinformationscore,
+       results.mcmcbayesmi,
+       results.mcmcloglossbayesmi,
+       results.mcmcpcsoftmaxbayesmi,
+       results.mcmcsoftmaxbayesmi,
+       results.midpointmi,
+       results.loglossmi,
+       results.loglossmiisotonicregression,
+       results.loglossmiplattscaling,
+       results.loglossmibetacalibration,
+       results.loglossmitemperaturescaling,
+       results.loglossmihistogrambinning,
+       results.pcsoftmaxmi,
+       results.pcsoftmaxmiisotonicregression,
+       results.pcsoftmaxmiplattscaling,
+       results.pcsoftmaxmibetacalibration,
+       results.pcsoftmaxmitemperaturescaling,
+       results.pcsoftmaxmihistogrambinning,
+       jobs.fold_id,
+       jobs.dataset,
+       jobs.learner,
+       jobs.experiment_schema,
+       jobs.experiment_table,
+       jobs.dataset_params,
+       jobs.fit_params,
+       jobs.learner_params,
+       jobs.hp_ranges,
+       jobs.hp_iters,
+       jobs.is_gpu,
+       jobs.seed,
+       jobs.inner_folds,
+       jobs.duration,
+       jobs.learning_problem,
+       jobs.validation_loss,
+       jobs.hash_value,
+       jobs.job_allocated_time,
+       jobs.job_end_time,
+       jobs.evaluation_time,
+       (jobs.dataset_params ->> 'n_classes'::text)::integer       AS n_classes,
+       (jobs.dataset_params ->> 'n_features'::text)::integer      AS n_features,
+       (jobs.dataset_params ->> 'flip_y'::text)::double precision AS flip_y
+FROM results.automl results
+         JOIN automl.avail_jobs jobs USING (job_id);
+
+alter table results.automl
+    owner to autoscaadmin;
+
+
+create view results.mutual_information_aggregated_new
+            (job_id, cluster_id, estimatedmutualinformation, estimatedmutualinformationscore, f1score, accuracy,
+             mathewscorrelationcoefficient, santhivardyupperbound, hellmanravivupperbound, fanoslowerbound,
+             fanosadjustedlowerbound, fold_id, dataset, learner, experiment_schema, experiment_table, dataset_params,
+             fit_params, learner_params, hp_ranges, hp_iters, is_gpu, seed, inner_folds, duration, learning_problem,
+             validation_loss, hash_value, job_allocated_time, job_end_time, evaluation_time, n_classes, n_features,
+             flip_y)
+as
+SELECT results.job_id,
+       results.cluster_id,
+       results.estimatedmutualinformation,
+       results.estimatedmutualinformationscore,
+       results.f1score,
+       results.accuracy,
+       results.mathewscorrelationcoefficient,
+       results.santhivardyupperbound,
+       results.hellmanravivupperbound,
+       results.fanoslowerbound,
+       results.fanosadjustedlowerbound,
+       jobs.fold_id,
+       jobs.dataset,
+       jobs.learner,
+       jobs.experiment_schema,
+       jobs.experiment_table,
+       jobs.dataset_params,
+       jobs.fit_params,
+       jobs.learner_params,
+       jobs.hp_ranges,
+       jobs.hp_iters,
+       jobs.is_gpu,
+       jobs.seed,
+       jobs.inner_folds,
+       jobs.duration,
+       jobs.learning_problem,
+       jobs.validation_loss,
+       jobs.hash_value,
+       jobs.job_allocated_time,
+       jobs.job_end_time,
+       jobs.evaluation_time,
+       (jobs.dataset_params ->> 'n_classes'::text)::integer       AS n_classes,
+       (jobs.dataset_params ->> 'n_features'::text)::integer      AS n_features,
+       (jobs.dataset_params ->> 'flip_y'::text)::double precision AS flip_y
+FROM results.mutual_information_new results
+         JOIN mutual_information_new.avail_jobs jobs USING (job_id);
+
+alter table results.mutual_information_aggregated_new
+    owner to autoscaadmin;
+
+create table results.mutual_information_new
+(
+    job_id                          integer not null
+        primary key,
+    cluster_id                      integer not null,
+    EstimatedMutualInformation      double precision,
+    MCMCBayesMI      double precision,
+    MCMCLogLossBayesMI      double precision,
+    MCMCPCSoftmaxBayesMI      double precision,
+    MCMCSoftmaxBayesMI      double precision,
+    EstimatedMutualInformationScore double precision,
+    f1score                         double precision,
+    accuracy                        double precision,
+    mathewscorrelationcoefficient   double precision,
+    santhivardyupperbound           double precision,
+    hellmanravivupperbound          double precision,
+    fanoslowerbound                 double precision,
+    fanosadjustedlowerbound         double precision
+);
+
+alter table results.mutual_information_new
+    owner to autoscaadmin;

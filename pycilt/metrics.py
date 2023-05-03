@@ -1,17 +1,14 @@
 import logging
 
 import numpy as np
-from sklearn.linear_model import SGDClassifier, RidgeClassifier
 from sklearn.metrics import accuracy_score, roc_auc_score
+
+from pycilt.bayes_search_utils import get_scores
+from pycilt.utils import normalize
 
 __all__ = ['bin_ce', 'helmann_raviv_function', 'helmann_raviv_upper_bound', 'santhi_vardi_upper_bound',
            'fanos_lower_bound', 'fanos_adjusted_lower_bound', 'auc_score', 'instance_informedness',
            'pc_softmax_estimation', 'log_loss_estimation', 'mid_point_mi']
-
-from sklearn.svm import LinearSVC
-
-from pycilt.bayes_search_utils import get_scores
-from pycilt.utils import normalize
 
 
 def bin_ce(p_e):
@@ -64,8 +61,8 @@ def helmann_raviv_function(n_classes, pe):
 def helmann_raviv_upper_bound(y_true, y_pred):
     n_classes = len(np.unique(y_true))
     acc = accuracy_score(y_true, y_pred)
-    pe = 1 - acc
-    hmr = helmann_raviv_function(n_classes, np.array([pe]))[0]
+    error_rate = 1 - acc
+    hmr = helmann_raviv_function(n_classes, np.array([error_rate]))[0]
     u = np.log2(n_classes) - hmr
     return u
 
@@ -73,8 +70,10 @@ def helmann_raviv_upper_bound(y_true, y_pred):
 def santhi_vardi_upper_bound(y_true, y_pred):
     n_classes = len(np.unique(y_true))
     acc = accuracy_score(y_true, y_pred)
-    pe = 1 - acc
-    u = np.log2(n_classes) + np.log2(1 - pe)
+    error_rate = 1 - acc
+    if error_rate == 1.0:
+        error_rate = error_rate - np.finfo(np.float64).eps
+    u = np.log2(n_classes) + np.log2(1 - error_rate)
     return u
 
 
@@ -95,6 +94,13 @@ def fanos_adjusted_lower_bound(y_true, y_pred):
     return l
 
 
+def mid_point_mi(y_true, y_pred):
+    mid_point = helmann_raviv_upper_bound(y_true, y_pred) + fanos_lower_bound(y_true, y_pred)
+    mid_point = mid_point / 2.0
+    mid_point = np.max([mid_point, 0.0])
+    return mid_point
+
+
 def auc_score(y_true, p_pred):
     logger = logging.getLogger("AUC")
     n_classes = len(np.unique(y_true))
@@ -104,11 +110,11 @@ def auc_score(y_true, p_pred):
         except Exception as e:
             logger.error(f"Exception: {str(e)}")
             try:
-                logger.error(f"Appliying normalization to avoid exception")
+                logger.error(f"Applying normalization to avoid exception")
                 p_pred = normalize(p_pred, axis=1)
                 metric_loss = roc_auc_score(y_true, p_pred, multi_class='ovr')
             except Exception as e:
-                logger.error(f"After normallization Exception: {str(e)}")
+                logger.error(f"After normalization Exception: {str(e)}")
                 logger.error(f"Setting Auc to nan")
                 metric_loss = np.nan
     else:
@@ -183,8 +189,3 @@ def log_loss_estimation(y_true, y_pred):
     return mi
 
 
-def mid_point_mi(y_true, y_pred):
-    mid_point = helmann_raviv_upper_bound(y_true, y_pred) + fanos_lower_bound(y_true, y_pred)
-    mid_point = mid_point / 2.0
-    mid_point = np.max([mid_point, 0.0])
-    return mid_point

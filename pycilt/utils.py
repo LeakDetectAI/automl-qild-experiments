@@ -102,3 +102,5 @@ def log_exception_error(logger, e):
         message = e
     logger.error(traceback.format_exc())
     logger.error(message)
+
+

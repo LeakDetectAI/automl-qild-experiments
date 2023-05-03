@@ -7,13 +7,15 @@ import re
 import sys
 from datetime import datetime, timedelta
 
+import dill
 import numpy as np
+import sklearn
 import tensorflow as tf
 import torch
-from autosklearn.estimators import AutoSklearnClassifier
 from keras import backend as K
 from netcal.binning import IsotonicRegression, HistogramBinning
 from netcal.scaling import LogisticCalibration, BetaCalibration, TemperatureScaling
+from packaging import version
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, \
     ExtraTreesClassifier
 from sklearn.linear_model import RidgeClassifier, SGDClassifier
@@ -26,16 +28,15 @@ from skopt.space import Real, Categorical, Integer
 from tensorflow.core.protobuf.config_pb2 import ConfigProto
 from tensorflow.python.client.session import Session
 
-from experiments.contants import *
-import dill
+from pycilt.automl import AutoGluonClassifier, AutoTabPFNClassifier
 from pycilt.baseline import MajorityVoting
 from pycilt.bayes_predictor import BayesPredictor
+from pycilt.contants import *
 from pycilt.metrics import *
 from pycilt.mi_estimators import MineMIEstimator, GMMMIEstimator, PCSoftmaxMIEstimator
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.synthetic_data_generator import SyntheticDatasetGenerator
-from packaging import version
-import sklearn
+
 __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_estimators", "get_dataset_reader",
            "learners", "classification_metrics", "mi_estimation_metrics", "mi_metrics", "lp_metric_dict",
            "get_duration_seconds", "duration_till_now", "time_from_now", "get_dataset_reader", "seconds_to_time",
@@ -45,9 +46,7 @@ __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_es
 
 from pycilt.utils import log_exception_error
 
-datasets = {
-    SYNTHETIC_DATASET: SyntheticDatasetGenerator,
-}
+datasets = {SYNTHETIC_DATASET: SyntheticDatasetGenerator}
 classifiers = {MULTI_LAYER_PERCEPTRON: MultiLayerPerceptron,
                SGD_CLASSIFIER: SGDClassifier,
                RIDGE_CLASSIFIER: RidgeClassifier,
@@ -60,7 +59,8 @@ classifiers = {MULTI_LAYER_PERCEPTRON: MultiLayerPerceptron,
                GRADIENT_BOOSTING_CLASSIFICATION: GradientBoostingClassifier,
                BAYES_PREDICTOR: BayesPredictor,
                MAJORITY_VOTING: MajorityVoting,
-               AUTO_SKLEARN: AutoSklearnClassifier
+               AUTO_GLUON: AutoGluonClassifier,
+               TABPNF: AutoTabPFNClassifier,
                }
 
 calibrators = {ISOTONIC_REGRESSION: IsotonicRegression,
@@ -75,11 +75,12 @@ calibrator_params = {ISOTONIC_REGRESSION: {'detection': False, 'independent_prob
                      TEMPERATURE_SCALING: {'detection': False, 'independent_probabilities': False}}
 mi_estimators = {'gmm_mi_estimator': GMMMIEstimator,
                  'gmm_mi_estimator_more_instances': GMMMIEstimator,
-                 'gmm_mi_estimator_s': GMMMIEstimator,
-                 'gmm_mi_estimator_more_instances_s': GMMMIEstimator,
+                 'gmm_mi_estimator_true': GMMMIEstimator,
+                 'gmm_mi_estimator_more_instances_true': GMMMIEstimator,
                  'mine_mi_estimator': MineMIEstimator,
                  'softmax_mi_estimator': PCSoftmaxMIEstimator,
                  'pc_softmax_mi_estimator': PCSoftmaxMIEstimator}
+
 learners = {**classifiers, **mi_estimators}
 
 classification_metrics = {
@@ -115,6 +116,10 @@ mi_estimation_metrics = {
 
 mi_metrics = {
     EMI: None,
+    MCMC_MI_ESTIMATION: None,
+    MCMC_LOG_LOSS: None,
+    MCMC_PC_SOFTMAX: None,
+    MCMC_SOFTMAX: None,
 }
 lp_metric_dict = {AUTO_ML: {**classification_metrics, **mi_estimation_metrics},
                   CLASSIFICATION: {**classification_metrics, **mi_estimation_metrics},
