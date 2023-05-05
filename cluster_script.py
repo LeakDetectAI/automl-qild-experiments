@@ -21,6 +21,7 @@ import sys
 import traceback
 from datetime import datetime
 
+import dill
 import h5py
 import numpy as np
 from docopt import docopt
@@ -36,7 +37,7 @@ from pycilt.bayes_search import BayesSearchCV
 from pycilt.bayes_search_utils import update_params, log_callback, get_scores
 from pycilt.contants import *
 from pycilt.metrics import probability_calibration
-from pycilt.mi_estimators import GMMMIEstimator, PCSoftmaxMIEstimator, MineMIEstimator
+from pycilt.mi_estimators import GMMMIEstimator, MineMIEstimator
 from pycilt.mi_estimators.mi_base_class import MIEstimatorBase
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.utils import print_dictionary, log_exception_error
@@ -127,13 +128,11 @@ if __name__ == "__main__":
                 learner_params['random_state'] = random_state
                 logger.info(f"Time Taken till now: {seconds_to_time(duration_till_now(start))}  seconds")
 
-                if learner == MultiLayerPerceptron or issubclass(learner, MIEstimatorBase):
+                if learner in [MultiLayerPerceptron, MineMIEstimator, AutoTabPFNClassifier]:
                     n_jobs = 1
-                    if learner == GMMMIEstimator:
-                        n_jobs = 10
                 else:
                     n_jobs = 10
-                if learner in [BayesPredictor, AutoGluonClassifier, AutoTabPFNClassifier] \
+                if learner in [BayesPredictor, AutoGluonClassifier, MineMIEstimator] \
                         or issubclass(learner, DummyClassifier):
                     if learner == BayesPredictor:
                         learner_params = {'dataset_obj': dataset_reader}
@@ -145,15 +144,28 @@ if __name__ == "__main__":
                         estimator.fit(X_train, y_train)
                         p_pred, y_pred = get_scores(X, estimator)
                         y_true = np.copy(y)
-                    else:
-                        if learner == AutoGluonClassifier:
-                            folder = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, OPTIMIZER_FOLDER,
-                                                  f"{hash_value}")
-                            os.mkdir(folder)
-                            learner_params = {**learner_params, **dict(n_features=n_features, n_classes=n_classes)}
-                            learner_params['output_folder'] = folder
+                    elif learner == MineMIEstimator:
+                        learner_params = {**learner_params, **dict(n_features=n_features, n_classes=n_classes)}
                         estimator = learner(**learner_params)
-                        estimator.fit(X_train, y_train)
+                        estimator.fit(X_train, y_train, **fit_params)
+                        p_pred, y_pred = get_scores(X, estimator)
+                        y_true = np.copy(y)
+                    else:
+                        estimator = get_automl_learned_estimator(optimizers_file_path, logger)
+                        if estimator is None:
+                            if learner == AutoGluonClassifier:
+                                folder = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, OPTIMIZER_FOLDER,
+                                                      f"{hash_value}gluon")
+                                if not os.path.isdir(folder):
+                                    os.mkdir(folder)
+                                learner_params = {**learner_params, **dict(n_features=n_features, n_classes=n_classes)}
+                                learner_params['output_folder'] = folder
+                            estimator = learner(**learner_params)
+                            estimator.fit(X_train, y_train, **fit_params)
+                            dill.dump(estimator, open(optimizers_file_path, "wb"))
+                            logger.info("AutoML pipeline trained and saving the model")
+                        else:
+                            logger.info("AutoML pipeline trained and reusing it")
                         p_pred, y_pred = get_scores(X, estimator)
                         y_true = np.copy(y)
                 else:
@@ -182,28 +194,13 @@ if __name__ == "__main__":
                     logger.info("Fitting the model with best parameters")
                     best_loss, learner_params = update_params(bayes_search, search_keys, learner_params, logger)
                     logger.info(f"Setting the best parameters {print_dictionary(learner_params)}")
-                    if learner == MineMIEstimator or learner == PCSoftmaxMIEstimator:
-                        estimator = learner(**learner_params)
-                        for _ in range(10):
-                            estimator.fit(X_train, y_train)
-                            ll = estimator.final_loss
-                            logger.info(f"Final Loss {ll}")
-                            if not (np.isnan(ll) or np.isinf(ll)):
-                                break
-                            else:
-                                logger.info("Final Loss NAN train again")
-                    else:
-                        estimator = learner(**learner_params)
-                        estimator.fit(X_train, y_train)
+                    estimator = learner(**learner_params)
+                    estimator.fit(X_train, y_train)
                     p_pred, y_pred = get_scores(X_test, estimator)
                     y_true = np.copy(y_test)
+
                 if issubclass(learner, MIEstimatorBase):
                     estimated_mi = estimator.estimate_mi(X, y)
-                    if learner == MineMIEstimator:
-                        logger.info(f"Best Loss {-best_loss}")
-                        estimated_mi = np.max([estimated_mi, -best_loss])
-                else:
-                    estimated_mi = 0
                 result_file = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, RESULT_FOLDER, f"{hash_value}.h5")
                 logger.info(f"Result file {result_file}")
 

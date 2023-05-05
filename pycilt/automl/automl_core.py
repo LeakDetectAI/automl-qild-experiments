@@ -1,29 +1,27 @@
-import logging
+from abc import abstractmethod
 
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.utils import check_random_state
 
 
-class MIEstimatorBase(BaseEstimator, ClassifierMixin):
-    def __init__(self, n_classes, n_features, random_state):
-        self.logger = logging.getLogger(name=MIEstimatorBase.__name__)
-        self.n_features = n_features
-        self.n_classes = n_classes
-        self.random_state = check_random_state(random_state)
-
-    def fit(self, **kwd):
+class AutomlClassifier(BaseEstimator, ClassifierMixin):
+    @abstractmethod
+    def fit(self, X, y, kwd):
         pass
 
-    def predict(self, X, verbose=0):
+    @abstractmethod
+    def predict(self, X, verbose):
         pass
 
-    def score(self, X, y, sample_weight=None, verbose=0):
+    @abstractmethod
+    def score(self, X, y, sample_weight, verbose):
         pass
 
-    def predict_proba(self, X, verbose=0):
+    @abstractmethod
+    def predict_proba(self, X, verbose):
         pass
 
-    def decision_function(self, X, verbose=0):
+    @abstractmethod
+    def decision_function(self, X, verbose):
         pass
 
     def get_params(self, deep=True):

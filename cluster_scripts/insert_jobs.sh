@@ -11,15 +11,16 @@
 #SBATCH -e /scratch/hpc-prf-autosca/prithag/clusterout/%x-%j
 
 cd $PFS_FOLDERA/information-leakage-techniques/
+
 module reset
-module load system singularity
-export IMG_FILE=$PFS_FOLDERA/information-leakage-techniques/singularity/pycilt.sif
+ml lang
+ml Anaconda3
+source ~/.bashrc
+conda activate ild
+which python
+which conda
 export SCRIPT_FILE=$PFS_FOLDERA/information-leakage-techniques/insert_jobs.py
-
-
-module list
-#singularity exec -B $PFS_FOLDERA/information-leakage-techniques/ --nv $IMG_FILE pipenv run python $SCRIPT_FILE
-singularity exec -B $PFS_FOLDERA/information-leakage-techniques/ --nv $IMG_FILE poetry run python $SCRIPT_FILE
+python $SCRIPT_FILE
 
 exit 0
 ~

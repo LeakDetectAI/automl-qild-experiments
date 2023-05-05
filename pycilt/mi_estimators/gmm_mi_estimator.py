@@ -10,9 +10,9 @@ from ..utils import log_exception_error
 
 
 class GMMMIEstimator(MIEstimatorBase):
-    def __init__(self, n_classes, input_dim, y_cat=False, covariance_type='full', reg_covar=1e-06, val_size=0.30,
+    def __init__(self, n_classes, n_features, y_cat=False, covariance_type='full', reg_covar=1e-06, val_size=0.30,
                  random_state=42):
-        super().__init__(n_classes=n_classes, input_dim=input_dim, random_state=random_state)
+        super().__init__(n_classes=n_classes, n_features=n_features, random_state=random_state)
         self.y_cat = y_cat
         self.num_comps = list(np.arange(2, 20, 1))
         self.reg_covar = reg_covar
@@ -62,8 +62,7 @@ class GMMMIEstimator(MIEstimatorBase):
             # self.logger.info(f"++++++++++++++++++ GMM Model {iter_} ++++++++++++++++++")
             try:
                 gmm = get_gmm(X, y, covariance_type=self.covariance_type, y_cat=self.y_cat, num_comps=self.num_comps,
-                              reg_covar=self.reg_covar, val_size=self.val_size, random_state=seed + iter_,
-                              logger=self.logger)
+                              reg_covar=self.reg_covar, val_size=self.val_size, random_state=seed + iter_)
                 select = SelectVars(gmm, selection_mode='backward')
                 select.fit(X, y, verbose=verbose, eps=np.finfo(np.float32).eps)
                 mi_mean, _ = select.get_info().values[0][1], select.get_info().values[0][2]
@@ -83,8 +82,7 @@ class GMMMIEstimator(MIEstimatorBase):
                         self.best_seed = seed + iter_
                         self.best_gmm_model = get_gmm(X, y, covariance_type=self.covariance_type, y_cat=self.y_cat,
                                                       num_comps=self.num_comps, reg_covar=self.reg_covar,
-                                                      val_size=self.val_size, random_state=seed + iter_,
-                                                      logger=self.logger)
+                                                      val_size=self.val_size, random_state=seed + iter_)
                 else:
                     self.logger.info(f"Model {iter_} trained estimates wrong MI")
             except Exception as error:

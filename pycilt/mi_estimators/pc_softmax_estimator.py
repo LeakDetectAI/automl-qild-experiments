@@ -12,9 +12,9 @@ from .pytorch_utils import get_optimizer_and_parameters, init
 
 
 class PCSoftmaxMIEstimator(MIEstimatorBase):
-    def __init__(self, n_classes, input_dim, n_hidden=10, n_units=100, loss_function=nn.NLLLoss(),
+    def __init__(self, n_classes, n_features, n_hidden=10, n_units=100, loss_function=nn.NLLLoss(),
                  optimizer_str='adam', learning_rate=0.001, reg_strength=0.001, is_pc_softmax=False, random_state=42):
-        super().__init__(n_classes=n_classes, input_dim=input_dim, random_state=random_state)
+        super().__init__(n_classes=n_classes, n_features=n_features, random_state=random_state)
         self.logger = logging.getLogger(PCSoftmaxMIEstimator.__name__)
         self.optimizer_str = optimizer_str
         self.learning_rate = learning_rate
@@ -45,7 +45,7 @@ class PCSoftmaxMIEstimator(MIEstimatorBase):
         return dataset_prop, tra_dataloader
 
     def fit(self, X, y, epochs=50, verbose=0, **kwd):
-        self.class_net = ClassNet(in_dim=self.input_dim, out_dim=self.n_classes, n_hidden=self.n_hidden,
+        self.class_net = ClassNet(in_dim=self.n_features, out_dim=self.n_classes, n_hidden=self.n_hidden,
                                   n_units=self.n_units, device=self.device, is_pc_softmax=self.is_pc_softmax)
         self.class_net.apply(init)
         self.class_net.to(self.device)

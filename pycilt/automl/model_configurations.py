@@ -8,7 +8,7 @@ hyperparameters = {
         "hidden_size": Int(lower=8, upper=256, default=32),
     },
     "GBM": {
-        "num_boost_round": Int(50, 500),
+        "n_estimators": Int(20, 300),
         "learning_rate": Real(1e-5, 0.5, log=True),
         "max_depth": Int(3, 20),
         "gamma": Real(1e-5, 1.0),
@@ -21,7 +21,7 @@ hyperparameters = {
         'l2_leaf_reg': Real(0.1, 10)
     },
     "XGB": {
-        "n_estimators": Int(20, 500),
+        "n_estimators": Int(20, 300),
         "max_depth": Int(3, 10),
         "learning_rate": Real(1e-5, 0.5, log=True),
         "gamma": Real(1e-5, 1.0),
@@ -37,7 +37,7 @@ hyperparameters = {
         'opt_func': Categorical('Adam', 'SGD'),
     },
     "RF": {
-        "n_estimators": Int(20, 500),
+        "n_estimators": Int(20, 300),
         "criterion": Categorical("gini", "entropy"),
         "max_depth": Int(lower=6, upper=20, default=10),
         "max_features": Categorical("sqrt", "log2"),
@@ -45,7 +45,7 @@ hyperparameters = {
         "min_samples_split": Int(lower=2, upper=50, default=10),
     },
     "XT": {
-        "n_estimators": Int(20, 500),
+        "n_estimators": Int(20, 300),
         "criterion": Categorical("gini", "entropy"),
         "max_depth": Int(lower=6, upper=20, default=10),
         "max_features": Categorical("sqrt", "log2"),

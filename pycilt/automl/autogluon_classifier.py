@@ -1,4 +1,5 @@
 import logging
+from abc import ABCMeta, abstractmethod
 
 import numpy as np
 import pandas as pd
@@ -6,10 +7,14 @@ from autogluon.tabular import TabularPredictor
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils import check_random_state
 
+from pycilt.automl.automl_core import AutomlClassifier
 from pycilt.automl.model_configurations import hyperparameters
 
 
-class AutoGluonClassifier(BaseEstimator, ClassifierMixin):
+
+
+
+class AutoGluonClassifier(AutomlClassifier):
 
     def __init__(self, n_features, n_classes, time_limit=1800, output_folder=None, random_state=None):
         self.logger = logging.getLogger(name=AutoGluonClassifier.__name__)
@@ -63,18 +68,3 @@ class AutoGluonClassifier(BaseEstimator, ClassifierMixin):
             raise ValueError(f"Dataset passed does not contain {self.n_features}")
         df_data = pd.DataFrame(data=data, columns=self.columns)
         return df_data
-
-    def get_params(self, deep=True):
-        out = dict()
-        for key in self._get_param_names():
-            value = getattr(self, key)
-            if deep and hasattr(value, "get_params"):
-                deep_items = value.get_params().items()
-                out.update((key + "__" + k, val) for k, val in deep_items)
-            out[key] = value
-        return out
-
-    def set_params(self, **parameters):
-        for parameter, value in parameters.items():
-            setattr(self, parameter, value)
-        return self

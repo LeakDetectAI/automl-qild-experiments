@@ -8,7 +8,6 @@ from skopt.utils import eval_callbacks, point_asdict
 
 from pycilt.utils import log_exception_error
 
-
 class BayesSearchCV(BayesSearchCVSK):
     def __init__(
             self,
@@ -68,6 +67,8 @@ class BayesSearchCV(BayesSearchCVSK):
             local_results = all_results["mean_test_score"][-len(params):]
         except Exception as e:
             local_results = list(np.zeros(len(params)))
+            self.logger.info(params_dict)
+            log_exception_error(self.logger, e)
         # Feed the point and objective value back into optimizer
         # Optimizer minimizes objective, hence provide negative score
 

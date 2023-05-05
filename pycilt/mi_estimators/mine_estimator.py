@@ -14,9 +14,9 @@ from .pytorch_utils import get_optimizer_and_parameters, init, get_mine_loss
 
 
 class MineMIEstimator(MIEstimatorBase):
-    def __init__(self, n_classes, input_dim, loss_function='donsker_varadhan_softplus', optimizer_str='adam',
-                 learning_rate=0.001, reg_strength=0.001, encode_classes=True, random_state=42):
-        super().__init__(n_classes=n_classes, input_dim=input_dim, random_state=random_state)
+    def __init__(self, n_classes, n_features, loss_function='donsker_varadhan_softplus', optimizer_str='adam',
+                 learning_rate=1e-4, reg_strength=1e-10, encode_classes=True, random_state=42):
+        super().__init__(n_classes=n_classes, n_features=n_features, random_state=random_state)
         self.logger = logging.getLogger(MineMIEstimator.__name__)
         self.optimizer_str = optimizer_str
         self.learning_rate = learning_rate
@@ -52,7 +52,7 @@ class MineMIEstimator(MIEstimatorBase):
         tensor_xy_tilde = torch.tensor(xy_tilde, dtype=torch.float32)
         return tensor_xy, tensor_xy_tilde
 
-    def fit(self, X, y, epochs=2000, verbose=0, **kwd):
+    def fit(self, X, y, epochs=100000, verbose=0, **kwd):
         MON_FREQ = epochs // 10
         # Monitoring
         MON_ITER = epochs // 50
@@ -62,15 +62,15 @@ class MineMIEstimator(MIEstimatorBase):
         else:
             cls_enc = 1
         self.label_binarizer = LabelBinarizer().fit(y)
-        n_hidden_layers = [1, 3, 5]
-        n_hidden_units = [64, 128, 256]
+        n_hidden_layers = [1, 2, 3]
+        n_hidden_units = [128, 64, 32, 8]
         self.final_loss = 0
         self.mi_validation_final = 0
         self.models = []
         self.n_models = 0
 
         for n_unit, n_hidden in product(n_hidden_layers, n_hidden_units):
-            stat_net = StatNet(in_dim=self.input_dim, cls_enc=cls_enc, n_hidden=n_hidden, n_units=n_unit)
+            stat_net = StatNet(in_dim=self.n_features, cls_enc=cls_enc, n_hidden=n_hidden, n_units=n_unit)
             stat_net.apply(init)
             stat_net.to(self.device)
             optimizer = self.optimizer_cls(stat_net.parameters(), **self._optimizer_config)

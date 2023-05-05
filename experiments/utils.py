@@ -32,10 +32,11 @@ from pycilt.automl import AutoGluonClassifier, AutoTabPFNClassifier
 from pycilt.baseline import MajorityVoting
 from pycilt.bayes_predictor import BayesPredictor
 from pycilt.contants import *
+from pycilt.dataset_readers import SyntheticDatasetGeneratorDistance
+from pycilt.dataset_readers.synthetic_data_generator import SyntheticDatasetGenerator
 from pycilt.metrics import *
 from pycilt.mi_estimators import MineMIEstimator, GMMMIEstimator, PCSoftmaxMIEstimator
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
-from pycilt.synthetic_data_generator import SyntheticDatasetGenerator
 
 __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_estimators", "get_dataset_reader",
            "learners", "classification_metrics", "mi_estimation_metrics", "mi_metrics", "lp_metric_dict",
@@ -46,7 +47,7 @@ __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_es
 
 from pycilt.utils import log_exception_error
 
-datasets = {SYNTHETIC_DATASET: SyntheticDatasetGenerator}
+datasets = {SYNTHETIC_DATASET: SyntheticDatasetGenerator, SYNTHETIC_DISTANCE_DATASET: SyntheticDatasetGeneratorDistance}
 classifiers = {MULTI_LAYER_PERCEPTRON: MultiLayerPerceptron,
                SGD_CLASSIFIER: SGDClassifier,
                RIDGE_CLASSIFIER: RidgeClassifier,

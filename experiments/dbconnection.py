@@ -10,7 +10,7 @@ import psycopg2
 from psycopg2.extras import DictCursor
 
 from experiments.utils import get_duration_seconds, duration_till_now
-from pycilt.contants import MUTUAL_INFORMATION_NEW
+from pycilt.contants import MUTUAL_INFORMATION_NEW, SYNTHETIC_DISTANCE_DATASET, SYNTHETIC_DATASET
 from pycilt.utils import print_dictionary
 
 LEARNERS = ['gmm_mi_estimator', 'gmm_mi_estimator_more_instances', 'gmm_mi_estimator_true',
@@ -557,7 +557,11 @@ class DBConnector(metaclass=ABCMeta):
                                 if key == 'dataset_params':
                                     val['n_classes'] = n_classes
                                     val['n_features'] = n_features
-                                    val['flip_y'] = flip_y.round(2)
+                                    if dataset == SYNTHETIC_DATASET:
+                                        val['flip_y'] = flip_y.round(2)
+                                    if dataset == SYNTHETIC_DISTANCE_DATASET:
+                                        val['noise'] = flip_y.round(2)
+
                                 val = json.dumps(val, cls=NpEncoder)
                             else:
                                 val = str(val)
