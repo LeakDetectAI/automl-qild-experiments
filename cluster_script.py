@@ -25,19 +25,19 @@ import dill
 import h5py
 import numpy as np
 from docopt import docopt
-from sklearn.dummy import DummyClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import StratifiedShuffleSplit
 
 from experiments.dbconnection import DBConnector
 from experiments.utils import *
 from pycilt.automl import AutoGluonClassifier, AutoTabPFNClassifier
+from pycilt.baseline import MajorityVoting
 from pycilt.bayes_predictor import BayesPredictor
 from pycilt.bayes_search import BayesSearchCV
 from pycilt.bayes_search_utils import update_params, log_callback, get_scores
 from pycilt.contants import *
 from pycilt.metrics import probability_calibration
-from pycilt.mi_estimators import GMMMIEstimator, MineMIEstimator
+from pycilt.mi_estimators import MineMIEstimator
 from pycilt.mi_estimators.mi_base_class import MIEstimatorBase
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.utils import print_dictionary, log_exception_error
@@ -49,7 +49,6 @@ EXPERIMENTS = 'experiments'
 OPTIMIZER_FOLDER = 'optimizers'
 
 if __name__ == "__main__":
-    start = datetime.now()
 
     ######################## DOCOPT ARGUMENTS: #################################
     arguments = docopt(__doc__)
@@ -62,13 +61,19 @@ if __name__ == "__main__":
     os.environ["HIP_LAUNCH_BLOCKING"] = "1"
     os.environ["CUDA_LAUNCH_BLOCKING"] = "2"
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    for i in range(10):
+    for i in range(40000):
+        start = datetime.now()
         dbConnector.job_description = None
         if 'CCS_REQID' in os.environ.keys():
             cluster_id = int(os.environ['CCS_REQID'])
-        print("**************************************************************************************************")
+        print("************************************************************************************")
         print(f"Getting the job for iteration {i}")
         dbConnector.fetch_job_arguments(cluster_id=cluster_id)
+        learner_name = dbConnector.job_description["learner"]
+        job_id = int(dbConnector.job_description["job_id"])
+        if learner_name == "auto_sklearn":
+            dbConnector.mark_running_job_finished(job_id, start)
+            continue
         if dbConnector.job_description is not None:
             try:
                 seed = int(dbConnector.job_description["seed"])
@@ -132,14 +137,13 @@ if __name__ == "__main__":
                     n_jobs = 1
                 else:
                     n_jobs = 10
-                if learner in [BayesPredictor, AutoGluonClassifier, MineMIEstimator] \
-                        or issubclass(learner, DummyClassifier):
+                if learner in [BayesPredictor, AutoGluonClassifier, MineMIEstimator, MajorityVoting]:
                     if learner == BayesPredictor:
                         learner_params = {'dataset_obj': dataset_reader}
                         estimator = learner(**learner_params)
                         estimator.fit(X_train, y_train)
                         y_true, y_pred, p_pred = estimator.get_bayes_predictor_scores()
-                    elif issubclass(learner, DummyClassifier):
+                    elif learner == MajorityVoting:
                         estimator = learner(**learner_params)
                         estimator.fit(X_train, y_train)
                         p_pred, y_pred = get_scores(X, estimator)
@@ -153,13 +157,12 @@ if __name__ == "__main__":
                     else:
                         estimator = get_automl_learned_estimator(optimizers_file_path, logger)
                         if estimator is None:
-                            if learner == AutoGluonClassifier:
-                                folder = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, OPTIMIZER_FOLDER,
-                                                      f"{hash_value}gluon")
-                                if not os.path.isdir(folder):
-                                    os.mkdir(folder)
-                                learner_params = {**learner_params, **dict(n_features=n_features, n_classes=n_classes)}
-                                learner_params['output_folder'] = folder
+                            folder = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, OPTIMIZER_FOLDER,
+                                                  f"{hash_value}gluon")
+                            if not os.path.isdir(folder):
+                                os.mkdir(folder)
+                            learner_params = {**learner_params, **dict(n_features=n_features, n_classes=n_classes)}
+                            learner_params['output_folder'] = folder
                             estimator = learner(**learner_params)
                             estimator.fit(X_train, y_train, **fit_params)
                             dill.dump(estimator, open(optimizers_file_path, "wb"))
@@ -196,8 +199,8 @@ if __name__ == "__main__":
                     logger.info(f"Setting the best parameters {print_dictionary(learner_params)}")
                     estimator = learner(**learner_params)
                     estimator.fit(X_train, y_train)
-                    p_pred, y_pred = get_scores(X_test, estimator)
-                    y_true = np.copy(y_test)
+                    p_pred, y_pred = get_scores(X, estimator)
+                    y_true = np.copy(y)
 
                 if issubclass(learner, MIEstimatorBase):
                     estimated_mi = estimator.estimate_mi(X, y)

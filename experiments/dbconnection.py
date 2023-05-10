@@ -10,11 +10,11 @@ import psycopg2
 from psycopg2.extras import DictCursor
 
 from experiments.utils import get_duration_seconds, duration_till_now
-from pycilt.contants import MUTUAL_INFORMATION_NEW, SYNTHETIC_DISTANCE_DATASET, SYNTHETIC_DATASET
+from pycilt.contants import SYNTHETIC_DISTANCE_DATASET, SYNTHETIC_DATASET
 from pycilt.utils import print_dictionary
 
 LEARNERS = ['gmm_mi_estimator', 'gmm_mi_estimator_more_instances', 'gmm_mi_estimator_true',
-            'gmm_mi_estimator_more_instances_true']
+            'gmm_mi_estimator_more_instances_true', 'auto_gluon']
 turn_filter_on = False
 
 
@@ -169,7 +169,7 @@ class DBConnector(metaclass=ABCMeta):
         self.init_connection()
         avail_jobs = f"{self.schema}.avail_jobs"
         running_jobs = f"{self.schema}.running_jobs"
-        if turn_filter_on and self.schema == MUTUAL_INFORMATION_NEW:
+        if turn_filter_on:
             select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu}) AND 
                              learner=any(array{LEARNERS}) AND NOT EXISTS(SELECT job_id 
                              FROM {running_jobs} r WHERE r.interrupted = FALSE AND r.job_id = row.job_id)"""

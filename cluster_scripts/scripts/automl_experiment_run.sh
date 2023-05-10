@@ -2,8 +2,8 @@
 #SBATCH -J "AutoML"
 #SBATCH -N 1
 #SBATCH -n 1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=32G
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=64G
 #SBATCH -A hpc-prf-autosca
 #SBATCH -t 3-00:00:00
 #SBATCH -p normal

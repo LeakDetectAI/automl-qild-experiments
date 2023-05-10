@@ -27,7 +27,6 @@ class AutoTabPFNClassifier(AutomlClassifier):
     def score(self, X, y, sample_weight=None, verbose=0):
         y_pred = self.model.predict(X, return_winning_probability=False, normalize_with_test=False)
         acc = accuracy_score(y, y_pred)
-        print(acc)
         return acc
 
     def predict_proba(self, X, verbose=0):

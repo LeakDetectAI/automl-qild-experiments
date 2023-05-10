@@ -15,7 +15,7 @@ if __name__ == "__main__":
     setup_logging(log_path=log_path)
     logger = logging.getLogger('Experiment')
     logger.info(f"DB config filePath {config_file_path}")
-    for schema in [AUTO_ML, MUTUAL_INFORMATION]:
+    for schema in [AUTO_ML]:
         logger.info(f"Inserting new jobs into {schema}")
         dbConnector = DBConnector(config_file_path=config_file_path, is_gpu=False, schema=schema, create_hash_list=True)
         if schema == CLASSIFICATION:

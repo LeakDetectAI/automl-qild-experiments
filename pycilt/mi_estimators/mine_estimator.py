@@ -62,13 +62,12 @@ class MineMIEstimator(MIEstimatorBase):
         else:
             cls_enc = 1
         self.label_binarizer = LabelBinarizer().fit(y)
-        n_hidden_layers = [1, 2, 3]
+        n_hidden_layers = [1, 3]
         n_hidden_units = [128, 64, 32, 8]
         self.final_loss = 0
         self.mi_validation_final = 0
         self.models = []
         self.n_models = 0
-
         for n_unit, n_hidden in product(n_hidden_layers, n_hidden_units):
             stat_net = StatNet(in_dim=self.n_features, cls_enc=cls_enc, n_hidden=n_hidden, n_units=n_unit)
             stat_net.apply(init)
