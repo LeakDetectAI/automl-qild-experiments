@@ -483,7 +483,7 @@ class DBConnector(metaclass=ABCMeta):
                 return True
         return False
 
-    def insert_new_jobs_with_different_fold(self, dataset="synthetic", folds=9):
+    def insert_new_jobs_with_different_fold(self, dataset="synthetic", folds=4):
         self.init_connection()
         avail_jobs = "{}.avail_jobs".format(self.schema)
         select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND {avail_jobs}.fold_id =0 ORDER  BY {avail_jobs}.job_id"
@@ -533,10 +533,10 @@ class DBConnector(metaclass=ABCMeta):
 
         self.cursor_db.execute(select_job)
         jobs_all = self.cursor_db.fetchall()
-        features = np.arange(2, 21)
-        classes = np.arange(2, 11)
+        features = np.arange(2, 21, step=2)
+        classes = np.arange(2, 11, step=2)
         # flip_ys_fine = np.arange(0.0, 1.01, .01)
-        flip_ys_broad = np.arange(0.0, 1.01, .05)
+        flip_ys_broad = np.arange(0.0, 1.01, .1)
         for job in jobs_all:
             job = dict(job)
             del job["job_id"]

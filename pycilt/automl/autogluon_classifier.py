@@ -9,7 +9,6 @@ from sklearn.utils import check_random_state
 from pycilt.automl.automl_core import AutomlClassifier
 from pycilt.automl.model_configurations import hyperparameters
 
-
 class AutoGluonClassifier(AutomlClassifier):
 
     def __init__(self, n_features, n_classes, time_limit=1800, output_folder=None,

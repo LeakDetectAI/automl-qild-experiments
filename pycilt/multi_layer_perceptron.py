@@ -18,7 +18,7 @@ from .layers import NormalizedDense
 
 class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
     def __init__(self, n_features, n_classes, n_hidden=10, n_units=100, batch_normalization=True, activation='relu',
-                 loss_function='categorical_crossentropy', metrics=['accuracy'], optimizer_str='sgd',
+                 loss_function='categorical_crossentropy', metrics=['accuracy'], optimizer_str='adam',
                  reg_strength=1e-4, kernel_initializer="lecun_normal", learning_rate=0.001,
                  early_stopping=False, model_save_path='', random_state=None, **kwargs):
         self.logger = logging.getLogger(name=MultiLayerPerceptron.__name__)
@@ -57,7 +57,7 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
             ]
         else:
             self.hidden_layers = [
-                Dense(self.n_units, name="hidden_{}".format(x), **kwargs)
+                Dense(self.n_units, activation='selu', name="hidden_{}".format(x), **kwargs)
                 for x in range(self.n_hidden)
             ]
         self.score_layer = Dense(self.n_classes, activation=None, kernel_regularizer=self.kernel_regularizer)

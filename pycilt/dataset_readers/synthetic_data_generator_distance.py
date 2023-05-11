@@ -95,8 +95,6 @@ class SyntheticDatasetGeneratorDistance(metaclass=ABCMeta):
             else:
                 X = np.vstack((X, data))
                 y = np.append(y, labels)
-        y = np.array(y ,dtype='int32')
-
         return X, y
 
     def calculate_mi(self):
@@ -156,11 +154,11 @@ class SyntheticDatasetGeneratorDistance(metaclass=ABCMeta):
         weighted_x_exp = x_exp * pys
         # weighted_x_exp = x_exp
         x_exp_sum = np.sum(weighted_x_exp, axis=1, keepdims=True)
-        pc_softmaxes = x_exp / x_exp_sum
+        pc_softmaxies = x_exp / x_exp_sum
         for i, y_t in enumerate(y):
-            mi = np.log2(pc_softmaxes[i, int(y_t)])
+            mi = np.log2(pc_softmaxies[i, int(y_t)])
             # print("########################################################################")
-            # print(f"y_t {y_t} mi {mi} pc_softmaxes {pc_softmaxes[i]} y_pred {y_pred[i]}")
+            # print(f"y_t {y_t} mi {mi} pc_softmaxies {pc_softmaxies[i]} y_pred {y_pred[i]}")
             pc_softmax_mis.append(mi)
 
             mi = np.log2(normal_softmaxes[i, int(y_t)]) + np.log2(self.n_classes)

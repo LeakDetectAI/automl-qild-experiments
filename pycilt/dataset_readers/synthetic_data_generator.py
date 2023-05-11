@@ -111,17 +111,21 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
                 X = np.vstack((X, data))
                 y = np.append(y, labels)
         if self.flip_y > 0:
-            y_old = np.copy(y)
-            indicies = []
-            for k_class in self.class_labels:
-                flip_samples = int(self.flip_y * self.samples_per_class[k_class])
-                ind0 = list(self.random_state.choice(np.where(y == k_class)[0], flip_samples, replace=False))
-                indicies.extend(ind0)
-            # print(f"Original {np.unique(y_old, return_counts=True)}")
-            y_old[indicies] = shuffle(y[indicies], random_state=self.random_state)
-            # print(f"Shuffle {np.unique(y_old, return_counts=True)}")
-            if len(np.unique(list(self.samples_per_class.values()))) > 1:
-                # print(f"Original {np.unique(y, return_counts=True)}")
+            if len(np.unique(list(self.samples_per_class.values()))) == 1:
+                self.logger.info("################# Balanced Dataset #################")
+                indicies = []
+                for k_class in self.class_labels:
+                    flip_samples = int(self.flip_y * self.samples_per_class[k_class])
+                    ind0 = list(self.random_state.choice(np.where(y == k_class)[0], flip_samples, replace=False))
+                    indicies.extend(ind0)
+                self.logger.info(f"Original {np.unique(y, return_counts=True)}")
+                y[indicies] = shuffle(y[indicies], random_state=self.random_state)
+                uni, counts = np.unique(y, return_counts=True)
+                self.logger.info(f"Flipping {uni, counts}")
+                self.logger.info(f"Flipping Ratio {uni, counts / np.sum(counts)}")
+            else:
+                self.logger.info("################# Imbalanced Dataset #################")
+                self.logger.info(f"Original {np.unique(y, return_counts=True)}")
                 choices = []
                 indicies = []
                 p = [1 / self.n_classes for i in range(self.n_classes)]
@@ -137,8 +141,7 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
                 uni, counts = np.unique(y, return_counts=True)
                 self.logger.info(f"Flipping {uni, counts}")
                 self.logger.info(f"Flipping Ratio {uni, counts / np.sum(counts)}")
-            else:
-                y = y_old
+
         return X, y
 
     def calculate_mi(self):

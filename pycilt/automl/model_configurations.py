@@ -1,5 +1,4 @@
-import numpy as np
-from autogluon.core.space import Categorical, Real, Int
+from autogluon.core.space import Real, Int
 
 hyperparameters = {
     "NN_TORCH": {
@@ -13,9 +12,11 @@ hyperparameters = {
         "learning_rate": Real(1e-2, 0.3, log=True),
         "max_depth": Int(3, 20),
         "num_leaves": Int(20, 300),
-        'feature_fraction': list(np.linspace(0.2, 0.95, num=10)),
-        'bagging_fraction': list(np.linspace(0.2, 0.95, num=10)),
-        'min_data_in_leaf': list(np.arange(200, 10000, step=100))
+        'feature_fraction': Real(0.2, 0.95, log=True),
+        'bagging_fraction': Real(0.2, 0.95, log=True),
+        'min_data_in_leaf': Int(20, 5000),
+        'lambda_l1': Real(1e-6, 1e-2, log=True),
+        'lambda_l2': Real(1e-6, 1e-2, log=True),
     },
     "CAT": {
         "learning_rate": Real(1e-2, 0.5, log=True),

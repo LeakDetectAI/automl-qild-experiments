@@ -25,7 +25,7 @@ if __name__ == "__main__":
         if schema == MUTUAL_INFORMATION_NEW:
             max_job_id = 5
         if schema == AUTO_ML:
-            max_job_id = 5
+            max_job_id = 4
 
         dbConnector.insert_new_jobs_different_configurations(max_job_id=max_job_id, dataset=SYNTHETIC_DATASET)
         dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DATASET)
