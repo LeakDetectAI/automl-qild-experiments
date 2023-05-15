@@ -35,7 +35,7 @@ from pycilt.contants import *
 from pycilt.dataset_readers import SyntheticDatasetGeneratorDistance
 from pycilt.dataset_readers.synthetic_data_generator import SyntheticDatasetGenerator
 from pycilt.metrics import *
-from pycilt.mi_estimators import MineMIEstimator, GMMMIEstimator, PCSoftmaxMIEstimator
+from pycilt.mi_estimators import MineMIEstimator, GMMMIEstimator, PCSoftmaxMIEstimator, MineMIEstimator2
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 
 __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_estimators", "get_dataset_reader",
@@ -47,7 +47,9 @@ __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_es
 
 from pycilt.utils import log_exception_error
 
-datasets = {SYNTHETIC_DATASET: SyntheticDatasetGenerator, SYNTHETIC_DISTANCE_DATASET: SyntheticDatasetGeneratorDistance}
+datasets = {SYNTHETIC_DATASET: SyntheticDatasetGenerator, SYNTHETIC_DISTANCE_DATASET: SyntheticDatasetGeneratorDistance,
+            SYNTHETIC_IMBALANCED_DATASET: SyntheticDatasetGenerator,
+            SYNTHETIC_DISTANCE_IMBALANCED_DATASET: SyntheticDatasetGeneratorDistance}
 classifiers = {MULTI_LAYER_PERCEPTRON: MultiLayerPerceptron,
                SGD_CLASSIFIER: SGDClassifier,
                RIDGE_CLASSIFIER: RidgeClassifier,
@@ -79,6 +81,7 @@ mi_estimators = {'gmm_mi_estimator': GMMMIEstimator,
                  'gmm_mi_estimator_true': GMMMIEstimator,
                  'gmm_mi_estimator_more_instances_true': GMMMIEstimator,
                  'mine_mi_estimator': MineMIEstimator,
+                 'mine_mi_estimator2': MineMIEstimator2,
                  'softmax_mi_estimator': PCSoftmaxMIEstimator,
                  'pc_softmax_mi_estimator': PCSoftmaxMIEstimator}
 
@@ -228,7 +231,7 @@ def setup_logging(log_path=None, level=logging.INFO):
     logging.getLogger("matplotlib").setLevel(logging.ERROR)
     logging.getLogger("tensorflow").setLevel(logging.ERROR)
     logging.getLogger("pytorch").setLevel(logging.ERROR)
-
+    logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
     # logging.captureWarnings(True)
 
 
@@ -239,6 +242,12 @@ def setup_random_seed(random_state=1234):
 
     seed = random_state.randint(2 ** 31, dtype="uint32")
     torch.manual_seed(seed)
+    logger.info(f"Total number of torch threads {torch.get_num_threads()}")
+    if torch.get_num_threads() <= 2:
+        n_cpus = 1
+    else:
+        n_cpus = torch.get_num_threads() - 2
+    torch.set_num_threads(n_cpus)
     tf.random.set_seed(seed)
 
     seed = random_state.randint(2 ** 31, dtype="uint32")

@@ -129,7 +129,7 @@ class GMMMIEstimator(MIEstimatorBase):
         except Exception as error:
             self.logger.debug("Best Model is None")
             log_exception_error(self.logger, error)
-            score = 0.0
+            score = -10000
         return score
 
     def predict_proba(self, X, verbose=0):

@@ -26,7 +26,9 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
         if isinstance(samples_per_class, int):
             self.samples_per_class = dict.fromkeys(np.arange(n_classes), samples_per_class)
         elif isinstance(samples_per_class, dict):
-            self.samples_per_class = samples_per_class
+            self.samples_per_class = {}
+            for key in samples_per_class.keys():
+                self.samples_per_class[int(key)] = samples_per_class.get(key)
         else:
             raise ValueError("Samples per class is not defined properly")
         self.n_instances = sum(self.samples_per_class.values())

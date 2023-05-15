@@ -1,7 +1,6 @@
 import logging
 
-from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import balanced_accuracy_score
 from sklearn.utils import check_random_state
 from tabpfn import TabPFNClassifier
 
@@ -26,7 +25,7 @@ class AutoTabPFNClassifier(AutomlClassifier):
 
     def score(self, X, y, sample_weight=None, verbose=0):
         y_pred = self.model.predict(X, return_winning_probability=False, normalize_with_test=False)
-        acc = accuracy_score(y, y_pred)
+        acc = balanced_accuracy_score(y, y_pred)
         return acc
 
     def predict_proba(self, X, verbose=0):

@@ -161,7 +161,9 @@ if __name__ == "__main__":
                                                   f"{hash_value}gluon")
                             if not os.path.isdir(folder):
                                 os.mkdir(folder)
-                            learner_params = {**learner_params, **dict(n_features=n_features, n_classes=n_classes)}
+                            learner_params = {**learner_params, **dict(n_features=n_features, n_classes=n_classes,
+                                                                       eval_metric=validation_loss)}
+                            logger.info(f"AutoGluon learner params {print_dictionary(learner_params)}")
                             learner_params['output_folder'] = folder
                             estimator = learner(**learner_params)
                             estimator.fit(X_train, y_train, **fit_params)
@@ -176,7 +178,7 @@ if __name__ == "__main__":
                     inner_cv_iterator = StratifiedShuffleSplit(n_splits=n_inner_folds, test_size=0.10,
                                                                random_state=random_state)
                     search_space = create_search_space(hp_ranges, logger)
-                    logger.info(f"search_space {search_space}")
+                    logger.info(f"Search Space {search_space}")
                     if learner == MultiLayerPerceptron or issubclass(learner, MIEstimatorBase):
                         learner_params = {**learner_params, **dict(n_features=n_features, n_classes=n_classes)}
                     estimator = learner(**learner_params)

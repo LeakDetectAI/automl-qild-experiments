@@ -15,7 +15,7 @@ from .pytorch_utils import get_optimizer_and_parameters, init, get_mine_loss
 
 class MineMIEstimator(MIEstimatorBase):
     def __init__(self, n_classes, n_features, loss_function='donsker_varadhan_softplus', optimizer_str='adam',
-                 learning_rate=1e-4, reg_strength=1e-10, encode_classes=True, random_state=42):
+                 learning_rate=1e-4, reg_strength=0, encode_classes=True, random_state=42):
         super().__init__(n_classes=n_classes, n_features=n_features, random_state=random_state)
         self.logger = logging.getLogger(MineMIEstimator.__name__)
         self.optimizer_str = optimizer_str
@@ -62,8 +62,8 @@ class MineMIEstimator(MIEstimatorBase):
         else:
             cls_enc = 1
         self.label_binarizer = LabelBinarizer().fit(y)
-        n_hidden_layers = [1, 3]
-        n_hidden_units = [128, 64, 32, 8]
+        n_hidden_layers = [1, 3, 5]
+        n_hidden_units = [8, 64, 128, 256]
         self.final_loss = 0
         self.mi_validation_final = 0
         self.models = []
@@ -108,8 +108,7 @@ class MineMIEstimator(MIEstimatorBase):
             self.models.append(stat_net)
             self.final_loss += final_loss
             self.mi_validation_final += mi_val
-            self.logger.info(
-                f"Fit Loss {final_loss} MI Val: {mi_val} for configuration n_hidden {n_hidden} n_unit {n_unit}")
+            self.logger.info(f"Fit Loss {final_loss} MI Val: {mi_val} for n_hidden {n_hidden} n_unit {n_unit}")
         self.n_models = len(self.models)
         self.final_loss = self.final_loss / self.n_models
         self.mi_validation_final = self.mi_validation_final / self.n_models
@@ -152,6 +151,7 @@ class MineMIEstimator(MIEstimatorBase):
         return final_scores
 
     def estimate_mi(self, X, y, verbose=0, MON_ITER=1000):
+        final_mis = []
         for model in self.models:
             mi_hats = []
             for iter_ in range(MON_ITER):
@@ -170,6 +170,8 @@ class MineMIEstimator(MIEstimatorBase):
             if np.isnan(mi_estimated) or np.isinf(mi_estimated):
                 self.logger.error(f'Setting MI to 0')
                 mi_estimated = 0
-            self.logger.info(f'Estimated MIs: {mi_hats} Mean {mi_estimated}')
-            mi_estimated = np.max([mi_estimated, 0.0]) * np.log2(np.e)
-        return mi_estimated
+            self.logger.info(f'Estimated MIs: {mi_hats[-10:]} Mean {mi_estimated}')
+            mi_estimated = np.max([mi_estimated, 0.0])
+            final_mis.append(mi_estimated)
+        final_mi = np.median(final_mis)
+        return final_mi

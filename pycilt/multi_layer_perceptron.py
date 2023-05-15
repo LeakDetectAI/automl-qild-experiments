@@ -8,7 +8,7 @@ from keras.layers import Dense, Activation
 from keras.regularizers import l2
 from keras.utils import to_categorical
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import balanced_accuracy_score
 from sklearn.utils import check_random_state
 from sklearn.utils import class_weight
 from tensorflow import optimizers
@@ -28,7 +28,10 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
         self.n_units = n_units
         self.n_hidden = n_hidden
         self.batch_normalization = batch_normalization
-        self.activation = activation
+        if not self.batch_normalization:
+            self.activation = 'selu'
+        else:
+            self.activation = activation
         self.loss_function = loss_function
         self.optimizer_str = optimizer_str
         self.optimizer = optimizers.get(optimizer_str)
@@ -52,13 +55,11 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
         self.input = Input(shape=self.n_features, dtype='float32')
         if self.batch_normalization:
             self.hidden_layers = [
-                NormalizedDense(self.n_units, name="hidden_{}".format(x), **kwargs)
-                for x in range(self.n_hidden)
+                NormalizedDense(self.n_units, name="hidden_{}".format(x), **kwargs) for x in range(self.n_hidden)
             ]
         else:
             self.hidden_layers = [
-                Dense(self.n_units, activation='selu', name="hidden_{}".format(x), **kwargs)
-                for x in range(self.n_hidden)
+                Dense(self.n_units, name="hidden_{}".format(x), **kwargs) for x in range(self.n_hidden)
             ]
         self.score_layer = Dense(self.n_classes, activation=None, kernel_regularizer=self.kernel_regularizer)
         self.output_node = Activation('softmax', name='predictions')
@@ -112,7 +113,7 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
 
     def score(self, X, y, sample_weight=None, verbose=0):
         y_pred = self.predict(X, verbose=verbose)
-        acc = accuracy_score(y, y_pred)
+        acc = balanced_accuracy_score(y, y_pred)
         return acc
 
     def predict_proba(self, X, verbose=0):
