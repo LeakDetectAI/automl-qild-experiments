@@ -15,7 +15,8 @@ def pdf(dist, x):
 
 
 class SyntheticDatasetGenerator(metaclass=ABCMeta):
-    def __init__(self, n_classes=2, n_features=2, samples_per_class=500, flip_y=0.1, random_state=42, fold_id=0):
+    def __init__(self, n_classes=2, n_features=2, samples_per_class=500, flip_y=0.1, random_state=42, fold_id=0,
+                 imbalance=0.0, gen_type='single', **kwargs):
         self.n_classes = n_classes
         self.n_features = n_features
         self.random_state = check_random_state(random_state)
@@ -31,6 +32,8 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
                 self.samples_per_class[int(key)] = samples_per_class.get(key)
         else:
             raise ValueError("Samples per class is not defined properly")
+        self.imbalance = imbalance
+        self.gen_type = gen_type
         self.n_instances = sum(self.samples_per_class.values())
         self.class_labels = np.arange(self.n_classes)
         self.y_prob = {}

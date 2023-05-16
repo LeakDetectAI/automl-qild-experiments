@@ -597,7 +597,8 @@ class DBConnector(metaclass=ABCMeta):
         n_features = 5
         classes = [2, 5]
         flip_ys_broad = np.arange(0.0, 1.01, .1)
-        imbalance_dictionary = {2: np.arange(0.05, 0.51, .05), 5: np.arange(0.04, 0.21, .02)}
+        imbalance_dictionary = {2: np.arange(0.05, 0.51, .05), 5: np.arange(0.02, 0.21, .02)}
+        gen_types = {2: ['single'], 5: GEN_TYPES}
         for job in jobs_all:
             job = dict(job)
             del job["job_id"]
@@ -607,13 +608,17 @@ class DBConnector(metaclass=ABCMeta):
             self.logger.info("###########################################################")
             self.logger.info(print_dictionary(job))
             for n_classes in classes:
+                self.logger.info("###########################################################")
                 for flip_y in flip_ys_broad:
                     imbalances = imbalance_dictionary[n_classes]
-                    for gen_type in GEN_TYPES:
+                    for gen_type in gen_types[n_classes]:
                         if gen_type == 'multiple' and n_classes == 2:
                             self.logger.info(f"Skipping configuration for n_classes {n_classes} gen_type {gen_type}")
                             continue
                         for imbalance in imbalances[::-1]:
+                            self.logger.info(f"Inserting job with gen_type {gen_type}, imbalance {imbalance}, "
+                                             f"flip_y {flip_y} and n_classes {n_classes}")
+
                             keys = list(job.keys())
                             values = list(job.values())
                             columns = ", ".join(list(job.keys()))
@@ -626,11 +631,14 @@ class DBConnector(metaclass=ABCMeta):
                                         val['n_classes'] = n_classes
                                         val['n_features'] = n_features
                                         val['samples_per_class'] = samples_per_class
-                                        if dataset == [SYNTHETIC_DATASET, SYNTHETIC_IMBALANCED_DATASET]:
+                                        if dataset in [SYNTHETIC_DATASET, SYNTHETIC_IMBALANCED_DATASET]:
                                             val['flip_y'] = flip_y.round(2)
                                         if dataset in [SYNTHETIC_DISTANCE_DATASET,
                                                        SYNTHETIC_DISTANCE_IMBALANCED_DATASET]:
                                             val['noise'] = flip_y.round(2)
+                                        val['imbalance'] = imbalance.round(2)
+                                        val['gen_type'] = gen_type
+                                        self.logger.info(f"Dataset Params {val}")
                                     val = json.dumps(val, cls=NpEncoder)
                                 else:
                                     val = str(val)

@@ -33,6 +33,6 @@ if __name__ == "__main__":
         #dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DISTANCE_DATASET)
 
         dbConnector.insert_new_jobs_imbalanced(max_job_id=max_job_id, dataset=SYNTHETIC_IMBALANCED_DATASET)
-        #dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_IMBALANCED_DATASET)
+        dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_IMBALANCED_DATASET)
         dbConnector.insert_new_jobs_imbalanced(max_job_id=max_job_id, dataset=SYNTHETIC_DISTANCE_IMBALANCED_DATASET)
-        #dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DISTANCE_IMBALANCED_DATASET)
+        dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DISTANCE_IMBALANCED_DATASET)

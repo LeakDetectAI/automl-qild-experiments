@@ -251,3 +251,9 @@ ALTER SEQUENCE mutual_information_new.running_jobs_running_id_seq RESTART WITH 1
 ALTER SEQUENCE mutual_information_new.avail_jobs_job_id_seq RESTART WITH 10;
 DELETE from results.mutual_information_new where True
 DELETE FROM classification.avail_jobs a USING classification.avail_jobs b WHERE a.job_id < b.job_id AND a.hash_value = b.hash_value;
+
+DELETE from mutual_information.avail_jobs where job_id>5515;
+ALTER sequence mutual_information.avail_jobs_job_id_seq RESTART WITH 5516;
+
+DELETE from automl.avail_jobs where job_id>18 and (dataset='synthetic_imbalanced' or dataset='synthetic_distance_imbalanced');
+ALTER sequence automl.avail_jobs_job_id_seq RESTART WITH 16523;
