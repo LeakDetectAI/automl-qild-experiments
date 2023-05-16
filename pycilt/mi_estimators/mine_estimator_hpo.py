@@ -14,11 +14,11 @@ from .mi_base_class import MIEstimatorBase
 from .pytorch_utils import get_optimizer_and_parameters, init, get_mine_loss
 
 
-class MineMIEstimator2(MIEstimatorBase):
+class MineMIEstimatorHPO(MIEstimatorBase):
     def __init__(self, n_classes, n_features, n_hidden=2, n_units=100, loss_function='donsker_varadhan_softplus',
                  optimizer_str='adam', learning_rate=1e-4, reg_strength=1e-10, encode_classes=True, random_state=42):
         super().__init__(n_classes=n_classes, n_features=n_features, random_state=random_state)
-        self.logger = logging.getLogger(MineMIEstimator2.__name__)
+        self.logger = logging.getLogger(MineMIEstimatorHPO.__name__)
         self.optimizer_str = optimizer_str
         self.learning_rate = learning_rate
         self.reg_strength = reg_strength
@@ -54,7 +54,7 @@ class MineMIEstimator2(MIEstimatorBase):
         tensor_xy_tilde = torch.tensor(xy_tilde, dtype=torch.float32)
         return tensor_xy, tensor_xy_tilde
 
-    def fit(self, X, y, epochs=2000, verbose=0, **kwd):
+    def fit(self, X, y, epochs=10000, verbose=0, **kwd):
         MON_FREQ = epochs // 10
         # Monitoring
         MON_ITER = epochs // 50

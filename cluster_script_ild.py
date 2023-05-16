@@ -37,7 +37,7 @@ from pycilt.bayes_search import BayesSearchCV
 from pycilt.bayes_search_utils import update_params, log_callback, get_scores
 from pycilt.contants import *
 from pycilt.metrics import probability_calibration
-from pycilt.mi_estimators import MineMIEstimator, MineMIEstimatorHPO
+from pycilt.mi_estimators import MineMIEstimator
 from pycilt.mi_estimators.mi_base_class import MIEstimatorBase
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.utils import print_dictionary, log_exception_error
@@ -79,14 +79,15 @@ if __name__ == "__main__":
                 seed = int(dbConnector.job_description["seed"])
                 job_id = int(dbConnector.job_description["job_id"])
                 fold_id = int(dbConnector.job_description["fold_id"])
-                dataset_name = dbConnector.job_description["dataset"]
-                n_inner_folds = int(dbConnector.job_description["inner_folds"])
-                dataset_params = dbConnector.job_description["dataset_params"]
+                dataset_name = dbConnector.job_description["dataset_name"]
+                imbalance = float(dbConnector.job_description["imbalance"])
+                base_learner = dbConnector.job_description["base_learner"]
+                estimator = dbConnector.job_description["estimator"]
                 learner_name = dbConnector.job_description["learner"]
                 fit_params = dbConnector.job_description["fit_params"]
                 learner_params_db = dbConnector.job_description["learner_params"]
                 duration = dbConnector.job_description["duration"]
-                hp_iters = int(dbConnector.job_description["hp_iters"])
+                cv_iterations = int(dbConnector.job_description["hp_iters"])
                 hp_ranges = dbConnector.job_description["hp_ranges"]
                 learning_problem = dbConnector.job_description["learning_problem"]
                 experiment_schema = dbConnector.job_description["experiment_schema"]
@@ -133,7 +134,7 @@ if __name__ == "__main__":
                 learner_params['random_state'] = random_state
                 logger.info(f"Time Taken till now: {seconds_to_time(duration_till_now(start))}  seconds")
 
-                if learner in [MultiLayerPerceptron, MineMIEstimator, AutoTabPFNClassifier, MineMIEstimatorHPO]:
+                if learner in [MultiLayerPerceptron, MineMIEstimator, AutoTabPFNClassifier]:
                     n_jobs = 1
                 else:
                     n_jobs = 10
@@ -200,7 +201,7 @@ if __name__ == "__main__":
                     best_loss, learner_params = update_params(bayes_search, search_keys, learner_params, logger)
                     logger.info(f"Setting the best parameters {print_dictionary(learner_params)}")
                     estimator = learner(**learner_params)
-                    estimator.fit(X_train, y_train, **fit_params)
+                    estimator.fit(X_train, y_train)
                     p_pred, y_pred = get_scores(X, estimator)
                     y_true = np.copy(y)
 

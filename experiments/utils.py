@@ -35,7 +35,7 @@ from pycilt.contants import *
 from pycilt.dataset_readers import SyntheticDatasetGeneratorDistance
 from pycilt.dataset_readers.synthetic_data_generator import SyntheticDatasetGenerator
 from pycilt.metrics import *
-from pycilt.mi_estimators import MineMIEstimator, GMMMIEstimator, PCSoftmaxMIEstimator, MineMIEstimator2
+from pycilt.mi_estimators import MineMIEstimator, GMMMIEstimator, PCSoftmaxMIEstimator, MineMIEstimatorHPO
 from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 
 __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_estimators", "get_dataset_reader",
@@ -81,7 +81,7 @@ mi_estimators = {'gmm_mi_estimator': GMMMIEstimator,
                  'gmm_mi_estimator_true': GMMMIEstimator,
                  'gmm_mi_estimator_more_instances_true': GMMMIEstimator,
                  'mine_mi_estimator': MineMIEstimator,
-                 'mine_mi_estimator2': MineMIEstimator2,
+                 'mine_mi_estimator_hpo': MineMIEstimatorHPO,
                  'softmax_mi_estimator': PCSoftmaxMIEstimator,
                  'pc_softmax_mi_estimator': PCSoftmaxMIEstimator}
 

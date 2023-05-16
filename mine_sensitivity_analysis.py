@@ -8,7 +8,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 
 from experiments.utils import *
 from pycilt.dataset_readers import SyntheticDatasetGenerator
-from pycilt.mi_estimators import MineMIEstimator2
+from pycilt.mi_estimators import MineMIEstimatorHPO
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 EXPERIMENTS = 'experiments'
@@ -73,7 +73,7 @@ if __name__ == "__main__":
         params = {'n_classes': n_classes, 'n_features': n_features, 'n_units': n_units, 'n_hidden': n_hidden,
                   'learning_rate': learning_rate, 'reg_strength': reg_strength, 'optimizer_str': optimizer_str,
                   'encode_classes': True, 'loss_function': loss_function}
-        clf = MineMIEstimator2(**params)
+        clf = MineMIEstimatorHPO(**params)
         clf.fit(X_train, y_train, epochs=10000, verbose=0)
         train_mi = clf.estimate_mi(X_train, y_train)
         mi = clf.estimate_mi(X_test, y_test)

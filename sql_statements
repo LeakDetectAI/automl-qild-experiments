@@ -423,3 +423,4 @@ ALTER sequence mutual_information.avail_jobs_job_id_seq RESTART WITH 5516;
 
 DELETE from automl.avail_jobs where job_id>18 and (dataset='synthetic_imbalanced' or dataset='synthetic_distance_imbalanced');
 ALTER sequence automl.avail_jobs_job_id_seq RESTART WITH 16523;
+DELETE from mutual_information.running_jobs row WHERE EXISTS(SELECT job_id FROM mutual_information.avail_jobs r WHERE r.job_id = row.job_id and r.learner='mine_mi_estimator_hpo');
