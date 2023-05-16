@@ -1,0 +1,46 @@
+create sequence information_leakage.avail_jobs_job_id_seq;
+
+alter sequence information_leakage.avail_jobs_job_id_seq owner to autoscaadmin;
+
+create table information_leakage.avail_jobs
+(
+    job_id             integer          default nextval('information_leakage.avail_jobs_job_id_seq'::regclass) not null
+        constraint avail_jobs_pk
+            primary key,
+    fold_id            integer                                                                    not null,
+    dataset_name            text                                                                       not null,
+    base_learner            text                                                                       not null,
+    estimator               text                                                                       not null,
+    cv_iterations           integer default 10,
+    n_hypothesis            integer  default 10,
+    experiment_schema  text                                                                       not null,
+    experiment_table   text,
+    seed               integer          default 123,
+    hash_value         text             default ''::text,
+    job_allocated_time timestamp,
+    job_end_time       timestamp,
+    evaluation_time    double precision default 0
+);
+
+alter table information_leakage.avail_jobs owner to autoscaadmin;
+
+create sequence information_leakage.running_jobs_running_id_seq;
+
+alter sequence information_leakage.running_jobs_running_id_seq owner to autoscaadmin;
+
+create table information_leakage.running_jobs
+(
+    running_id    integer default nextval('information_leakage.running_jobs_running_id_seq'::regclass) not null,
+    job_id        integer                                                                 not null
+        primary key,
+    cluster_id    integer                                                                 not null,
+    finished      boolean default false                                                   not null,
+    interrupted   boolean default false                                                   not null,
+    error_history text    default 'NA'::text
+);
+
+alter table information_leakage.running_jobs
+    owner to autoscaadmin;
+
+create unique index running_jobs_running_id_idx on information_leakage.running_jobs (running_id);
+
