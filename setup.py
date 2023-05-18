@@ -2,7 +2,7 @@ from os.path import realpath, dirname, join
 
 from setuptools import setup, find_packages
 
-DISTNAME = 'pycild'
+DISTNAME = 'pycilt'
 DESCRIPTION = 'Information Leakage Detection Techniques'
 MAINTAINER = 'Pritha Gupta and Jan Drees'
 MAINTAINER_EMAIL = 'prithag@mail.uni-paderborn.de'

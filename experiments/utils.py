@@ -248,7 +248,9 @@ def setup_random_seed(random_state=1234):
     else:
         n_cpus = torch.get_num_threads() - 2
         if "pc2" in os.environ["HOME"]:
-            n_cpus = 4
+            n_cpus = 8
+    logger.info(f"Torch threads set {n_cpus}")
+
     torch.set_num_threads(n_cpus)
     tf.random.set_seed(seed)
 

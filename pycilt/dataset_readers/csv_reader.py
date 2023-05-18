@@ -7,13 +7,12 @@ import pandas as pd
 import seaborn as sns
 from sklearn.preprocessing import LabelEncoder
 
-from pycsca.utils import print_dictionary
+from pycilt.utils import print_dictionary
 
 sns.set(color_codes=True)
 plt.style.use('default')
 LABEL_COL = 'label'
 MISSING_CCS_FIN = 'missing_ccs_fin'
-
 
 def str2bool(v):
     if int(v) > 0:
@@ -36,6 +35,8 @@ class CSVReader(metaclass=ABCMeta):
     def __load_dataset__(self):
         if not os.path.exists(self.df_file):
             raise ValueError(f"No such file or directory: {self.df_file}")
+        if not os.path.exists(self.f_file):
+            raise ValueError(f"No such file or directory: {self.f_file}")
         self.data_frame = pd.read_csv(self.df_file, index_col=0)
 
         if LABEL_COL not in self.data_frame.columns:
@@ -76,8 +77,6 @@ class CSVReader(metaclass=ABCMeta):
         if MISSING_CCS_FIN in self.data_frame.columns:
             self.data_frame[MISSING_CCS_FIN] = self.data_frame[MISSING_CCS_FIN].apply(str2bool)
             self.ccs_fin_array = list(self.data_frame[MISSING_CCS_FIN].unique())
-        df = pd.DataFrame.copy(self.data_frame)
-        df[LABEL_COL].replace(self.inverse_label_mapping, inplace=True)
         df = pd.DataFrame.copy(self.data_frame)
         df[LABEL_COL].replace(self.inverse_label_mapping, inplace=True)
         df = pd.DataFrame(df[[LABEL_COL, MISSING_CCS_FIN]].value_counts().sort_index())

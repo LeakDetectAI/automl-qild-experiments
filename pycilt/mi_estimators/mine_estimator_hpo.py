@@ -3,9 +3,8 @@ import logging
 import numpy as np
 import numpy.random as npr
 import torch
-from scipy.stats import entropy
 from sklearn.metrics import mean_squared_error
-from sklearn.preprocessing import LabelBinarizer, KBinsDiscretizer
+from sklearn.preprocessing import LabelBinarizer
 from tqdm import tqdm
 
 from pycilt.utils import softmax
@@ -100,6 +99,7 @@ class MineMIEstimatorHPO(MIEstimatorBase):
         mis = np.array(all_estimates)
         n = int(len(all_estimates) / 3)
         self.mi_val = np.nanmean(mis[np.argpartition(mis, -n)[-n:]])
+        torch.no_grad()
         self.logger.info(f"Fit Loss {self.final_loss} MI Val: {self.mi_val}")
         return self
 
@@ -109,11 +109,13 @@ class MineMIEstimatorHPO(MIEstimatorBase):
         return y_pred
 
     def score(self, X, y, sample_weight=None, verbose=0):
+        torch.no_grad()
         xy, xy_tilde = self.pytorch_tensor_dataset(X, y, i=0)
         preds_xy = self.stat_net(xy).detach().numpy().flatten()
         preds_xy_tilde = self.stat_net(xy_tilde).detach().numpy().flatten()
         mse = mean_squared_error(preds_xy, preds_xy_tilde)
         self.logger.info(f"MSE {mse}")
+        self.logger.info(f"Memory allocated {torch.cuda.memory_allocated()} Cached {torch.cuda.memory_cached()}")
         return mse
 
     def predict_proba(self, X, verbose=0):

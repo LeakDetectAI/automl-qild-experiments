@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH -J "AutoML"
+#SBATCH -J "MIEst-MI"
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=64G
+#SBATCH --mem=128G
 #SBATCH -A hpc-prf-autosca
 #SBATCH -t 3-00:00:00
-#SBATCH -p normal
+#SBATCH -p largemem
 #SBATCH -o /scratch/hpc-prf-autosca/prithag/clusterout/%x-%j
 #SBATCH -e /scratch/hpc-prf-autosca/prithag/clusterout/%x-%j
 

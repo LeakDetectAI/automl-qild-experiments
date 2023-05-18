@@ -6,7 +6,7 @@ from sklearn.model_selection import StratifiedKFold
 
 from .ild_base_class import InformationLeakageDetector
 from .utils import mi_estimation_metrics, calibrators, calibrator_params
-from .. import AutoGluonClassifier
+from .. import AutoTabPFNClassifier
 from ..bayes_search_utils import get_scores
 from ..contants import LOG_LOSS_MI_ESTIMATION
 from ..metrics import probability_calibration
@@ -14,14 +14,14 @@ from ..multi_layer_perceptron import MultiLayerPerceptron
 from ..utils import log_exception_error
 
 
-class AutoGluonLeakageDetector(InformationLeakageDetector):
+class TabPFNLeakageDetector(InformationLeakageDetector):
     def __int__(self, learner_params, fit_params, result_folder, cv_iterations, random_state):
         super().__int__(cv_iterations=cv_iterations, random_state=random_state)
         self.learner_params = learner_params
         self.fit_params = fit_params
         self.result_folder = result_folder
-        self.base_detector = AutoGluonClassifier
-        self.logger = logging.getLogger(AutoGluonLeakageDetector.__name__)
+        self.base_detector = AutoTabPFNClassifier
+        self.logger = logging.getLogger(TabPFNLeakageDetector.__name__)
 
     def fit(self, X, y):
         skf = StratifiedKFold(n_splits=self.cv_iterations, random_state=0)
