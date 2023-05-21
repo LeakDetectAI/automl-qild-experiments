@@ -16,9 +16,7 @@ from ..utils import log_exception_error
 
 class AutoGluonLeakageDetector(InformationLeakageDetector):
     def __int__(self, learner_params, fit_params, result_folder, cv_iterations, random_state):
-        super().__int__(cv_iterations=cv_iterations, random_state=random_state)
-        self.learner_params = learner_params
-        self.fit_params = fit_params
+        super().__int__(learner_params=learner_params, fit_params=fit_params, cv_iterations=cv_iterations, random_state=random_state)
         self.result_folder = result_folder
         self.base_detector = AutoGluonClassifier
         self.logger = logging.getLogger(AutoGluonLeakageDetector.__name__)

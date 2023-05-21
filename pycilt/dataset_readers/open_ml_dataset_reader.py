@@ -81,7 +81,7 @@ class OpenMLDatasetReader(metaclass=ABCMeta):
                 self.dataset_dictionary[label] = (X, y)
 
     def get_data(self, class_label=1):
-        df = self.data_frame
+        df = pd.DataFrame.copy(self.data_frame)
         p = [0, class_label]
         df = df[df.label.isin(p)]
         df[LABEL_COL].replace([class_label], 1, inplace=True)

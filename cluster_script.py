@@ -61,7 +61,7 @@ if __name__ == "__main__":
     os.environ["HIP_LAUNCH_BLOCKING"] = "1"
     os.environ["CUDA_LAUNCH_BLOCKING"] = "2"
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    for i in range(40000):
+    for i in range(5000):
         start = datetime.now()
         dbConnector.job_description = None
         if 'CCS_REQID' in os.environ.keys():
@@ -113,8 +113,8 @@ if __name__ == "__main__":
                 duration = get_duration_seconds(duration)
                 dataset_params['random_state'] = random_state
                 dataset_params['fold_id'] = fold_id
-                if 'more_instances' in learner_name:
-                    dataset_params["samples_per_class"] = 250 * dataset_params["n_features"]
+                #if 'more_instances' in learner_name:
+                #    dataset_params["samples_per_class"] = 250 * dataset_params["n_features"]
                 dataset_reader = get_dataset_reader(dataset_name, dataset_params)
                 X, y = dataset_reader.generate_dataset()
                 n_features = X.shape[-1]
@@ -137,6 +137,7 @@ if __name__ == "__main__":
                     n_jobs = 1
                 else:
                     n_jobs = 10
+                logger.info(f"Actual Mutual Information {dataset_reader.get_bayes_mi(MCMC_MI_ESTIMATION)}")
                 if learner in [BayesPredictor, AutoGluonClassifier, MineMIEstimator, MajorityVoting]:
                     if learner == BayesPredictor:
                         learner_params = {'dataset_obj': dataset_reader}
@@ -165,6 +166,7 @@ if __name__ == "__main__":
                                                                        eval_metric=validation_loss)}
                             logger.info(f"AutoGluon learner params {print_dictionary(learner_params)}")
                             learner_params['output_folder'] = folder
+                            learner_params['time_limit'] = 1200
                             estimator = learner(**learner_params)
                             estimator.fit(X_train, y_train, **fit_params)
                             dill.dump(estimator, open(optimizers_file_path, "wb"))

@@ -36,7 +36,7 @@ class MineMIEstimatorHPO(MIEstimatorBase):
         self.final_loss = 0
         self.mi_val = 0
 
-    def pytorch_tensor_dataset(self, X, y, i=2):
+    def pytorch_tensor_dataset(self, X, y, batch_size=64, i=2):
         seed = self.random_state.randint(2 ** 31, dtype="uint32") + i
         rs = np.random.RandomState(seed)
         if self.encode_classes:
@@ -49,14 +49,17 @@ class MineMIEstimatorHPO(MIEstimatorBase):
             xy = np.hstack((X, y[:, None]))
             y_s = rs.permutation(y)
             xy_tilde = np.hstack((X, y_s[:, None]))
+        indices = rs.choice(xy_tilde.shape[0], size=batch_size)
+        xy = xy[indices]
+        xy_tilde = xy_tilde[indices]
         tensor_xy = torch.tensor(xy, dtype=torch.float32)  # transform to torch tensor
         tensor_xy_tilde = torch.tensor(xy_tilde, dtype=torch.float32)
         return tensor_xy, tensor_xy_tilde
 
-    def fit(self, X, y, epochs=10000, verbose=0, **kwd):
+    def fit(self, X, y, epochs=10000, batch_size=128, verbose=0, **kwd):
         MON_FREQ = epochs // 10
         # Monitoring
-        MON_ITER = epochs // 50
+        MON_ITER = 10
         if self.encode_classes:
             y_t = LabelBinarizer().fit_transform(y)
             cls_enc = y_t.shape[-1]
@@ -72,7 +75,7 @@ class MineMIEstimatorHPO(MIEstimatorBase):
         for iter_ in tqdm(range(epochs), total=epochs, desc='iteration'):
             self.stat_net.zero_grad()
             # print(f"iter {iter_}, y {y}")
-            xy, xy_tilde = self.pytorch_tensor_dataset(X, y, i=iter_)
+            xy, xy_tilde = self.pytorch_tensor_dataset(X, y, batch_size=batch_size, i=iter_)
             preds_xy = self.stat_net(xy)
             preds_xy_tilde = self.stat_net(xy_tilde)
             train_div = get_mine_loss(preds_xy, preds_xy_tilde, metric=self.loss_function)
@@ -85,7 +88,7 @@ class MineMIEstimatorHPO(MIEstimatorBase):
                     mi_hats = []
                     for _ in range(MON_ITER):
                         # print(f"iter {iter_}, y {y}")
-                        xy, xy_tilde = self.pytorch_tensor_dataset(X, y, i=iter_)
+                        xy, xy_tilde = self.pytorch_tensor_dataset(X, y, batch_size=batch_size, i=iter_)
                         preds_xy = self.stat_net(xy)
                         preds_xy_tilde = self.stat_net(xy_tilde)
                         eval_div = get_mine_loss(preds_xy, preds_xy_tilde, metric=self.loss_function)
@@ -110,7 +113,7 @@ class MineMIEstimatorHPO(MIEstimatorBase):
 
     def score(self, X, y, sample_weight=None, verbose=0):
         torch.no_grad()
-        xy, xy_tilde = self.pytorch_tensor_dataset(X, y, i=0)
+        xy, xy_tilde = self.pytorch_tensor_dataset(X, y, batch_size=X.shape[0], i=0)
         preds_xy = self.stat_net(xy).detach().numpy().flatten()
         preds_xy_tilde = self.stat_net(xy_tilde).detach().numpy().flatten()
         mse = mean_squared_error(preds_xy, preds_xy_tilde)
@@ -127,7 +130,7 @@ class MineMIEstimatorHPO(MIEstimatorBase):
         scores = None
         for n_class in range(self.n_classes):
             y = np.zeros(X.shape[0]) + n_class
-            xy, xy_tilde = self.pytorch_tensor_dataset(X, y, i=0)
+            xy, xy_tilde = self.pytorch_tensor_dataset(X, y, batch_size=X.shape[0], i=0)
             score = self.stat_net(xy).detach().numpy()
             # self.logger.info(f"Class {n_class} scores {score.flatten()}")
             if scores is None:
@@ -136,10 +139,10 @@ class MineMIEstimatorHPO(MIEstimatorBase):
                 scores = np.hstack((scores, score))
         return scores
 
-    def estimate_mi(self, X, y, verbose=0, MON_ITER=1000):
+    def estimate_mi(self, X, y, verbose=0, MON_ITER=100):
         mi_hats = []
         for iter_ in range(MON_ITER):
-            xy, xy_tilde = self.pytorch_tensor_dataset(X, y, i=iter_)
+            xy, xy_tilde = self.pytorch_tensor_dataset(X, y, batch_size=X.shape[0], i=iter_)
             preds_xy = self.stat_net(xy)
             preds_xy_tilde = self.stat_net(xy_tilde)
             eval_div = get_mine_loss(preds_xy, preds_xy_tilde, metric=self.loss_function)

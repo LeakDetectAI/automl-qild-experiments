@@ -424,3 +424,16 @@ ALTER sequence mutual_information.avail_jobs_job_id_seq RESTART WITH 5516;
 DELETE from automl.avail_jobs where job_id>18 and (dataset='synthetic_imbalanced' or dataset='synthetic_distance_imbalanced');
 ALTER sequence automl.avail_jobs_job_id_seq RESTART WITH 16523;
 DELETE from mutual_information.running_jobs row WHERE EXISTS(SELECT job_id FROM mutual_information.avail_jobs r WHERE r.job_id = row.job_id and r.learner='mine_mi_estimator_hpo');
+SELECT job_id, hash_value, job_allocated_time, job_end_time,evaluation_time FROM automl.avail_jobs row
+WHERE EXISTS(SELECT job_id FROM automl.running_jobs r WHERE r.job_id = row.job_id and r.finished=True and learner='auto_gluon' and job_allocated_time > '2023-05-19 13:00:00');
+
+
+UPDATE automl.avail_jobs
+SET evaluation_time =
+    CASE
+        WHEN job_end_time is null THEN 0
+        WHEN EXTRACT(EPOCH FROM (job_end_time - job_allocated_time)) < 0 THEN 0
+        WHEN EXTRACT(EPOCH FROM (job_end_time - job_allocated_time)) < 500 THEN EXTRACT(EPOCH FROM (job_end_time - job_allocated_time)) + 3600
+        ELSE EXTRACT(EPOCH FROM (job_end_time - job_allocated_time))
+    END
+WHERE learner = 'auto_gluon';

@@ -1,4 +1,5 @@
 import logging
+import os.path
 
 import numpy as np
 import pandas as pd
@@ -33,12 +34,14 @@ class AutoGluonClassifier(AutomlClassifier):
         self.class_label = 'class'
         self.columns = [f'feature_{i}' for i in range(self.n_features)] + [self.class_label]
         self.leaderboard = None
+        #        if "pc2" in os.environ["HOME"]:
+        #            tmp_dir_path = os.path.join(os.environ["PFS_FOLDER"], "tmp")
+        #            if not os.path.isdir(tmp_dir_path):
+        #                os.mkdir(tmp_dir_path)
+        #            os.environ['RAY_LOG_DIR'] = os.environ['RAY_HOME'] = os.environ['TMPDIR'] = tmp_dir_path
 
     def fit(self, X, y, **kwd):
-        data = np.concatenate((X, y[:, None]), axis=1)
-        if self.n_features != X.shape[-1]:
-            raise ValueError(f"Dataset passed does not contain {self.n_features}")
-        train_data = pd.DataFrame(data=data, columns=self.columns)
+        train_data = self.convert_to_dataframe(X, y)
         self.model = TabularPredictor(label=self.class_label, sample_weight=self.sample_weight,
                                       eval_metric=self.eval_metric, path=self.output_folder)
         self.model.fit(train_data, time_limit=self.time_limit, hyperparameters=hyperparameters,
@@ -80,5 +83,11 @@ class AutoGluonClassifier(AutomlClassifier):
     def get_k_rank_model(self, k):
         self.leaderboard.sort_values(['score_val'], ascending=False, inplace=True)
         model_name = self.leaderboard.iloc[k - 1]['model']
+        model = self.model._trainer.load_model(model_name)
+        return model
+
+    def get_model(self, model_name):
+        self.leaderboard.sort_values(['score_val'], ascending=False, inplace=True)
+        # model_name = self.leaderboard.iloc[k - 1]['model']
         model = self.model._trainer.load_model(model_name)
         return model

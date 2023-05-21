@@ -5,19 +5,29 @@ import numpy as np
 from scipy.stats import fisher_exact
 
 from pycilt.contants import MAJORITY_VOTING, PAIRED_TTEST, FISHER_EXACT_TEST_MEAN, FISHER_EXACT_TEST_MEDIAN
-from pycilt.detectors.utils import leakage_detection_methods
+from pycilt.detectors.utils import leakage_detection_methods, mi_estimation_metrics
 from pycilt.statistical_tests import paired_ttest
 from pycilt.utils import log_exception_error
 
 
 class InformationLeakageDetector(metaclass=ABCMeta):
-    def __int__(self, cv_iterations, random_state):
+    def __int__(self, learner_params, fit_params, cv_iterations, n_hypothesis, random_state):
         self.cv_iterations = cv_iterations
         self.random_state = random_state
+        self.fit_params = fit_params
+        self.learner_params = learner_params
+        self.n_hypothesis = n_hypothesis
         self.estimators = []
-        self.results = {MAJORITY_VOTING: []}
+        self.results = {}
         self.base_detector = None
         self.logger = logging.getLogger(InformationLeakageDetector.__name__)
+        self.__initialize_objects__()
+
+    def __initialize_objects__(self):
+        for i in range(self.n_hypothesis):
+            self.results[f'model_{i}'] = {}
+            for metric_name, evaluation_metric in mi_estimation_metrics.items():
+                self.results[f'model_{i}'][metric_name] = []
 
     def fit(self, X, y):
         raise NotImplemented

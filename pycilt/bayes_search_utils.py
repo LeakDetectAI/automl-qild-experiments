@@ -1,8 +1,12 @@
+import logging
+
 import numpy as np
 import sklearn
+from autogluon.core.models import AbstractModel
+from packaging import version
 from sklearn.linear_model import RidgeClassifier, SGDClassifier
 from sklearn.svm import LinearSVC
-from packaging import version
+
 from pycilt.utils import print_dictionary, sigmoid
 
 
@@ -56,10 +60,14 @@ def get_scores(X, estimator):
         p_pred = pred_prob
     else:
         p_pred = pred_prob.flatten()
-
+    if isinstance(estimator, AbstractModel):
+        if len(p_pred.shape) == 1:
+            p_pred = np.hstack(((1 - p_pred)[:, None], p_pred[:, None]))
     if isinstance(estimator, SGDClassifier) or isinstance(estimator, LinearSVC) or isinstance(estimator,
                                                                                               RidgeClassifier):
         p_pred = sigmoid(p_pred)
         if len(p_pred.shape) == 1:
             p_pred = np.hstack(((1 - p_pred)[:, None], p_pred[:, None]))
+    logger = logging.getLogger("Score")
+    logger.info(f"Scores Shape {p_pred.shape}, Classes {np.unique(y_pred)}")
     return p_pred, y_pred
