@@ -20,7 +20,7 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier,
     ExtraTreesClassifier
 from sklearn.linear_model import RidgeClassifier, SGDClassifier
 from sklearn.metrics import f1_score, accuracy_score, matthews_corrcoef, \
-    mutual_info_score
+    mutual_info_score, balanced_accuracy_score
 from sklearn.svm import LinearSVC
 from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
 from sklearn.utils import check_random_state
@@ -28,15 +28,9 @@ from skopt.space import Real, Categorical, Integer
 from tensorflow.core.protobuf.config_pb2 import ConfigProto
 from tensorflow.python.client.session import Session
 
-from pycilt.automl import AutoGluonClassifier, AutoTabPFNClassifier
-from pycilt.baseline import MajorityVoting
-from pycilt.bayes_predictor import BayesPredictor
+from pycilt import *
 from pycilt.contants import *
-from pycilt.dataset_readers import SyntheticDatasetGeneratorDistance
-from pycilt.dataset_readers.synthetic_data_generator import SyntheticDatasetGenerator
 from pycilt.metrics import *
-from pycilt.mi_estimators import MineMIEstimator, GMMMIEstimator, PCSoftmaxMIEstimator, MineMIEstimatorHPO
-from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 
 __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_estimators", "get_dataset_reader",
            "learners", "classification_metrics", "mi_estimation_metrics", "mi_metrics", "lp_metric_dict",
@@ -47,9 +41,11 @@ __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_es
 
 from pycilt.utils import log_exception_error
 
-datasets = {SYNTHETIC_DATASET: SyntheticDatasetGenerator, SYNTHETIC_DISTANCE_DATASET: SyntheticDatasetGeneratorDistance,
+datasets = {SYNTHETIC_DATASET: SyntheticDatasetGenerator,
+            SYNTHETIC_DISTANCE_DATASET: SyntheticDatasetGeneratorDistance,
             SYNTHETIC_IMBALANCED_DATASET: SyntheticDatasetGenerator,
-            SYNTHETIC_DISTANCE_IMBALANCED_DATASET: SyntheticDatasetGeneratorDistance}
+            SYNTHETIC_DISTANCE_IMBALANCED_DATASET: SyntheticDatasetGeneratorDistance,
+            OPENML_DATASET: OpenMLDatasetReader}
 classifiers = {MULTI_LAYER_PERCEPTRON: MultiLayerPerceptron,
                SGD_CLASSIFIER: SGDClassifier,
                RIDGE_CLASSIFIER: RidgeClassifier,
@@ -76,24 +72,30 @@ calibrator_params = {ISOTONIC_REGRESSION: {'detection': False, 'independent_prob
                      HISTOGRAM_BINNING: {'detection': False, 'independent_probabilities': False},
                      BETA_CALIBRATION: {'detection': False, 'independent_probabilities': False},
                      TEMPERATURE_SCALING: {'detection': False, 'independent_probabilities': False}}
-mi_estimators = {'gmm_mi_estimator': GMMMIEstimator,
+mi_estimators = {GMM_MI_ESTIMATOR: GMMMIEstimator,
                  'gmm_mi_estimator_more_instances': GMMMIEstimator,
                  'gmm_mi_estimator_true': GMMMIEstimator,
                  'gmm_mi_estimator_more_instances_true': GMMMIEstimator,
-                 'mine_mi_estimator': MineMIEstimator,
+                 MINE_MI_ESTIMATOR: MineMIEstimator,
                  'mine_mi_estimator_hpo': MineMIEstimatorHPO,
                  'softmax_mi_estimator': PCSoftmaxMIEstimator,
                  'pc_softmax_mi_estimator': PCSoftmaxMIEstimator}
 
-learners = {**classifiers, **mi_estimators}
+leakage_detectors = {AUTO_GLUON: AutoGluonLeakageDetector,
+                     TABPNF: TabPFNLeakageDetector,
+                     MULTI_LAYER_PERCEPTRON: MLPLeakageDetector,
+                     MINE_MI_ESTIMATOR: MIEstimationLeakageDetector,
+                     GMM_MI_ESTIMATOR: MIEstimationLeakageDetector}
+
+learners = {**classifiers, **mi_estimators, **leakage_detectors}
 
 classification_metrics = {
     ACCURACY: accuracy_score,
     F_SCORE: f1_score,
     # AUC_SCORE: auc_score,
     MCC: matthews_corrcoef,
-    # INFORMEDNESS: instance_informedness,
-    MISCORE: mutual_info_score,
+    # INFORMEDNESS: balanced_accuracy_score,
+    EXPECTED_MUTUAL_INFORMATION_SCORE: mutual_info_score,
     SANTHIUB: santhi_vardi_upper_bound,
     HELLMANUB: helmann_raviv_upper_bound,
     FANOSLB: fanos_lower_bound,
@@ -117,9 +119,17 @@ mi_estimation_metrics = {
     PC_SOFTMAX_MI_ESTIMATION_BETA_CALIBRATION: pc_softmax_estimation,
     PC_SOFTMAX_MI_ESTIMATION_TEMPERATURE_SCALING: pc_softmax_estimation,
     PC_SOFTMAX_MI_ESTIMATION_HISTOGRAM_BINNING: pc_softmax_estimation}
-
+ild_metrics = {
+    ACCURACY: accuracy_score,
+    F_SCORE: f1_score,
+    # AUC_SCORE: auc_score,
+    MCC: matthews_corrcoef,
+    INFORMEDNESS: balanced_accuracy_score,
+    FPR: false_positive_rate,
+    FNR: false_negative_rate
+}
 mi_metrics = {
-    EMI: None,
+    EXPECTED_MUTUAL_INFORMATION: None,
     MCMC_MI_ESTIMATION: None,
     MCMC_LOG_LOSS: None,
     MCMC_PC_SOFTMAX: None,
@@ -128,7 +138,8 @@ mi_metrics = {
 lp_metric_dict = {AUTO_ML: {**classification_metrics, **mi_estimation_metrics},
                   CLASSIFICATION: {**classification_metrics, **mi_estimation_metrics},
                   MUTUAL_INFORMATION: {**mi_metrics, **classification_metrics},
-                  MUTUAL_INFORMATION_NEW: {**mi_metrics, **classification_metrics}}
+                  MUTUAL_INFORMATION_NEW: {**mi_metrics, **classification_metrics},
+                  LEAKAGE_DETECTION: ild_metrics}
 
 
 def get_duration_seconds(duration):

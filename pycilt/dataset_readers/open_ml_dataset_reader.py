@@ -3,9 +3,12 @@ from abc import ABCMeta
 
 import numpy as np
 import openml
+import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import check_random_state
-import pandas as pd
+
+from pycilt.dataset_readers.utils import clean_class_label
+
 LABEL_COL = 'label'
 
 
@@ -38,11 +41,8 @@ class OpenMLDatasetReader(metaclass=ABCMeta):
         vulnerable_classes_str = description.split('\n')[-1].split("vulnerable_classes ")[-1]
         vulnerable_classes_str = vulnerable_classes_str.strip('[]')
         self.vulnerable_classes = [s.strip() for s in vulnerable_classes_str.split(',')]
+        self.n_features = len(self.dataset.features)
 
-    def clean_class_label(self, string):
-        string = ' '.join(string.split('_')).title()
-        string = string.replace("  ", " ")
-        return string
 
     def __clean_up_dataset__(self):
         categorical_columns = self.data_frame_raw.select_dtypes(include=['object']).columns
@@ -51,9 +51,9 @@ class OpenMLDatasetReader(metaclass=ABCMeta):
             if column != LABEL_COL:
                 self.data_frame_raw[column] = label_encoder.fit_transform(self.data_frame_raw[column])
 
-        self.data_frame_raw[LABEL_COL] = self.data_frame_raw[LABEL_COL].apply(lambda x: self.clean_class_label(x))
-        self.correct_class = self.clean_class_label(self.correct_class)
-        self.vulnerable_classes = [self.clean_class_label(s) for s in self.vulnerable_classes]
+        self.data_frame_raw[LABEL_COL] = self.data_frame_raw[LABEL_COL].apply(lambda x: clean_class_label(x))
+        self.correct_class = clean_class_label(self.correct_class)
+        self.vulnerable_classes = [clean_class_label(s) for s in self.vulnerable_classes]
         labels = list(self.data_frame_raw[LABEL_COL].unique())
         labels.sort()
         self.logger.info(f"Class Labels formatted {labels}")

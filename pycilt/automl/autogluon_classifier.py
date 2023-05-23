@@ -1,5 +1,6 @@
 import logging
 import os.path
+import signal
 
 import numpy as np
 import pandas as pd
@@ -8,12 +9,13 @@ from sklearn.utils import check_random_state
 
 from pycilt.automl.automl_core import AutomlClassifier
 from pycilt.automl.model_configurations import hyperparameters
+from pycilt.utils import log_exception_error
 
 
 class AutoGluonClassifier(AutomlClassifier):
 
     def __init__(self, n_features, n_classes, time_limit=1800, output_folder=None, eval_metric='accuracy',
-                 use_hyperparameters=True, delete_tmp_folder_after_terminate=True, random_state=None):
+                 use_hyperparameters=True, delete_tmp_folder_after_terminate=True, random_state=None, **kwargs):
         self.logger = logging.getLogger(name=AutoGluonClassifier.__name__)
         self.random_state = check_random_state(random_state)
         self.output_folder = output_folder
@@ -40,12 +42,42 @@ class AutoGluonClassifier(AutomlClassifier):
         #                os.mkdir(tmp_dir_path)
         #            os.environ['RAY_LOG_DIR'] = os.environ['RAY_HOME'] = os.environ['TMPDIR'] = tmp_dir_path
 
+    def check_if_fitted(self):
+        if os.path.exists(self.output_folder):
+            try:
+                self.model = TabularPredictor.load(self.output_folder)
+                self.logger.info(f"Loading the model at {self.output_folder}")
+            except Exception as error:
+                log_exception_error(self.logger, error)
+                self.logger.error(f"Cannot load the trained model at {self.output_folder}")
+                self.model = None
+        self.leaderboard = self.model.leaderboard(extra_info=True)
+        time_taken = self.leaderboard['fit_time'].sum() + self.leaderboard['pred_time_val'].sum()
+        difference = self.time_limit - time_taken
+        if difference <= 60:
+            self.model = None
+
     def fit(self, X, y, **kwd):
         train_data = self.convert_to_dataframe(X, y)
-        self.model = TabularPredictor(label=self.class_label, sample_weight=self.sample_weight,
-                                      eval_metric=self.eval_metric, path=self.output_folder)
-        self.model.fit(train_data, time_limit=self.time_limit, hyperparameters=hyperparameters,
-                       hyperparameter_tune_kwargs=self.hyperparameter_tune_kwargs, auto_stack=self.auto_stack)
+        def signal_handler(signum, frame):
+            raise KeyboardInterrupt("Function execution timed out")
+
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.alarm(self.time_limit)
+        self.check_if_fitted()
+        if self.model is None:
+            self.model = TabularPredictor(label=self.class_label, sample_weight=self.sample_weight,
+                                          eval_metric=self.eval_metric, path=self.output_folder)
+            try:
+                self.model.fit(train_data, time_limit=self.time_limit, hyperparameters=hyperparameters,
+                               hyperparameter_tune_kwargs=self.hyperparameter_tune_kwargs, auto_stack=self.auto_stack)
+                signal.alarm(0)
+            except KeyboardInterrupt as error:
+                log_exception_error(self.logger, error)
+                self.logger.error(f"Fit function execution timed out so loading the already trained model")
+                self.model = TabularPredictor.load(self.output_folder)
+                self.logger.info(f"Loading the model at {self.output_folder}")
+
         self.leaderboard = self.model.leaderboard(extra_info=True)
         if self.delete_tmp_folder_after_terminate:
             self.model.delete_models(models_to_keep='best', dry_run=False)

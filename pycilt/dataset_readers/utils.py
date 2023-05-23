@@ -33,3 +33,9 @@ def generate_samples_per_class(n_classes, samples=1000, imbalance=0.05, gen_type
         logger.info(f"Class {n_classes} calculated {samples_per_class[str(n_classes - 1)] / n_total_instances}")
     logger.info(f"Imbalanced {imbalance} samples_per_class {samples_per_class}")
     return samples_per_class
+
+
+def clean_class_label(string):
+    string = ' '.join(string.split('_')).title()
+    string = string.replace("  ", " ")
+    return string

@@ -8,7 +8,7 @@ from pycilt.automl.automl_core import AutomlClassifier
 
 
 class AutoTabPFNClassifier(AutomlClassifier):
-    def __init__(self, n_ensembles=100, device='cpu', random_state=None):
+    def __init__(self, n_ensembles=100, device='cpu', random_state=None, **kwargs):
         self.logger = logging.getLogger(name=AutoTabPFNClassifier.__name__)
         self.random_state = check_random_state(random_state)
         self.device = device

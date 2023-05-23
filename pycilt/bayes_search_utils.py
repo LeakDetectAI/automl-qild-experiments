@@ -10,29 +10,31 @@ from sklearn.svm import LinearSVC
 from pycilt.utils import print_dictionary, sigmoid
 
 
-def get_parameters(optimizers, search_keys):
+def get_parameters_at_k(optimizers, search_keys, k):
     yis = []
     xis = []
     for opt in optimizers:
         yis.extend(opt.yi)
         xis.extend(opt.Xi)
-    best_i = np.argmin(yis)
-    best_params = xis[best_i]
-    best_loss = yis[best_i]
+    yis = np.array(yis)
+    xis = np.array(xis)
+    index_k = np.argsort(yis)[k]
+    best_params = xis[index_k]
+    best_loss = yis[index_k]
     best_params = dict(zip(search_keys, best_params))
     return best_loss, best_params
 
 
-def update_params(bayes_search, search_keys, params, logger):
-    best_loss, best_params = get_parameters(bayes_search.optimizers_, search_keys)
+def update_params_at_k(bayes_search, search_keys, params, logger, k=0):
+    loss, best_params = get_parameters_at_k(k, bayes_search.optimizers_, search_keys)
     if version.parse(sklearn.__version__) < version.parse("0.25.0"):
         if 'criterion' in best_params.keys():
             if best_params['criterion'] == 'squared_error':
                 best_params['criterion'] = 'mse'
     params.update(best_params)
     params_str = print_dictionary(best_params, sep='\t')
-    logger.info(f"Best parameters are: {params_str} with Accuracy/MI of: {-best_loss}\n")
-    return best_loss, params
+    logger.info(f"Parameters at position k:{k} are {params_str} with objective of: {-loss}\n")
+    return loss, params
 
 
 def log_callback(logger, parameters):

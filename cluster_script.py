@@ -34,8 +34,9 @@ from pycilt.automl import AutoGluonClassifier, AutoTabPFNClassifier
 from pycilt.baseline import MajorityVoting
 from pycilt.bayes_predictor import BayesPredictor
 from pycilt.bayes_search import BayesSearchCV
-from pycilt.bayes_search_utils import update_params, log_callback, get_scores
+from pycilt.bayes_search_utils import update_params_at_k, log_callback, get_scores
 from pycilt.contants import *
+from pycilt.contants import LOGS_FOLDER, RESULT_FOLDER, EXPERIMENTS, OPTIMIZER_FOLDER
 from pycilt.metrics import probability_calibration
 from pycilt.mi_estimators import MineMIEstimator, MineMIEstimatorHPO
 from pycilt.mi_estimators.mi_base_class import MIEstimatorBase
@@ -43,10 +44,6 @@ from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.utils import print_dictionary, log_exception_error
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-LOGS_FOLDER = 'logs'
-RESULT_FOLDER = 'results'
-EXPERIMENTS = 'experiments'
-OPTIMIZER_FOLDER = 'optimizers'
 
 if __name__ == "__main__":
 
@@ -69,11 +66,6 @@ if __name__ == "__main__":
         print("************************************************************************************")
         print(f"Getting the job for iteration {i}")
         dbConnector.fetch_job_arguments(cluster_id=cluster_id)
-        learner_name = dbConnector.job_description["learner"]
-        job_id = int(dbConnector.job_description["job_id"])
-        if learner_name == "auto_sklearn":
-            dbConnector.mark_running_job_finished(job_id, start)
-            continue
         if dbConnector.job_description is not None:
             try:
                 seed = int(dbConnector.job_description["seed"])
@@ -97,9 +89,9 @@ if __name__ == "__main__":
                 if validation_loss == 'None':
                     validation_loss = None
                 random_state = np.random.RandomState(seed=seed + fold_id)
-                log_path = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, LOGS_FOLDER, f"{hash_value}.log")
-                base_dir = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM)
-                create_directory_safely(base_dir, False)
+                BASE_DIR = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM)
+                log_path = os.path.join(BASE_DIR, LOGS_FOLDER, f"{hash_value}.log")
+                create_directory_safely(BASE_DIR, False)
                 create_directory_safely(log_path, True)
 
                 setup_logging(log_path=log_path)
@@ -124,8 +116,7 @@ if __name__ == "__main__":
                 X_train, X_test = X[train_index], X[test_index]
                 y_train, y_test = y[train_index], y[test_index]
 
-                optimizers_file_path = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, OPTIMIZER_FOLDER,
-                                                    f"{hash_value}.pkl")
+                optimizers_file_path = os.path.join(BASE_DIR, OPTIMIZER_FOLDER, f"{hash_value}.pkl")
                 create_directory_safely(optimizers_file_path, True)
 
                 learner = learners[learner_name]
@@ -158,8 +149,7 @@ if __name__ == "__main__":
                     else:
                         estimator = get_automl_learned_estimator(optimizers_file_path, logger)
                         if estimator is None:
-                            folder = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, OPTIMIZER_FOLDER,
-                                                  f"{hash_value}gluon")
+                            folder = os.path.join(BASE_DIR, OPTIMIZER_FOLDER, f"{hash_value}gluon")
                             if not os.path.isdir(folder):
                                 os.mkdir(folder)
                             learner_params = {**learner_params, **dict(n_features=n_features, n_classes=n_classes,
@@ -199,7 +189,7 @@ if __name__ == "__main__":
                         log_exception_error(logger, error)
                         logger.error("Cannot fit the Bayes SearchCV ")
                     logger.info("Fitting the model with best parameters")
-                    best_loss, learner_params = update_params(bayes_search, search_keys, learner_params, logger)
+                    best_loss, learner_params = update_params_at_k(bayes_search, search_keys, learner_params, logger)
                     logger.info(f"Setting the best parameters {print_dictionary(learner_params)}")
                     estimator = learner(**learner_params)
                     estimator.fit(X_train, y_train, **fit_params)
@@ -208,7 +198,7 @@ if __name__ == "__main__":
 
                 if issubclass(learner, MIEstimatorBase):
                     estimated_mi = estimator.estimate_mi(X, y)
-                result_file = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, RESULT_FOLDER, f"{hash_value}.h5")
+                result_file = os.path.join(BASE_DIR, RESULT_FOLDER, f"{hash_value}.h5")
                 logger.info(f"Result file {result_file}")
 
                 create_directory_safely(result_file, True)
@@ -243,7 +233,7 @@ if __name__ == "__main__":
                             metric_loss = evaluation_metric(y_true, p_pred)
                     elif metric_name in [MCMC_LOG_LOSS, MCMC_MI_ESTIMATION, MCMC_PC_SOFTMAX, MCMC_SOFTMAX]:
                         metric_loss = dataset_reader.get_bayes_mi(metric_name)
-                    elif metric_name == EMI:
+                    elif metric_name == EXPECTED_MUTUAL_INFORMATION:
                         metric_loss = estimated_mi
                     else:
                         if metric_name == F_SCORE:
