@@ -24,6 +24,7 @@ class SklearnClassifierLeakageDetector(InformationLeakageDetector):
         self.inner_cv_iterator = StratifiedShuffleSplit(n_splits=self.n_inner_folds, test_size=0.10,
                                                         random_state=self.random_state)
         self.logger = logging.getLogger(SklearnClassifierLeakageDetector.__name__)
+        self.n_jobs = 10
 
     def perform_hyperparameter_optimization(self, X, y):
         X_train, y_train = self.get_training_dataset(X, y)
