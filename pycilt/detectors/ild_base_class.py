@@ -24,7 +24,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
     def __init__(self, padding_name, learner_params, fit_params, hash_value, cv_iterations, n_hypothesis,
                  base_directory, random_state, **kwargs):
         self.logger = logging.getLogger(InformationLeakageDetector.__name__)
-        self.padding_name = self.format_name(padding_name)
+        self.padding_name, self.padding_code = self.format_name(padding_name)
         self.fit_params = fit_params
         self.learner_params = learner_params
         self.cv_iterations = cv_iterations
@@ -49,21 +49,21 @@ class InformationLeakageDetector(metaclass=ABCMeta):
         padding_name = padding_name.replace(" ", "")
         hash_object = hashlib.sha1()
         hash_object.update(padding_name.encode())
-        hex_dig = str(hash_object.hexdigest())[:8]
+        hex_dig = str(hash_object.hexdigest())[:16]
         # self.logger.info(   "Job_id {} Hash_string {}".format(job.get("job_id", None), str(hex_dig)))
         self.logger.info(f"For padding name {padding_name}the hex value is {hex_dig}")
-        return hex_dig
+        return padding_name, hex_dig
 
     @property
     def _is_fitted_(self) -> bool:
         conditions = [os.path.exists(self.results_file)]
         if os.path.exists(self.results_file):
             file = h5py.File(self.results_file, 'r')
-            conditions.append(self.padding_name in file)
-            if self.padding_name in file:
-                self.logger.info(f"Simulations done for padding label {self.padding_name}")
+            conditions.append(self.padding_code in file)
+            if self.padding_code in file:
+                self.logger.info(f"Simulations done for padding label {self.padding_code}")
                 for model_name in self.results.keys():
-                    padding_name_group = file[self.padding_name]
+                    padding_name_group = file[self.padding_code]
                     conditions.append(model_name in padding_name_group)
                     self.logger.info(f"Predictions done for model {model_name}")
         return np.all(conditions)
@@ -105,17 +105,21 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             file = h5py.File(self.results_file, 'r+')
         else:
             file = h5py.File(self.results_file, 'w')
-        if self.padding_name not in file:
-            padding_name_group = file.create_group(self.padding_name)
+        if self.padding_code not in file:
+            padding_name_group = file.create_group(self.padding_code)
         else:
-            padding_name_group = file.get(self.padding_name)
+            padding_name_group = file.get(self.padding_code)
         for model_name, metric_results in self.results.items():
-            if model_name not in file:
-                model_group = padding_name_group.create_group(self.padding_name)
+            if model_name not in padding_name_group:
+                model_group = padding_name_group.create_group(self.padding_code)
             else:
-                model_group = padding_name_group.get(self.padding_name)
+                model_group = padding_name_group.get(self.padding_code)
             for metric_name, results in metric_results.items():
-                model_group.create_dataset(metric_name, results)
+                if model_name not in model_group:
+                    model_group.create_dataset(metric_name, results)
+                else:
+                    stored_results = model_group[metric_name]
+                    self.logger.info(f"Stored Results {stored_results} Results {results}")
         file.close()
 
     def read_results_file(self, detection_method):
@@ -123,7 +127,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
         model_results = {}
         if os.path.exists(self.results_file):
             file = h5py.File(self.results_file, 'r')
-            padding_name_group = file[self.padding_name]
+            padding_name_group = file[self.padding_code]
             for model_name in self.results.keys():
                 model_group = padding_name_group[model_name]
                 try:

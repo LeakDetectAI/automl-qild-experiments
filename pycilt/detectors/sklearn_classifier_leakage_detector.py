@@ -53,7 +53,7 @@ class SklearnClassifierLeakageDetector(InformationLeakageDetector):
 
     def fit(self, X, y):
         if self._is_fitted_:
-            self.logger.info(f"Model already fitted for the padding {self.padding_name}")
+            self.logger.info(f"Model already fitted for the padding {self.padding_code}")
         else:
             train_size = self.perform_hyperparameter_optimization(X, y)
             for k, (train_index, test_index) in enumerate(self.cv_iterator.split(X, y)):
@@ -63,7 +63,7 @@ class SklearnClassifierLeakageDetector(InformationLeakageDetector):
                 y_train, y_test = y[train_index], y[test_index]
                 self.calculate_majority_voting_accuracy(X_train, y_train, X_test, y_test)
                 for i, model in enumerate(self.estimators):
-                    self.logger.info(f"************* Model {i}: {model.__class__.__name__} ********************")
+                    self.logger.info(f"************* Model {i+1}: {model.__class__.__name__} ********************")
                     model.fit(X=X_train, y=y_train)
                     p_pred, y_pred = get_scores(X_test, model)
                     self.evaluate_scores(X_test, X_train, y_test, y_train, y_pred, p_pred, model, i)

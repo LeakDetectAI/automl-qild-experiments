@@ -29,7 +29,7 @@ class MIEstimationLeakageDetector(SklearnClassifierLeakageDetector):
 
     def fit(self, X, y):
         if self._is_fitted_:
-            self.logger.info(f"Model already fitted for the padding {self.padding_name}")
+            self.logger.info(f"Model already fitted for the padding {self.padding_code}")
         else:
             train_size = self.perform_hyperparameter_optimization(X, y)
             for k, (train_index, test_index) in enumerate(self.cv_iterator.split(X, y)):

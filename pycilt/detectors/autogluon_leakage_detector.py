@@ -7,7 +7,7 @@ from .. import AutoGluonClassifier
 from ..bayes_search_utils import get_scores
 from ..contants import *
 from ..metrics import probability_calibration
-from ..utils import log_exception_error
+from ..utils import log_exception_error, create_directory_safely
 
 
 class AutoGluonLeakageDetector(InformationLeakageDetector):
@@ -17,8 +17,9 @@ class AutoGluonLeakageDetector(InformationLeakageDetector):
                          hash_value=hash_value, cv_iterations=cv_iterations, n_hypothesis=n_hypothesis,
                          base_directory=base_directory, random_state=random_state, **kwargs)
         self.base_detector = AutoGluonClassifier
-        folder_name = f"{hash_value}_{self.padding_name}gluon"
-        self.learner_params['output_folder'] = os.path.join(base_directory, OPTIMIZER_FOLDER, folder_name)
+        output_folder = os.path.join(base_directory, OPTIMIZER_FOLDER, hash_value, f"{self.padding_code}gluon")
+        create_directory_safely(output_folder)
+        self.learner_params['output_folder'] = output_folder
         self.learner_params['eval_metric'] = validation_loss
         self.learner_params['delete_tmp_folder_after_terminate'] = False
         self.base_detector = AutoGluonClassifier(**self.learner_params)
@@ -35,7 +36,7 @@ class AutoGluonLeakageDetector(InformationLeakageDetector):
 
     def fit(self, X, y, **kwargs):
         if self._is_fitted_:
-            self.logger.info(f"Model already fitted for the padding {self.padding_name}")
+            self.logger.info(f"Model already fitted for the padding {self.padding_code}")
         else:
             train_size = self.perform_hyperparameter_optimization(X, y)
             for k, (train_index, test_index) in enumerate(self.cv_iterator.split(X, y)):
@@ -50,7 +51,7 @@ class AutoGluonLeakageDetector(InformationLeakageDetector):
                 X_t = train_data.drop(columns=['class'])  # Extract the features from the training data
                 y_t = train_data['class']  # Extract the labels from the training data
                 for i, model in enumerate(self.estimators):
-                    self.logger.info(f"************* Model {i}: {model.__class__.__name__} ********************")
+                    self.logger.info(f"************* Model {i+1}: {model.__class__.__name__} ********************")
                     model._n_repeats_finished = 0
                     n_repeat_start = 0
                     model.fit(X=X_t, y=y_t, n_repeat_start=n_repeat_start)
