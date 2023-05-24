@@ -38,10 +38,8 @@ class InformationLeakageDetector(metaclass=ABCMeta):
         self.results = {}
         self.base_detector = None
         self.base_directory = base_directory
-        self.optimizers_file_path = os.path.join(self.base_directory, OPTIMIZER_FOLDER, f"{hash_value}.pkl")
         self.results_file = os.path.join(self.base_directory, RESULT_FOLDER, f"{hash_value}_intermediate.h5")
         create_directory_safely(self.results_file, True)
-        create_directory_safely(self.optimizers_file_path, True)
         self.__initialize_objects__()
 
     def format_name(self, padding_name):
@@ -62,10 +60,23 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             conditions.append(self.padding_code in file)
             if self.padding_code in file:
                 self.logger.info(f"Simulations done for padding label {self.padding_code}")
-                for model_name in self.results.keys():
+                for model_name, metric_results in self.results.items():
                     padding_name_group = file[self.padding_code]
                     conditions.append(model_name in padding_name_group)
-                    self.logger.info(f"Predictions done for model {model_name}")
+                    if model_name in padding_name_group:
+                        model_group = padding_name_group.get(model_name)
+                        self.logger.info(f"Predictions done for model {model_name}")
+                        for metric_name, results in metric_results.items():
+                            conditions.append(metric_name in model_group)
+                            self.logger.info(f"Results exists for metric {metric_name}")
+        if os.path.exists(self.results_file) and not np.all(conditions):
+            if os.path.exists(self.results_file):
+                file = h5py.File(self.results_file, 'w')
+                if self.padding_code in file:
+                    del file[self.padding_code]
+                    self.logger.info(f"Results for padding {self.padding_name} removed since it is "
+                                     f"incomplete {not np.all(conditions)}")
+                file.close()
         return np.all(conditions)
 
     def __initialize_objects__(self):
@@ -99,51 +110,6 @@ class InformationLeakageDetector(metaclass=ABCMeta):
     def fit(self, X, y):
         raise NotImplemented
 
-    def store_results(self):
-        self.logger.info(f"Result file {self.results_file}")
-        if os.path.exists(self.results_file):
-            file = h5py.File(self.results_file, 'r+')
-        else:
-            file = h5py.File(self.results_file, 'w')
-        if self.padding_code not in file:
-            padding_name_group = file.create_group(self.padding_code)
-        else:
-            padding_name_group = file.get(self.padding_code)
-        for model_name, metric_results in self.results.items():
-            if model_name not in padding_name_group:
-                model_group = padding_name_group.create_group(self.padding_code)
-            else:
-                model_group = padding_name_group.get(self.padding_code)
-            for metric_name, results in metric_results.items():
-                if model_name not in model_group:
-                    model_group.create_dataset(metric_name, results)
-                else:
-                    stored_results = model_group[metric_name]
-                    self.logger.info(f"Stored Results {stored_results} Results {results}")
-        file.close()
-
-    def read_results_file(self, detection_method):
-        metric_name = leakage_detection_methods[detection_method]
-        model_results = {}
-        if os.path.exists(self.results_file):
-            file = h5py.File(self.results_file, 'r')
-            padding_name_group = file[self.padding_code]
-            for model_name in self.results.keys():
-                model_group = padding_name_group[model_name]
-                try:
-                    model_results[model_name] = model_group[metric_name]
-                except KeyError as e:
-                    log_exception_error(self.logger, e)
-                    self.logger.error("Error while calibrating the probabilities")
-                    model_results = None
-                    raise ValueError(f"Provided Metric Name {metric_name} is not applicable "
-                                     f"for current base detector {self.base_detector} "
-                                     f"so cannot apply the provided detection method {detection_method}")
-            file.close()
-            return model_results
-        else:
-            raise ValueError(f"The results are not found at the path {self.results_file}")
-
     def evaluate_scores(self, X_test, X_train, y_test, y_train, y_pred, p_pred, model, i):
         for metric_name, evaluation_metric in mi_estimation_metrics.items():
             if LOG_LOSS_MI_ESTIMATION in metric_name or PC_SOFTMAX_MI_ESTIMATION in metric_name:
@@ -170,13 +136,59 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             if metric_name == CONFUSION_MATRIX:
                 # metric_loss = np.array(metric_loss)
                 (tn, fp, fn, tp) = metric_loss.ravel()
-                cm_str = f"tn {tn}, fp {fp}, fn {fn}, tp {tp}"
-                metric_loss = np.array(metric_loss.ravel())
-                self.logger.info(f"Metric {metric_name}: Value {cm_str}")
+                cm_str = f"TN: {tn}, FP: {fp}, FN: {fn}, TP: {tp}"
+                metric_loss = [tn, fp, fn, tp]
+                self.logger.info(f"Metric {metric_name}: Value: {cm_str}")
             else:
-                self.logger.info(f"Metric {metric_name}: Value {metric_loss}")
+                self.logger.info(f"Metric {metric_name}: Value: {metric_loss}")
             model_name = list(self.results.keys())[i]
             self.results[model_name][metric_name].append(metric_loss)
+
+    def store_results(self):
+        self.logger.info(f"Result file {self.results_file}")
+        if os.path.exists(self.results_file):
+            file = h5py.File(self.results_file, 'r+')
+        else:
+            file = h5py.File(self.results_file, 'w')
+        try:
+            self.logger.info(f"{self.padding_code} in {file}: {self.padding_code in file}")
+            if self.padding_code not in file:
+                padding_name_group = file.create_group(self.padding_code)
+            else:
+                padding_name_group = file.get(self.padding_code)
+            for model_name, metric_results in self.results.items():
+                self.logger.info(f"{model_name} in {padding_name_group}: {model_name in padding_name_group}")
+                model_group = padding_name_group.create_group(model_name)
+                self.logger.info(f"Creating model group {model_name} results {model_group}")
+                for metric_name, results in metric_results.items():
+                    self.logger.info(f"Storing results {metric_name} results {results}")
+                    model_group.create_dataset(metric_name, np.array(results))
+        except Exception as error:
+            log_exception_error(self.logger, error)
+            self.logger.error("Problem creating the dataset ")
+        file.close()
+
+    def read_results_file(self, detection_method):
+        metric_name = leakage_detection_methods[detection_method]
+        model_results = {}
+        if os.path.exists(self.results_file):
+            file = h5py.File(self.results_file, 'r')
+            padding_name_group = file[self.padding_code]
+            for model_name in self.results.keys():
+                model_group = padding_name_group[model_name]
+                try:
+                    model_results[model_name] = model_group[metric_name]
+                except KeyError as e:
+                    log_exception_error(self.logger, e)
+                    self.logger.error("Error while calibrating the probabilities")
+                    model_results = None
+                    raise ValueError(f"Provided Metric Name {metric_name} is not applicable "
+                                     f"for current base detector {self.base_detector} "
+                                     f"so cannot apply the provided detection method {detection_method}")
+            file.close()
+            return model_results
+        else:
+            raise ValueError(f"The results are not found at the path {self.results_file}")
 
     def detect(self, detection_method):
         # change for including holm-bonnfernoi
@@ -192,7 +204,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             n_training_folds = self.cv_iterations - 1
             n_test_folds = 1
             model_results = self.read_results_file(detection_method)
-            model_pvalues = {}
+            model_p_values = {}
             for model_name, metric_vals in model_results.items():
                 if 'MI' in detection_method:
                     base_mi = self.random_state.rand(len(metric_vals)) * 1e-2
@@ -207,6 +219,6 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                         p_value = np.mean(p_values)
                     elif detection_method == FISHER_EXACT_TEST_MEDIAN:
                         p_value = np.median(p_values)
-                model_pvalues[model_name] = p_value
-            p_vals, pvals_corrected, rejected = holm_bonferroni(list(model_pvalues.values()))
+                model_p_values[model_name] = p_value
+            p_vals, pvals_corrected, rejected = holm_bonferroni(list(model_p_values.values()))
         return np.any(rejected), np.sum(rejected)

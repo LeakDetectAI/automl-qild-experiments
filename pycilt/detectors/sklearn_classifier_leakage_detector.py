@@ -1,14 +1,13 @@
 import logging
+import os
 
 from sklearn.model_selection import StratifiedShuffleSplit
 
 from .ild_base_class import InformationLeakageDetector
-from .utils import mi_estimation_metrics, calibrators, calibrator_params
 from ..bayes_search import BayesSearchCV
 from ..bayes_search_utils import get_scores, log_callback, update_params_at_k
-from ..contants import LOG_LOSS_MI_ESTIMATION, PC_SOFTMAX_MI_ESTIMATION
-from ..metrics import probability_calibration
-from ..utils import log_exception_error
+from ..contants import OPTIMIZER_FOLDER
+from ..utils import log_exception_error, create_directory_safely
 
 
 class SklearnClassifierLeakageDetector(InformationLeakageDetector):
@@ -23,6 +22,9 @@ class SklearnClassifierLeakageDetector(InformationLeakageDetector):
         self.validation_loss = validation_loss
         self.inner_cv_iterator = StratifiedShuffleSplit(n_splits=self.n_inner_folds, test_size=0.30,
                                                         random_state=self.random_state)
+        self.optimizers_file_path = os.path.join(base_directory, OPTIMIZER_FOLDER, hash_value,
+                                                 f"{self.padding_code}.pkl")
+        create_directory_safely(self.optimizers_file_path, True)
         self.logger = logging.getLogger(SklearnClassifierLeakageDetector.__name__)
         self.n_jobs = 10
 

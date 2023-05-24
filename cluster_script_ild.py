@@ -110,7 +110,6 @@ if __name__ == "__main__":
                 learner_params = convert_learner_params(learner_params_db)
                 learner_params['random_state'] = random_state
                 learner_params = {**learner_params, **dict(n_features=dataset_reader.n_features, n_classes=2)}
-                learner_params['time_limit'] = 200
                 detector_params = {'learner_params': learner_params, 'fit_params': fit_params, 'hash_value': hash_value,
                                    'cv_iterations': cv_iterations, 'n_hypothesis': n_hypothesis,
                                    'base_directory': BASE_DIR, 'search_space': search_space, 'hp_iters': hp_iters,
