@@ -12,16 +12,16 @@ from ..utils import log_exception_error
 
 
 class SklearnClassifierLeakageDetector(InformationLeakageDetector):
-    def __int__(self, padding_name, learner_params, fit_params, hash_value, cv_iterations, n_hypothesis, base_directory,
-                search_space, hp_iters, n_inner_folds, validation_loss, random_state=None, **kwargs):
-        super().__int__(padding_name=padding_name, learner_params=learner_params, fit_params=fit_params,
-                        hash_value=hash_value, cv_iterations=cv_iterations, n_hypothesis=n_hypothesis,
-                        base_directory=base_directory, random_state=random_state, **kwargs)
+    def __init__(self, padding_name, learner_params, fit_params, hash_value, cv_iterations, n_hypothesis,
+                 base_directory, search_space, hp_iters, n_inner_folds, validation_loss, random_state=None, **kwargs):
+        super().__init__(padding_name=padding_name, learner_params=learner_params, fit_params=fit_params,
+                         hash_value=hash_value, cv_iterations=cv_iterations, n_hypothesis=n_hypothesis,
+                         base_directory=base_directory, random_state=random_state, **kwargs)
         self.search_space = search_space
         self.hp_iters = hp_iters
         self.n_inner_folds = n_inner_folds
         self.validation_loss = validation_loss
-        self.inner_cv_iterator = StratifiedShuffleSplit(n_splits=self.n_inner_folds, test_size=0.10,
+        self.inner_cv_iterator = StratifiedShuffleSplit(n_splits=self.n_inner_folds, test_size=0.30,
                                                         random_state=self.random_state)
         self.logger = logging.getLogger(SklearnClassifierLeakageDetector.__name__)
         self.n_jobs = 10
@@ -57,39 +57,16 @@ class SklearnClassifierLeakageDetector(InformationLeakageDetector):
         else:
             train_size = self.perform_hyperparameter_optimization(X, y)
             for k, (train_index, test_index) in enumerate(self.cv_iterator.split(X, y)):
-                self.logger.info(f"************************************ Split {k} ************************************")
+                self.logger.info(f"********************************* Split {k+1} *********************************")
                 train_index = train_index[:train_size]
                 X_train, X_test = X[train_index], X[test_index]
                 y_train, y_test = y[train_index], y[test_index]
                 self.calculate_majority_voting_accuracy(X_train, y_train, X_test, y_test)
                 for i, model in enumerate(self.estimators):
-                    self.logger.info(
-                        f"************************************ Model {i} ************************************")
+                    self.logger.info(f"************* Model {i}: {model.__class__.__name__} ********************")
                     model.fit(X=X_train, y=y_train)
                     p_pred, y_pred = get_scores(X_test, model)
-                    for metric_name, evaluation_metric in mi_estimation_metrics.items():
-                        if LOG_LOSS_MI_ESTIMATION in metric_name or PC_SOFTMAX_MI_ESTIMATION in metric_name:
-                            calibrator_technique = None
-                            for key in calibrators.keys():
-                                if key in metric_name:
-                                    calibrator_technique = key
-                            if calibrator_technique is not None:
-                                calibrator = calibrators[calibrator_technique]
-                                c_params = calibrator_params[calibrator_technique]
-                                calibrator = calibrator(**c_params)
-                                try:
-                                    p_pred_cal = probability_calibration(X_train, y_train, X_test, model, calibrator,
-                                                                         self.logger)
-                                    metric_loss = evaluation_metric(y_test, p_pred_cal)
-                                except Exception as error:
-                                    log_exception_error(self.logger, error)
-                                    self.logger.error("Error while calibrating the probabilities")
-                                    metric_loss = evaluation_metric(y_test, p_pred)
-                            else:
-                                metric_loss = evaluation_metric(y_test, p_pred)
-                        else:
-                            metric_loss = evaluation_metric(y_test, y_pred)
-                        self.logger.info(f"Metric {metric_name}: Value {metric_loss}")
-                        model_name = list(self.results.keys())[i]
-                        self.results[model_name][metric_name].append(metric_loss)
+                    self.evaluate_scores(X_test, X_train, y_test, y_train, y_pred, p_pred, model, i)
             self.store_results()
+
+

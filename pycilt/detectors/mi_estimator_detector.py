@@ -4,13 +4,13 @@ from ..mi_estimators import GMMMIEstimator, MineMIEstimatorHPO
 
 
 class MIEstimationLeakageDetector(SklearnClassifierLeakageDetector):
-    def __int__(self, mi_technique, padding_name, learner_params, fit_params, hash_value, cv_iterations, n_hypothesis,
-                base_directory, search_space, hp_iters, n_inner_folds, validation_loss, random_state=None, **kwargs):
-        super().__int__(padding_name=padding_name, learner_params=learner_params, fit_params=fit_params,
-                        hash_value=hash_value, cv_iterations=cv_iterations, n_hypothesis=n_hypothesis,
-                        base_directory=base_directory, search_space=search_space, hp_iters=hp_iters,
-                        n_inner_folds=n_inner_folds, validation_loss=validation_loss, random_state=random_state,
-                        **kwargs)
+    def __init__(self, mi_technique, padding_name, learner_params, fit_params, hash_value, cv_iterations, n_hypothesis,
+                 base_directory, search_space, hp_iters, n_inner_folds, validation_loss, random_state=None, **kwargs):
+        super().__init__(padding_name=padding_name, learner_params=learner_params, fit_params=fit_params,
+                         hash_value=hash_value, cv_iterations=cv_iterations, n_hypothesis=n_hypothesis,
+                         base_directory=base_directory, search_space=search_space, hp_iters=hp_iters,
+                         n_inner_folds=n_inner_folds, validation_loss=validation_loss, random_state=random_state,
+                         **kwargs)
 
         if mi_technique == MINE_MI_ESTIMATOR:
             self.base_detector = MineMIEstimatorHPO

@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 from abc import ABCMeta
@@ -13,16 +14,17 @@ from statsmodels.stats.multitest import multipletests
 from pycilt.bayes_search_utils import get_scores
 from pycilt.classifiers import MajorityVoting
 from pycilt.contants import *
-from pycilt.detectors.utils import leakage_detection_methods, mi_estimation_metrics
+from pycilt.detectors.utils import leakage_detection_methods, mi_estimation_metrics, calibrators, calibrator_params
+from pycilt.metrics import probability_calibration
 from pycilt.statistical_tests import paired_ttest
 from pycilt.utils import log_exception_error, create_directory_safely
 
 
 class InformationLeakageDetector(metaclass=ABCMeta):
-    def __int__(self, padding_name: str, learner_params: dict, fit_params: dict, hash_value: str, cv_iterations: int, n_hypothesis: int,
-                base_directory: str, random_state: object, **kwargs):
+    def __init__(self, padding_name, learner_params, fit_params, hash_value, cv_iterations, n_hypothesis,
+                 base_directory, random_state, **kwargs):
         self.logger = logging.getLogger(InformationLeakageDetector.__name__)
-        self.padding_name = padding_name
+        self.padding_name = self.format_name(padding_name)
         self.fit_params = fit_params
         self.learner_params = learner_params
         self.cv_iterations = cv_iterations
@@ -42,36 +44,36 @@ class InformationLeakageDetector(metaclass=ABCMeta):
         create_directory_safely(self.optimizers_file_path, True)
         self.__initialize_objects__()
 
-    @property
-    def padding_name(self):
-        self.padding_name = '_'.join(self.padding_name.split(' ')).lower()
-        self.padding_name = self.padding_name.replace(" ", "")
-        return self.padding_name
-
-    @padding_name.setter
-    def padding_name(self, value):
-        self._padding_name = value
+    def format_name(self, padding_name):
+        padding_name = '_'.join(padding_name.split(' ')).lower()
+        padding_name = padding_name.replace(" ", "")
+        hash_object = hashlib.sha1()
+        hash_object.update(padding_name.encode())
+        hex_dig = str(hash_object.hexdigest())[:8]
+        # self.logger.info(   "Job_id {} Hash_string {}".format(job.get("job_id", None), str(hex_dig)))
+        self.logger.info(f"For padding name {padding_name}the hex value is {hex_dig}")
+        return hex_dig
 
     @property
     def _is_fitted_(self) -> bool:
+        conditions = [os.path.exists(self.results_file)]
         if os.path.exists(self.results_file):
             file = h5py.File(self.results_file, 'r')
-            conditions = []
+            conditions.append(self.padding_name in file)
             if self.padding_name in file:
                 self.logger.info(f"Simulations done for padding label {self.padding_name}")
-                conditions.append(self.padding_name in file)
                 for model_name in self.results.keys():
                     padding_name_group = file[self.padding_name]
                     conditions.append(model_name in padding_name_group)
                     self.logger.info(f"Predictions done for model {model_name}")
         return np.all(conditions)
 
-
     def __initialize_objects__(self):
         for i in range(self.n_hypothesis):
             self.results[f'model_{i}'] = {}
             for metric_name, evaluation_metric in mi_estimation_metrics.items():
                 self.results[f'model_{i}'][metric_name] = []
+        self.results[MAJORITY_VOTING] = {}
         self.results[MAJORITY_VOTING][ACCURACY] = []
 
     def get_training_dataset(self, X, y):
@@ -100,12 +102,18 @@ class InformationLeakageDetector(metaclass=ABCMeta):
     def store_results(self):
         self.logger.info(f"Result file {self.results_file}")
         if os.path.exists(self.results_file):
-            file = h5py.File(self.results_file, 'a')
+            file = h5py.File(self.results_file, 'r+')
         else:
             file = h5py.File(self.results_file, 'w')
-        padding_name_group = file.create_group(self.padding_name)
+        if self.padding_name not in file:
+            padding_name_group = file.create_group(self.padding_name)
+        else:
+            padding_name_group = file.get(self.padding_name)
         for model_name, metric_results in self.results.items():
-            model_group = padding_name_group.create_group(model_name)
+            if model_name not in file:
+                model_group = padding_name_group.create_group(self.padding_name)
+            else:
+                model_group = padding_name_group.get(self.padding_name)
             for metric_name, results in metric_results.items():
                 model_group.create_dataset(metric_name, results)
         file.close()
@@ -132,6 +140,40 @@ class InformationLeakageDetector(metaclass=ABCMeta):
         else:
             raise ValueError(f"The results are not found at the path {self.results_file}")
 
+    def evaluate_scores(self, X_test, X_train, y_test, y_train, y_pred, p_pred, model, i):
+        for metric_name, evaluation_metric in mi_estimation_metrics.items():
+            if LOG_LOSS_MI_ESTIMATION in metric_name or PC_SOFTMAX_MI_ESTIMATION in metric_name:
+                calibrator_technique = None
+                for key in calibrators.keys():
+                    if key in metric_name:
+                        calibrator_technique = key
+                if calibrator_technique is not None:
+                    calibrator = calibrators[calibrator_technique]
+                    c_params = calibrator_params[calibrator_technique]
+                    calibrator = calibrator(**c_params)
+                    try:
+                        p_pred_cal = probability_calibration(X_train, y_train, X_test, model, calibrator,
+                                                             self.logger)
+                        metric_loss = evaluation_metric(y_test, p_pred_cal)
+                    except Exception as error:
+                        log_exception_error(self.logger, error)
+                        self.logger.error("Error while calibrating the probabilities")
+                        metric_loss = evaluation_metric(y_test, p_pred)
+                else:
+                    metric_loss = evaluation_metric(y_test, p_pred)
+            else:
+                metric_loss = evaluation_metric(y_test, y_pred)
+            if metric_name == CONFUSION_MATRIX:
+                # metric_loss = np.array(metric_loss)
+                (tn, fp, fn, tp) = metric_loss.ravel()
+                cm_str = f"tn {tn}, fp {fp}, fn {fn}, tp {tp}"
+                metric_loss = np.array(metric_loss.ravel())
+                self.logger.info(f"Metric {metric_name}: Value {cm_str}")
+            else:
+                self.logger.info(f"Metric {metric_name}: Value {metric_loss}")
+            model_name = list(self.results.keys())[i]
+            self.results[model_name][metric_name].append(metric_loss)
+
     def detect(self, detection_method):
         # change for including holm-bonnfernoi
         def holm_bonferroni(p_values):
@@ -155,6 +197,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                     accuracies = self.results[MAJORITY_VOTING]
                     p_value = paired_ttest(accuracies, metric_vals, n_training_folds, n_test_folds, correction=True)
                 elif 'fishers' in detection_method:
+                    metric_vals = [np.array([[tn, fp], [fn, tp]]) for [tn, fp, fn, tp] in metric_vals]
                     p_values = np.array([fisher_exact(cm)[1] for cm in metric_vals])
                     if detection_method == FISHER_EXACT_TEST_MEAN:
                         p_value = np.mean(p_values)

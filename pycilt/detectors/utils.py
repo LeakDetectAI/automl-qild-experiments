@@ -1,3 +1,5 @@
+import hashlib
+
 from netcal.binning import IsotonicRegression, HistogramBinning
 from netcal.scaling import LogisticCalibration, BetaCalibration, TemperatureScaling
 from sklearn.metrics import confusion_matrix, accuracy_score
@@ -43,3 +45,5 @@ calibrator_params = {ISOTONIC_REGRESSION: {'detection': False, 'independent_prob
                      HISTOGRAM_BINNING: {'detection': False, 'independent_probabilities': False},
                      BETA_CALIBRATION: {'detection': False, 'independent_probabilities': False},
                      TEMPERATURE_SCALING: {'detection': False, 'independent_probabilities': False}}
+
+

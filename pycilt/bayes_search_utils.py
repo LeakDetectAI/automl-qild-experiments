@@ -70,6 +70,8 @@ def get_scores(X, estimator):
         p_pred = sigmoid(p_pred)
         if len(p_pred.shape) == 1:
             p_pred = np.hstack(((1 - p_pred)[:, None], p_pred[:, None]))
-    logger = logging.getLogger("Score")
-    logger.info(f"Scores Shape {p_pred.shape}, Classes {np.unique(y_pred)}")
+    y_pred = np.array(y_pred)
+    p_pred = np.array(p_pred)
+    #logger = logging.getLogger("Score")
+    #logger.info(f"Scores Shape {p_pred.shape}, Classes {np.unique(y_pred)}")
     return p_pred, y_pred

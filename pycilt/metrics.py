@@ -1,8 +1,10 @@
 import logging
 
 import numpy as np
+from autogluon.core.models import AbstractModel
 from sklearn.metrics import accuracy_score, roc_auc_score
 
+from pycilt import AutoGluonClassifier
 from pycilt.bayes_search_utils import get_scores
 from pycilt.utils import normalize
 
@@ -145,6 +147,11 @@ def false_negative_rate(y_true, y_pred):
 
 
 def probability_calibration(X_train, y_train, X_test, classifier, calibrator, logger):
+    if isinstance(classifier, AbstractModel):
+        n_features = X_train.shape[-1]
+        n_classes = len(np.unique(y_train))
+        X_train = AutoGluonClassifier(n_features=n_features, n_classes=n_classes).convert_to_dataframe(X_train, None)
+        X_test = AutoGluonClassifier(n_features=n_features, n_classes=n_classes).convert_to_dataframe(X_test, None)
     y_pred_train, _ = get_scores(X_train, classifier)
     y_pred_test, _ = get_scores(X_test, classifier)
     if len(y_pred_train.shape) == 1:
@@ -154,8 +161,8 @@ def probability_calibration(X_train, y_train, X_test, classifier, calibrator, lo
     calibrator.fit(y_pred_train, y_train)
     y_pred_cal = calibrator.transform(y_pred_test)
     if len(y_pred_cal.shape) == 1:
-        logger.info(f"Calibration Type {type(calibrator).__name__}")
-        logger.info(f"Calibrated Class 1 Probs {y_pred_cal[0:3]} \n Original Probs {y_pred_test[0:3]}")
+        #logger.info(f"Calibration Type {type(calibrator).__name__}")
+        #logger.info(f"Calibrated Class 1 Probs {y_pred_cal[0:3]} \n Original Probs {y_pred_test[0:3]}")
         y_pred_cal = np.hstack(((1 - y_pred_cal)[:, None], y_pred_cal[:, None]))
     return y_pred_cal
 

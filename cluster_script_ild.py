@@ -110,16 +110,18 @@ if __name__ == "__main__":
                 learner_params = convert_learner_params(learner_params_db)
                 learner_params['random_state'] = random_state
                 learner_params = {**learner_params, **dict(n_features=dataset_reader.n_features, n_classes=2)}
+                learner_params['time_limit'] = 200
                 detector_params = {'learner_params': learner_params, 'fit_params': fit_params, 'hash_value': hash_value,
                                    'cv_iterations': cv_iterations, 'n_hypothesis': n_hypothesis,
                                    'base_directory': BASE_DIR, 'search_space': search_space, 'hp_iters': hp_iters,
                                    'n_inner_folds': n_inner_folds, 'validation_loss': validation_loss}
-
+                detector_params = convert_learner_params(detector_params)
+                print(detector_params)
                 logger.info(f"Time Taken till now: {seconds_to_time(duration_till_now(start))}  seconds")
                 y_true = []
                 y_pred = []
-
                 for label, (X, y) in dataset_reader.dataset_dictionary.items():
+                    logger.info(f"Running the detector for label {label}")
                     detector_params['padding_name'] = label
                     ild_model = ild_learner(**detector_params)
                     ild_model.fit(X, y)

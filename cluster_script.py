@@ -30,17 +30,12 @@ from sklearn.model_selection import StratifiedShuffleSplit
 
 from experiments.dbconnection import DBConnector
 from experiments.utils import *
-from pycilt.automl import AutoGluonClassifier, AutoTabPFNClassifier
-from pycilt.baseline import MajorityVoting
-from pycilt.bayes_predictor import BayesPredictor
+from pycilt import *
 from pycilt.bayes_search import BayesSearchCV
 from pycilt.bayes_search_utils import update_params_at_k, log_callback, get_scores
 from pycilt.contants import *
 from pycilt.contants import LOGS_FOLDER, RESULT_FOLDER, EXPERIMENTS, OPTIMIZER_FOLDER
 from pycilt.metrics import probability_calibration
-from pycilt.mi_estimators import MineMIEstimator, MineMIEstimatorHPO
-from pycilt.mi_estimators.mi_base_class import MIEstimatorBase
-from pycilt.multi_layer_perceptron import MultiLayerPerceptron
 from pycilt.utils import print_dictionary, log_exception_error
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -129,6 +124,7 @@ if __name__ == "__main__":
                 else:
                     n_jobs = 10
                 logger.info(f"Actual Mutual Information {dataset_reader.get_bayes_mi(MCMC_MI_ESTIMATION)}")
+                learner_params = {**learner_params, **dict(n_features=n_features, n_classes=n_classes)}
                 if learner in [BayesPredictor, AutoGluonClassifier, MineMIEstimator, MajorityVoting]:
                     if learner == BayesPredictor:
                         learner_params = {'dataset_obj': dataset_reader}
@@ -152,11 +148,9 @@ if __name__ == "__main__":
                             folder = os.path.join(BASE_DIR, OPTIMIZER_FOLDER, f"{hash_value}gluon")
                             if not os.path.isdir(folder):
                                 os.mkdir(folder)
-                            learner_params = {**learner_params, **dict(n_features=n_features, n_classes=n_classes,
-                                                                       eval_metric=validation_loss)}
                             logger.info(f"AutoGluon learner params {print_dictionary(learner_params)}")
                             learner_params['output_folder'] = folder
-                            learner_params['time_limit'] = 1200
+                            learner_params['eval_metric'] = validation_loss
                             estimator = learner(**learner_params)
                             estimator.fit(X_train, y_train, **fit_params)
                             dill.dump(estimator, open(optimizers_file_path, "wb"))
@@ -167,12 +161,11 @@ if __name__ == "__main__":
                         y_true = np.copy(y)
                 else:
                     # inner_cv_iterator = StratifiedKFold(n_splits=n_inner_folds, shuffle=True, random_state=random_state)
-                    inner_cv_iterator = StratifiedShuffleSplit(n_splits=n_inner_folds, test_size=0.10,
+                    inner_cv_iterator = StratifiedShuffleSplit(n_splits=n_inner_folds, test_size=0.30,
                                                                random_state=random_state)
                     search_space = create_search_space(hp_ranges, logger)
                     logger.info(f"Search Space {search_space}")
-                    if learner == MultiLayerPerceptron or issubclass(learner, MIEstimatorBase):
-                        learner_params = {**learner_params, **dict(n_features=n_features, n_classes=n_classes)}
+
                     estimator = learner(**learner_params)
                     bayes_search_params = dict(estimator=estimator, search_spaces=search_space, n_iter=hp_iters,
                                                scoring=validation_loss, n_jobs=n_jobs, cv=inner_cv_iterator,

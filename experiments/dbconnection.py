@@ -663,6 +663,7 @@ class DBConnector(metaclass=ABCMeta):
     def get_hash_value_for_job(self, job):
         keys = [
             "fold_id",
+            "base_learner",
             "learner",
             "dataset_params",
             "fit_params",
