@@ -27,13 +27,13 @@ if __name__ == "__main__":
         if schema == AUTO_ML:
             max_job_id = 12
 
-        dbConnector.insert_new_jobs_different_configurations(max_job_id=max_job_id, dataset=SYNTHETIC_DATASET)
-        dbConnector.insert_new_jobs_different_configurations(max_job_id=max_job_id, dataset=SYNTHETIC_DISTANCE_DATASET)
-        dbConnector.insert_new_jobs_imbalanced(max_job_id=max_job_id, dataset=SYNTHETIC_IMBALANCED_DATASET)
-        dbConnector.insert_new_jobs_imbalanced(max_job_id=max_job_id, dataset=SYNTHETIC_DISTANCE_IMBALANCED_DATASET)
+        #dbConnector.insert_new_jobs_different_configurations(max_job_id=max_job_id, dataset=SYNTHETIC_DATASET)
+        #dbConnector.insert_new_jobs_different_configurations(max_job_id=max_job_id, dataset=SYNTHETIC_DISTANCE_DATASET)
+        #dbConnector.insert_new_jobs_imbalanced(max_job_id=max_job_id, dataset=SYNTHETIC_IMBALANCED_DATASET)
+        #dbConnector.insert_new_jobs_imbalanced(max_job_id=max_job_id, dataset=SYNTHETIC_DISTANCE_IMBALANCED_DATASET)
 
-        dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DATASET)
-        dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DISTANCE_DATASET)
-        dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_IMBALANCED_DATASET)
-        dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DISTANCE_IMBALANCED_DATASET)
+        #dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DATASET)
+        #dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DISTANCE_DATASET)
+        #dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_IMBALANCED_DATASET)
+        #dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DISTANCE_IMBALANCED_DATASET)
 

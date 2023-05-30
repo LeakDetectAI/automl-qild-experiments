@@ -51,6 +51,7 @@ CLASSIFICATION = 'classification'
 AUTO_ML = 'automl'
 LEAKAGE_DETECTION = "leakage_detection"
 
+
 INFORMEDNESS = "BalancedAccuracy"
 MCC = "MathewsCorrelationCoefficient"
 AUC_SCORE = "AucScore"

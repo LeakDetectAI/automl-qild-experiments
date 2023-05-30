@@ -103,12 +103,10 @@ def log_exception_error(logger, e):
     logger.error(traceback.format_exc())
     logger.error(message)
 
-
 def create_directory_safely(path, is_file_path=False):
     try:
         if is_file_path:
             path = os.path.dirname(path)
-        if not os.path.exists(path):
-            os.mkdir(path)
+        os.makedirs(path, exist_ok=True)
     except Exception as e:
         print(str(e))

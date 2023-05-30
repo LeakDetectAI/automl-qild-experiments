@@ -1,0 +1,45 @@
+create view results.automl_agg
+            (job_id, fold_id, learner, dataset, n_classes, n_features, flip_y, noise, imbalance, gen_type,
+             f1score, accuracy, mathewscorrelationcoefficient, estimatedmutualinformationscore, mcmcbayesmi,
+             mcmcloglossbayesmi, midpointmi, loglossmi, loglossmiisotonicregression, loglossmiplattscaling,
+             loglossmibetacalibration, loglossmitemperaturescaling, loglossmihistogrambinnin, pcsoftmaxmi,
+             pcsoftmaxmiisotonicregression, pcsoftmaxmiplattscaling, pcsoftmaxmibetacalibration,
+             pcsoftmaxmitemperaturescaling, pcsoftmaxmihistogrambinning, hash_value, evaluation_time)
+as
+SELECT results.job_id,
+       jobs.fold_id,
+       jobs.learner,
+       jobs.dataset,
+       (jobs.dataset_params ->> 'n_classes'::text)::integer       AS n_classes,
+       (jobs.dataset_params ->> 'n_features'::text)::integer      AS n_features,
+       (jobs.dataset_params ->> 'flip_y'::text)::double precision AS flip_y,
+       (jobs.dataset_params ->> 'noise'::text)::double precision  AS noise,
+       (jobs.dataset_params ->> 'imbalance'::text)::double precision  AS imbalance,
+       (jobs.dataset_params ->> 'gen_type'::text)::text  AS gen_type,
+       results.f1score,
+       results.accuracy,
+       results.mathewscorrelationcoefficient,
+       results.estimatedmutualinformationscore,
+       results.mcmcbayesmi,
+       results.mcmcloglossbayesmi,
+       results.midpointmi,
+       results.loglossmi,
+       results.loglossmiisotonicregression,
+       results.loglossmiplattscaling,
+       results.loglossmiisotonicregression,
+       results.loglossmibetacalibration,
+       results.loglossmitemperaturescaling,
+       results.pcsoftmaxmi,
+       results.pcsoftmaxmiisotonicregression,
+       results.pcsoftmaxmiplattscaling,
+       results.pcsoftmaxmibetacalibration,
+       results.pcsoftmaxmitemperaturescaling,
+       results.pcsoftmaxmihistogrambinning,
+       jobs.hash_value,
+       jobs.evaluation_time
+
+FROM results.automl results
+         JOIN automl.avail_jobs jobs USING (job_id);
+
+alter table results.automl_agg
+    owner to autoscaadmin;

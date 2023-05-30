@@ -2,12 +2,10 @@ import logging
 import os.path
 
 from .ild_base_class import InformationLeakageDetector
-from .utils import mi_estimation_metrics, calibrators, calibrator_params
 from .. import AutoGluonClassifier
 from ..bayes_search_utils import get_scores
 from ..contants import *
-from ..metrics import probability_calibration
-from ..utils import log_exception_error, create_directory_safely
+from ..utils import create_directory_safely
 
 
 class AutoGluonLeakageDetector(InformationLeakageDetector):
@@ -17,19 +15,20 @@ class AutoGluonLeakageDetector(InformationLeakageDetector):
                          hash_value=hash_value, cv_iterations=cv_iterations, n_hypothesis=n_hypothesis,
                          base_directory=base_directory, random_state=random_state, **kwargs)
         self.base_detector = AutoGluonClassifier
+        self.learner = None
         output_folder = os.path.join(base_directory, OPTIMIZER_FOLDER, hash_value, f"{self.padding_code}gluon")
         create_directory_safely(output_folder)
         self.learner_params['output_folder'] = output_folder
         self.learner_params['eval_metric'] = validation_loss
         self.learner_params['delete_tmp_folder_after_terminate'] = False
-        self.base_detector = AutoGluonClassifier(**self.learner_params)
         self.logger = logging.getLogger(AutoGluonLeakageDetector.__name__)
 
     def perform_hyperparameter_optimization(self, X, y):
         X_train, y_train = self.get_training_dataset(X, y)
-        self.base_detector.fit(X_train, y_train)
+        self.learner = self.base_detector(**self.learner_params)
+        self.learner.fit(X_train, y_train)
         for i in range(self.n_hypothesis):
-            model = self.base_detector.get_k_rank_model(i + 1)
+            model = self.learner.get_k_rank_model(i + 1)
             self.estimators.append(model)
         train_size = X_train.shape[0]
         return train_size
@@ -46,15 +45,20 @@ class AutoGluonLeakageDetector(InformationLeakageDetector):
                 y_train, y_test = y[train_index], y[test_index]
                 self.calculate_majority_voting_accuracy(X_train, y_train, X_test, y_test)
 
-                train_data = self.base_detector.convert_to_dataframe(X_train, y_train)
-                test_data = self.base_detector.convert_to_dataframe(X_test, None)
+                train_data = self.learner.convert_to_dataframe(X_train, y_train)
+                test_data = self.learner.convert_to_dataframe(X_test, None)
                 X_t = train_data.drop(columns=['class'])  # Extract the features from the training data
                 y_t = train_data['class']  # Extract the labels from the training data
                 for i, model in enumerate(self.estimators):
-                    self.logger.info(f"************* Model {i+1}: {model.__class__.__name__} ********************")
+                    self.logger.info(f"************* Model {i + 1}: {model.__class__.__name__} ********************")
                     model._n_repeats_finished = 0
                     n_repeat_start = 0
                     model.fit(X=X_t, y=y_t, n_repeat_start=n_repeat_start)
                     p_pred, y_pred = get_scores(test_data, model)
                     self.evaluate_scores(X_test, X_train, y_test, y_train, y_pred, p_pred, model, i)
             self.store_results()
+
+
+
+
+

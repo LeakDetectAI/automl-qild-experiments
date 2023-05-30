@@ -79,19 +79,32 @@ class CSVReader(metaclass=ABCMeta):
             self.ccs_fin_array = list(self.data_frame[MISSING_CCS_FIN].unique())
         df = pd.DataFrame.copy(self.data_frame)
         df[LABEL_COL].replace(self.inverse_label_mapping, inplace=True)
-        df = pd.DataFrame(df[[LABEL_COL, MISSING_CCS_FIN]].value_counts().sort_index())
-        df.reset_index(inplace=True)
-        df.rename({0: 'Frequency'}, inplace=True, axis='columns')
-        df.sort_values(by=[MISSING_CCS_FIN, LABEL_COL], inplace=True)
-        f_vals = df.loc[df[LABEL_COL] == self.correct_class][[MISSING_CCS_FIN, 'Frequency']].values
-        vals = dict(zip(f_vals[:, 0], f_vals[:, 1]))
+        if MISSING_CCS_FIN in self.data_frame.columns:
+            df = pd.DataFrame(df[[LABEL_COL, MISSING_CCS_FIN]].value_counts().sort_index())
+            df.reset_index(inplace=True)
+            df.rename({0: 'Frequency'}, inplace=True, axis='columns')
+            df.sort_values(by=[MISSING_CCS_FIN, LABEL_COL], inplace=True)
+            f_vals = df.loc[df[LABEL_COL] == self.correct_class][[MISSING_CCS_FIN, 'Frequency']].values
+            vals = dict(zip(f_vals[:, 0], f_vals[:, 1]))
 
-        def div(row, val):
-            return row['Frequency'] / val
+            def div(row, val):
+                return row['Frequency'] / val
 
-        df['ratio_1_0'] = df.apply(lambda row: div(row, vals[True]) if str2bool(row.missing_ccs_fin) else div(row, vals[False]), axis=1)
-        fname = os.path.join(self.dataset_folder, "label_frequency.csv")
-        df.to_csv(fname)
+            df['ratio_1_0'] = df.apply(lambda row: div(row, vals[True]) if str2bool(row.missing_ccs_fin) else div(row, vals[False]), axis=1)
+            fname = os.path.join(self.dataset_folder, "label_frequency.csv")
+            df.to_csv(fname)
+        else:
+            df = pd.DataFrame(df[LABEL_COL].value_counts().sort_index())
+            df.reset_index(inplace=True)
+            df.rename({0: 'Frequency'}, inplace=True, axis='columns')
+            df.sort_values(by=[LABEL_COL], inplace=True)
+            f_vals = [0]
+            def div(row):
+                return row['Frequency'] / f_vals
+
+            df['ratio_1_0'] = df[LABEL_COL].value_counts()/len(df.loc[df[LABEL_COL] == self.correct_class])
+            fname = os.path.join(self.dataset_folder, "label_frequency.csv")
+            df.to_csv(fname)
         self.label_frequency = df
 
     def get_data_class_label(self, class_label=1, missing_ccs_fin=False):

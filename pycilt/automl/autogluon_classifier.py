@@ -1,5 +1,6 @@
 import logging
 import os.path
+import shutil
 
 import numpy as np
 import pandas as pd
@@ -14,7 +15,8 @@ from pycilt.utils import log_exception_error
 class AutoGluonClassifier(AutomlClassifier):
 
     def __init__(self, n_features, n_classes, time_limit=1800, output_folder=None, eval_metric='accuracy',
-                 use_hyperparameters=True, delete_tmp_folder_after_terminate=True, random_state=None, **kwargs):
+                 use_hyperparameters=True, delete_tmp_folder_after_terminate=True, auto_stack=False,
+                 random_state=None, **kwargs):
         self.logger = logging.getLogger(name=AutoGluonClassifier.__name__)
         self.random_state = check_random_state(random_state)
         self.output_folder = output_folder
@@ -26,7 +28,7 @@ class AutoGluonClassifier(AutomlClassifier):
             self.hyperparameters = hyperparameters
         else:
             self.hyperparameters = None
-        self.auto_stack = True
+        self.auto_stack = auto_stack
         self.n_features = n_features
         self.n_classes = n_classes
         self.sample_weight = "auto_weight"
@@ -55,6 +57,13 @@ class AutoGluonClassifier(AutomlClassifier):
                 log_exception_error(self.logger, error)
                 self.logger.error(f"Cannot load the trained model at {self.output_folder}")
                 self.model = None
+                try:
+                    shutil.rmtree(self.output_folder)
+                    self.logger.error(f"The folder '{self.output_folder}' and its contents are deleted successfully.")
+                except OSError as error:
+                    log_exception_error(self.logger, error)
+                    self.logger.error(f"Error: {error.strerror}")
+
         if self.model is not None:
             self.leaderboard = self.model.leaderboard(extra_info=True)
             time_taken = self.leaderboard['fit_time'].sum() + self.leaderboard['pred_time_val'].sum()
@@ -77,11 +86,7 @@ class AutoGluonClassifier(AutomlClassifier):
                                hyperparameter_tune_kwargs=self.hyperparameter_tune_kwargs, auto_stack=self.auto_stack)
             except Exception as error:
                 log_exception_error(self.logger, error)
-                self.logger.error(f"Fit function execution timed out so loading the already trained model")
-            finally:
-                self.time_limit_reached = True
-                self.model = TabularPredictor.load(self.output_folder)
-                self.logger.info(f"Loading the model at {self.output_folder}")
+                self.logger.error("Fit function execution timed out so loading the already trained model")
 
     def fit(self, X, y, **kwd):
         # Set the alarm to trigger after the specified time limit

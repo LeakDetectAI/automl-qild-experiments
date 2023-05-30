@@ -13,10 +13,10 @@
 
 #largemem
 cd $PFS_FOLDER/information-leakage-techniques/
-module reset
 ml lang
 ml Python/3.9.5
-source ~/.bashrc
+echo $PYTHONUSERBASE
+echo $PATH
 which python
 which pip
 

@@ -48,7 +48,7 @@ if __name__ == "__main__":
     os.environ["HIP_LAUNCH_BLOCKING"] = "1"
     os.environ["CUDA_LAUNCH_BLOCKING"] = "2"
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    for i in range(40000):
+    for i in range(100):
         start = datetime.now()
         dbConnector.job_description = None
         if 'CCS_REQID' in os.environ.keys():
@@ -110,31 +110,38 @@ if __name__ == "__main__":
                 learner_params = convert_learner_params(learner_params_db)
                 learner_params['random_state'] = random_state
                 learner_params = {**learner_params, **dict(n_features=dataset_reader.n_features, n_classes=2)}
-                detector_params = {'learner_params': learner_params, 'fit_params': fit_params, 'hash_value': hash_value,
-                                   'cv_iterations': cv_iterations, 'n_hypothesis': n_hypothesis,
-                                   'base_directory': BASE_DIR, 'search_space': search_space, 'hp_iters': hp_iters,
-                                   'n_inner_folds': n_inner_folds, 'validation_loss': validation_loss}
+                detector_params = {'mi_technique': base_learner, 'learner_params': learner_params,
+                                   'fit_params': fit_params, 'hash_value': hash_value, 'cv_iterations': cv_iterations,
+                                   'n_hypothesis': n_hypothesis, 'base_directory': BASE_DIR,
+                                   'search_space': search_space, 'hp_iters': hp_iters, 'n_inner_folds': n_inner_folds,
+                                   'validation_loss': validation_loss}
                 detector_params = convert_learner_params(detector_params)
                 print(detector_params)
                 logger.info(f"Time Taken till now: {seconds_to_time(duration_till_now(start))}  seconds")
                 y_true = []
                 y_pred = []
+                values_of_m = {}
+                values_of_m_array = []
                 for label, (X, y) in dataset_reader.dataset_dictionary.items():
                     logger.info(f"Running the detector for label {label}")
                     detector_params['padding_name'] = label
                     ild_model = ild_learner(**detector_params)
                     ild_model.fit(X, y)
                     ground_truth = label in dataset_reader.vulnerable_classes
-                    predicted_decision, n_hypothesis_detection = ild_model.detect()
+                    predicted_decision, n_hypothesis_detection = ild_model.detect(detection_method=detector_method)
+                    logger.info(f"The label is vulnerable {ground_truth} and predicted {predicted_decision}")
                     y_true.append(ground_truth)
                     y_pred.append(predicted_decision)
-
+                    values_of_m[label] = n_hypothesis_detection
+                    values_of_m_array.append([label, n_hypothesis_detection])
+                values_of_m_array = np.array(values_of_m_array)
                 result_file = os.path.join(BASE_DIR, RESULT_FOLDER, f"{hash_value}.h5")
                 logger.info(f"Result file {result_file}")
                 create_directory_safely(result_file, True)
                 f = h5py.File(result_file, 'w')
                 f.create_dataset('predictions', data=y_pred)
                 f.create_dataset('ground_truth', data=y_true)
+                f.create_dataset('values_of_m', data=values_of_m_array)
                 f.close()
                 results = {'job_id': str(job_id), 'cluster_id': str(cluster_id)}
                 for metric_name, evaluation_metric in lp_metric_dict[learning_problem].items():
@@ -148,6 +155,7 @@ if __name__ == "__main__":
                             results[metric_name] = f"{np.around(metric_loss, 4)}"
                     logger.info(f"Out of sample error {metric_name} : {metric_loss}")
                     print(f"Out of sample error {metric_name} : {metric_loss}")
+                results['hypothesis'] = values_of_m
                 dbConnector.insert_results(experiment_schema=experiment_schema, experiment_table=experiment_table,
                                            results=results)
                 dbConnector.mark_running_job_finished(job_id, start)

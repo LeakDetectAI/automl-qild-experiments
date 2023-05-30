@@ -660,6 +660,75 @@ class DBConnector(metaclass=ABCMeta):
                                 self.logger.info(f"Job already exist")
         self.close_connection()
 
+    # def insert_new_jobs_openml(self, dataset="openml_dataset", max_job_id=5):
+    #     self.init_connection()
+    #     avail_jobs = "{}.avail_jobs".format(self.schema)
+    #     select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND " \
+    #                  f"{avail_jobs}.fold_id =0 and {avail_jobs}.job_id<={max_job_id} ORDER  BY {avail_jobs}.job_id"
+    #
+    #     self.cursor_db.execute(select_job)
+    #     jobs_all = self.cursor_db.fetchall()
+    #     print(jobs_all)
+    #     imbalance_dictionary = {2: np.arange(0.05, 0.51, .05)}
+    #     for job in jobs_all:
+    #         job = dict(job)
+    #         del job["job_id"]
+    #         del job["job_allocated_time"]
+    #         del job['job_end_time']
+    #         job['evaluation_time'] = 0
+    #         self.logger.info("###########################################################")
+    #         self.logger.info(print_dictionary(job))
+    #         for n_classes in classes:
+    #             self.logger.info("###########################################################")
+    #             for flip_y in flip_ys_broad:
+    #                 imbalances = imbalance_dictionary[n_classes]
+    #
+    #
+    #                     for imbalance in imbalances[::-1]:
+    #                         self.logger.info(f"Inserting job with ge}, imbalance {imbalance}, "
+    #                                          f"flip_y {flip_y} and n_classes {n_classes}")
+    #
+    #                         keys = list(job.keys())
+    #                         values = list(job.values())
+    #                         columns = ", ".join(list(job.keys()))
+    #                         values_str = []
+    #                         samples_per_class = generate_samples_per_class(n_classes, samples=1000, imbalance=imbalance,
+    #                                                                        gen_type=gen_type, logger=self.logger)
+    #                         for i, (key, val) in enumerate(zip(keys, values)):
+    #                             if isinstance(val, dict):
+    #                                 if key == 'dataset_params':
+    #                                     val['n_classes'] = n_classes
+    #                                     val['n_features'] = n_features
+    #                                     val['samples_per_class'] = samples_per_class
+    #                                     if dataset in [SYNTHETIC_DATASET, SYNTHETIC_IMBALANCED_DATASET]:
+    #                                         val['flip_y'] = flip_y.round(2)
+    #                                     if dataset in [SYNTHETIC_DISTANCE_DATASET,
+    #                                                    SYNTHETIC_DISTANCE_IMBALANCED_DATASET]:
+    #                                         val['noise'] = flip_y.round(2)
+    #                                     val['imbalance'] = imbalance.round(2)
+    #                                     val['gen_type'] = gen_type
+    #                                     self.logger.info(f"Dataset Params {val}")
+    #                                 val = json.dumps(val, cls=NpEncoder)
+    #                             else:
+    #                                 val = str(val)
+    #                             values_str.append(val)
+    #                             if i == 0:
+    #                                 str_values = "%s"
+    #                             else:
+    #                                 str_values = str_values + ", %s"
+    #                         condition = self.check_exists(job)
+    #                         if not condition:
+    #                             insert_result = f"INSERT INTO {avail_jobs} ({columns}) VALUES ({str_values}) RETURNING job_id"
+    #                             self.cursor_db.execute(insert_result, tuple(values_str))
+    #                             id_of_new_row = self.cursor_db.fetchone()[0]
+    #                             self.logger.info("Inserting results: {} {}".format(insert_result, values_str))
+    #                             if self.cursor_db.rowcount == 1:
+    #                                 self.logger.info(f"Results inserted for the job {id_of_new_row}")
+    #                             self.connection.commit()
+    #                         else:
+    #                             self.logger.info(f"Job already exist")
+    #     self.close_connection()
+
     def get_hash_value_for_job(self, job):
         keys = [
             "fold_id",

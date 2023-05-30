@@ -9,9 +9,8 @@ from pycilt.bayes_search_utils import get_scores
 from pycilt.utils import normalize
 
 __all__ = ['bin_ce', 'helmann_raviv_function', 'helmann_raviv_upper_bound', 'santhi_vardi_upper_bound',
-           'fanos_lower_bound', 'fanos_adjusted_lower_bound', 'auc_score', 'instance_informedness',
-           'pc_softmax_estimation', 'log_loss_estimation', 'mid_point_mi', 'false_positive_rate',
-           'false_negative_rate']
+           'fanos_lower_bound', 'fanos_adjusted_lower_bound', 'auc_score', 'pc_softmax_estimation',
+           'log_loss_estimation', 'mid_point_mi', 'false_positive_rate', 'false_negative_rate']
 
 
 def bin_ce(p_e):
@@ -123,16 +122,6 @@ def auc_score(y_true, p_pred):
     else:
         metric_loss = roc_auc_score(y_true, p_pred)
     return metric_loss
-
-
-def instance_informedness(y_true, y_pred):
-    tp = np.logical_and(y_true, y_pred).sum()
-    tn = np.logical_and(np.logical_not(y_true), np.logical_not(y_pred)).sum()
-    cp = np.array(y_true).sum()
-    cn = np.logical_not(y_true).sum()
-    inf = np.nansum([tp / cp, tn / cn, -1])
-    return inf
-
 
 def false_positive_rate(y_true, y_pred):
     tn = np.logical_and(np.logical_not(y_true), np.logical_not(y_pred)).sum()

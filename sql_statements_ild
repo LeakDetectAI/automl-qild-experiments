@@ -1,47 +1,54 @@
-create sequence infomration_leakage_detection.avail_jobs_job_id_seq;
+create sequence leakage_detection.avail_jobs_job_id_seq;
 
-alter sequence infomration_leakage_detection.avail_jobs_job_id_seq owner to autoscaadmin;
+alter sequence leakage_detection.avail_jobs_job_id_seq owner to autoscaadmin;
 
-create table infomration_leakage_detection.avail_jobs
-(
-    job_id             integer          default nextval('infomration_leakage_detection.avail_jobs_job_id_seq'::regclass) not null
-        constraint avail_jobs_pk
-            primary key,
-    fold_id            integer                                                                    not null,
-    dataset_name            text                                                                       not null,
-    imbalance               float                                                                      default 0.5,
-    base_learner            text                                                                       not null,
-    estimator               text                                                                       not null,
-    cv_iterations           integer default 10,
-    n_hypothesis            integer  default 10,
-    experiment_schema  text                                                                       not null,
+CREATE TABLE leakage_detection.avail_jobs (
+    job_id             integer          DEFAULT nextval('leakage_detection.avail_jobs_job_id_seq'::regclass) NOT NULL,
+    fold_id            integer       NOT NULL,
+    dataset_name       text          NOT NULL,
+    dataset_params     json,
+    base_learner       text             NOT NULL,
+    detector_method    text             NOT NULL,
+    fit_params         json,
+    learner_params     json,
+    hp_ranges          json,
+    hp_iters           integer          DEFAULT 50,
+    inner_folds        integer          DEFAULT 3,
+    validation_loss    text,
+    cv_iterations      integer          DEFAULT 10,
+    n_hypothesis       integer          DEFAULT 10,
+    learning_problem   text             NOT NULL,
+    experiment_schema  text             NOT NULL,
     experiment_table   text,
-    seed               integer          default 123,
-    hash_value         text             default ''::text,
+    seed               integer          DEFAULT 123,
+    is_gpu             boolean default false                                                     not null,
+    hash_value         text             DEFAULT ''::text,
+    duration           text,
     job_allocated_time timestamp,
     job_end_time       timestamp,
-    evaluation_time    double precision default 0
+    evaluation_time    double precision DEFAULT 0,
+    CONSTRAINT avail_jobs_pk PRIMARY KEY (job_id)
 );
 
-alter table infomration_leakage_detection.avail_jobs owner to autoscaadmin;
 
-create sequence infomration_leakage_detection.running_jobs_running_id_seq;
+alter table leakage_detection.avail_jobs owner to autoscaadmin;
 
-alter sequence infomration_leakage_detection.running_jobs_running_id_seq owner to autoscaadmin;
+create sequence leakage_detection.running_jobs_running_id_seq;
 
-create table infomration_leakage_detection.running_jobs
-(
-    running_id    integer default nextval('infomration_leakage_detection.running_jobs_running_id_seq'::regclass) not null,
-    job_id        integer                                                                 not null
-        primary key,
-    cluster_id    integer                                                                 not null,
-    finished      boolean default false                                                   not null,
-    interrupted   boolean default false                                                   not null,
-    error_history text    default 'NA'::text
+alter sequence leakage_detection.running_jobs_running_id_seq owner to autoscaadmin;
+
+CREATE TABLE leakage_detection.running_jobs (
+    running_id    integer  DEFAULT nextval('leakage_detection.running_jobs_running_id_seq'::regclass) NOT NULL,
+    job_id        integer  NOT NULL,
+    cluster_id    integer  NOT NULL,
+    finished      boolean  DEFAULT false NOT NULL,
+    interrupted   boolean  DEFAULT false NOT NULL,
+    error_history text     DEFAULT 'NA'::text,
+    PRIMARY KEY (job_id)
 );
 
-alter table infomration_leakage_detection.running_jobs
-    owner to autoscaadmin;
 
-create unique index running_jobs_running_id_idx on infomration_leakage_detection.running_jobs (running_id);
+alter table leakage_detection.running_jobs owner to autoscaadmin;
+
+create unique index running_jobs_running_id_idx on leakage_detection.running_jobs (running_id);
 

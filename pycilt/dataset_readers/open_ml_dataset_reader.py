@@ -18,11 +18,6 @@ class OpenMLDatasetReader(metaclass=ABCMeta):
         self.dataset_id = dataset_id
         self.imbalance = imbalance
         self.random_state = check_random_state(random_state)
-        self.vulnerable_classes = ['0x00_in_PKCS#1_padding_(first_8_bytes_after_0x00_0x02)',
-                                   'Correctly_formatted_PKCS#1_PMS_message__but_1_byte_shorter',
-                                   'Wrong_second_byte_(0x02_set_to_0x17)',
-                                   'Wrong_first_byte_(0x00_set_to_0x17)',
-                                   'No_0x00_in_message']
         self.correct_class = 'Correctly_formatted_PKCS#1_PMS_message'
         self.vulnerable_classes = []
         self.__read_dataset__()
@@ -42,7 +37,8 @@ class OpenMLDatasetReader(metaclass=ABCMeta):
         vulnerable_classes_str = vulnerable_classes_str.strip('[]')
         self.vulnerable_classes = [s.strip() for s in vulnerable_classes_str.split(',')]
         self.n_features = len(self.dataset.features)
-
+        self.fold_id = int(description.split('\n')[-2].split("fold_id ")[-1])
+        self.delay = int(description.split('Bleichenbacher Timing Attack: ')[-1].split(" micro seconds")[0])
 
     def __clean_up_dataset__(self):
         categorical_columns = self.data_frame_raw.select_dtypes(include=['object']).columns
@@ -91,13 +87,19 @@ class OpenMLDatasetReader(metaclass=ABCMeta):
 
     def get_sampled_imbalanced_data(self, X, y):
         if self.imbalance < 0.5:
-            total_instances = X.shape[0]
-            n_0 = int((1 - self.imbalance) * total_instances)
-            n_1 = int(total_instances - n_0)
-            self.logger.info("--------p {}, n_0 {}, n_1 {}-------".format(self.imbalance, n_0, n_1))
-            ind0 = self.random_state.choice(np.where(y == 0)[0], n_0)
+            # total_instances = X.shape[0]
+            n_0 = len(np.where(y == 0)[0])
+            n_1 = int(n_0 * (self.imbalance / (1 - self.imbalance)))
+            self.logger.info(f"Before processing----ratio {n_1 / n_0} p {self.imbalance}, n_0 {n_0}, n_1 {n_1}----")
+            ind0 = np.where(y == 0)[0]
             ind1 = self.random_state.choice(np.where(y == 1)[0], n_1)
+            if n_1 < 200:
+                ind0 = np.concatenate((ind0, ind0))
+                ind1 = self.random_state.choice(np.where(y == 1)[0], 2 * n_1)
             indx = np.concatenate((ind0, ind1))
             self.random_state.shuffle(indx)
             X, y = X[indx], y[indx]
+            n_0 = len(np.where(y == 0)[0])
+            n_1 = len(np.where(y == 1)[0])
+            self.logger.info(f"After processing----ratio {n_1 / n_0} p {self.imbalance}, n_0 {n_0}, n_1 {n_1}----")
         return X, y
