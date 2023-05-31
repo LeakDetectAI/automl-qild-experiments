@@ -1,3 +1,4 @@
+import copy
 import logging
 import os
 
@@ -46,8 +47,10 @@ class SklearnClassifierLeakageDetector(InformationLeakageDetector):
             log_exception_error(self.logger, error)
             self.logger.error("Cannot fit the Bayes SearchCV ")
         train_size = X_train.shape[0]
+        learner_params = copy.deepcopy(self.learner_params)
         for i in range(self.n_hypothesis):
-            loss, learner_params = update_params_at_k(bayes_search, search_keys, self.learner_params, self.logger, k=0)
+            self.logger.info("**************************************************************************************")
+            loss, learner_params = update_params_at_k(bayes_search, search_keys, learner_params, self.logger, k=i)
             learner = self.base_detector(**learner_params)
             self.logger.info(f"Model {i} with loss {loss} and parameters {learner_params}")
             self.estimators.append(learner)

@@ -8,6 +8,19 @@ from sklearn.svm import LinearSVC
 from pycilt.utils import print_dictionary, sigmoid
 
 
+def convert_value(value):
+    try:
+        # Try converting to integer
+        return int(value)
+    except ValueError:
+        try:
+            # Try converting to float
+            return float(value)
+        except ValueError:
+            # Return as string if conversion fails
+            return value
+
+
 def get_parameters_at_k(optimizers, search_keys, k):
     yis = []
     xis = []
@@ -15,24 +28,26 @@ def get_parameters_at_k(optimizers, search_keys, k):
         yis.extend(opt.yi)
         xis.extend(opt.Xi)
     yis = np.array(yis)
-    xis = np.array(xis)
+    #xis = np.array(xis)
     index_k = np.argsort(yis)[k]
     best_params = xis[index_k]
     best_loss = yis[index_k]
+    #best_params = [convert_value(p) for p in best_params]
     best_params = dict(zip(search_keys, best_params))
     return best_loss, best_params
 
 
-def update_params_at_k(bayes_search, search_keys, params, logger, k=0):
+def update_params_at_k(bayes_search, search_keys, learner_params, logger, k=0):
     loss, best_params = get_parameters_at_k(optimizers=bayes_search.optimizers_, search_keys=search_keys, k=k)
     if version.parse(sklearn.__version__) < version.parse("0.25.0"):
         if 'criterion' in best_params.keys():
             if best_params['criterion'] == 'squared_error':
                 best_params['criterion'] = 'mse'
-    params.update(best_params)
-    params_str = print_dictionary(best_params, sep='\t')
+    learner_params.update(best_params)
+    params_str = print_dictionary(learner_params, sep='\t')
     logger.info(f"Parameters at position k:{k} are {params_str} with objective of: {-loss}\n")
-    return loss, params
+    logger.info(f"Model {k} with loss {loss} and parameters {learner_params}")
+    return loss, learner_params
 
 
 def log_callback(logger, parameters):

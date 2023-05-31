@@ -5,7 +5,7 @@ from .ild_base_class import InformationLeakageDetector
 from .. import AutoGluonClassifier
 from ..bayes_search_utils import get_scores
 from ..contants import *
-from ..utils import create_directory_safely
+from ..utils import create_directory_safely, log_exception_error
 
 
 class AutoGluonLeakageDetector(InformationLeakageDetector):
@@ -27,7 +27,7 @@ class AutoGluonLeakageDetector(InformationLeakageDetector):
         X_train, y_train = self.get_training_dataset(X, y)
         self.learner = self.base_detector(**self.learner_params)
         self.learner.fit(X_train, y_train)
-        for i in range(self.n_hypothesis):
+        for i in range(self.n_hypothesis * 2):
             model = self.learner.get_k_rank_model(i + 1)
             self.estimators.append(model)
         train_size = X_train.shape[0]
@@ -49,16 +49,21 @@ class AutoGluonLeakageDetector(InformationLeakageDetector):
                 test_data = self.learner.convert_to_dataframe(X_test, None)
                 X_t = train_data.drop(columns=['class'])  # Extract the features from the training data
                 y_t = train_data['class']  # Extract the labels from the training data
+                n_hypothesis = 0
                 for i, model in enumerate(self.estimators):
-                    self.logger.info(f"************* Model {i + 1}: {model.__class__.__name__} ********************")
-                    model._n_repeats_finished = 0
-                    n_repeat_start = 0
-                    model.fit(X=X_t, y=y_t, n_repeat_start=n_repeat_start)
-                    p_pred, y_pred = get_scores(test_data, model)
-                    self.evaluate_scores(X_test, X_train, y_test, y_train, y_pred, p_pred, model, i)
+                    if n_hypothesis == self.n_hypothesis:
+                        break
+                    try:
+                        self.logger.info(f"************** Model {i + 1}: {model.__class__.__name__} **************")
+                        model._n_repeats_finished = 0
+                        n_repeat_start = 0
+                        model.fit(X=X_t, y=y_t, n_repeat_start=n_repeat_start)
+                        p_pred, y_pred = get_scores(test_data, model)
+                        self.evaluate_scores(X_test, X_train, y_test, y_train, y_pred, p_pred, model, i)
+                        n_hypothesis += 1
+                        self.logger.info(f"Hypothesis Done {n_hypothesis} out of {self.n_hypothesis}")
+                    except Exception as error:
+                        log_exception_error(self.logger, error)
+                        self.logger.error("Problem with fitting the model")
+
             self.store_results()
-
-
-
-
-
