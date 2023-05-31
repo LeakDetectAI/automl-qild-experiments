@@ -2,7 +2,7 @@ create view results.automl_agg
             (job_id, fold_id, learner, dataset, n_classes, n_features, flip_y, noise, imbalance, gen_type,
              f1score, accuracy, mathewscorrelationcoefficient, estimatedmutualinformationscore, mcmcbayesmi,
              mcmcloglossbayesmi, midpointmi, loglossmi, loglossmiisotonicregression, loglossmiplattscaling,
-             loglossmibetacalibration, loglossmitemperaturescaling, loglossmihistogrambinnin, pcsoftmaxmi,
+             loglossmibetacalibration, loglossmitemperaturescaling, loglossmihistogrambinning, pcsoftmaxmi,
              pcsoftmaxmiisotonicregression, pcsoftmaxmiplattscaling, pcsoftmaxmibetacalibration,
              pcsoftmaxmitemperaturescaling, pcsoftmaxmihistogrambinning, hash_value, evaluation_time)
 as

@@ -16,7 +16,7 @@ class AutoGluonLeakageDetector(InformationLeakageDetector):
                          base_directory=base_directory, random_state=random_state, **kwargs)
         self.base_detector = AutoGluonClassifier
         self.learner = None
-        output_folder = os.path.join(base_directory, OPTIMIZER_FOLDER, hash_value, f"{self.padding_code}gluon")
+        output_folder = os.path.join(base_directory, OPTIMIZER_FOLDER, hash_value, f"{self.padding_code}_autogluon")
         create_directory_safely(output_folder)
         self.learner_params['output_folder'] = output_folder
         self.learner_params['eval_metric'] = validation_loss

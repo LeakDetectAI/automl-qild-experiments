@@ -42,7 +42,7 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
         self.early_stopping = early_stopping
         self.model_save_path = model_save_path
         self.reg_strength = reg_strength
-        self.kernel_regularizer = l2(l=self.reg_strength)
+        self.kernel_regularizer = l2(l=float(self.reg_strength))
         self.kernel_initializer = kernel_initializer
         self.kwargs = kwargs
         self.random_state = check_random_state(random_state)
