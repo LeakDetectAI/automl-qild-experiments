@@ -117,19 +117,17 @@ class InformationLeakageDetector(metaclass=ABCMeta):
         raise NotImplemented
 
     def close_file(self):
-        is_open = False
         try:
             file = h5py.File(self.results_file, 'r')
             is_open = file.id.valid
             if is_open:
-                self.logger.info("The file is open.")
+                self.logger.info("The file is open closing it")
                 file.close()
             else:
                 self.logger.info("The file is not open.")
         except Exception as error:
             log_exception_error(self.logger, error)
             self.logger.error("Cannot open the file since it does not exist")
-
 
     def evaluate_scores(self, X_test, X_train, y_test, y_train, y_pred, p_pred, model, i):
         for metric_name, evaluation_metric in mi_estimation_metrics.items():
