@@ -93,9 +93,9 @@ class OpenMLDatasetReader(metaclass=ABCMeta):
             self.logger.info(f"Before processing----ratio {n_1 / n_0} p {self.imbalance}, n_0 {n_0}, n_1 {n_1}----")
             ind0 = np.where(y == 0)[0]
             ind1 = self.random_state.choice(np.where(y == 1)[0], n_1)
-            if n_1 < 200:
-                ind0 = np.concatenate((ind0, ind0))
-                ind1 = self.random_state.choice(np.where(y == 1)[0], 2 * n_1)
+            # if n_1 < 200:
+            #    ind0 = np.concatenate((ind0, ind0))
+            #    ind1 = self.random_state.choice(np.where(y == 1)[0], 2 * n_1)
             indx = np.concatenate((ind0, ind1))
             self.random_state.shuffle(indx)
             X, y = X[indx], y[indx]

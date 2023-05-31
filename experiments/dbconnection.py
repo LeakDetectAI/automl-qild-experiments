@@ -167,7 +167,7 @@ class DBConnector(metaclass=ABCMeta):
                 )
 
     def fetch_job_arguments(self, cluster_id):
-        self.add_jobs_in_avail_which_failed()
+        #self.add_jobs_in_avail_which_failed()
         self.init_connection()
         avail_jobs = f"{self.schema}.avail_jobs"
         running_jobs = f"{self.schema}.running_jobs"

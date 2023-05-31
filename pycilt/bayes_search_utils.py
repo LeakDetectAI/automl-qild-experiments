@@ -1,5 +1,3 @@
-import logging
-
 import numpy as np
 import sklearn
 from autogluon.core.models import AbstractModel
@@ -26,7 +24,7 @@ def get_parameters_at_k(optimizers, search_keys, k):
 
 
 def update_params_at_k(bayes_search, search_keys, params, logger, k=0):
-    loss, best_params = get_parameters_at_k(k, bayes_search.optimizers_, search_keys)
+    loss, best_params = get_parameters_at_k(optimizers=bayes_search.optimizers_, search_keys=search_keys, k=k)
     if version.parse(sklearn.__version__) < version.parse("0.25.0"):
         if 'criterion' in best_params.keys():
             if best_params['criterion'] == 'squared_error':

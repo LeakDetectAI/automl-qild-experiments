@@ -4,7 +4,7 @@ from sklearn.manifold import TSNE
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
 
-n_reduced = 50
+n_reduced = 30
 # Create a dictionary to store the techniques and their options
 reduction_techniques = {
     'recursive_feature_elimination_et': RFE(ExtraTreesClassifier(), n_features_to_select=n_reduced),

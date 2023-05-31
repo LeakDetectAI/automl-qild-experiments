@@ -37,7 +37,6 @@ class MIEstimationLeakageDetector(SklearnClassifierLeakageDetector):
                 train_index = train_index[:train_size]
                 X_train, X_test = X[train_index], X[test_index]
                 y_train, y_test = y[train_index], y[test_index]
-                self.calculate_majority_voting_accuracy(X_train, y_train, X_test, y_test)
                 for i, model in enumerate(self.estimators):
                     self.logger.info(f"************************************ Model {i} ************************************")
                     model.fit(X=X_train, y=y_train)

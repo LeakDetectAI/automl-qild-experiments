@@ -123,14 +123,13 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             is_open = file.id.valid
             if is_open:
                 self.logger.info("The file is open.")
+                file.close()
             else:
                 self.logger.info("The file is not open.")
         except Exception as error:
             log_exception_error(self.logger, error)
             self.logger.error("Cannot open the file since it does not exist")
-        finally:
-            if is_open:
-                file.close()
+
 
     def evaluate_scores(self, X_test, X_train, y_test, y_train, y_pred, p_pred, model, i):
         for metric_name, evaluation_metric in mi_estimation_metrics.items():
