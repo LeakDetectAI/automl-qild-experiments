@@ -13,7 +13,7 @@ LABEL_COL = 'label'
 
 
 class OpenMLDatasetReader(metaclass=ABCMeta):
-    def __init__(self, dataset_id: int, imbalance, random_state=None, **kwargs):
+    def __init__(self, dataset_id: int, imbalance: float, random_state=None, **kwargs):
         self.logger = logging.getLogger(OpenMLDatasetReader.__name__)
         self.dataset_id = dataset_id
         self.imbalance = imbalance
@@ -28,6 +28,7 @@ class OpenMLDatasetReader(metaclass=ABCMeta):
         self.dataset = openml.datasets.get_dataset(self.dataset_id, download_data=False)
         # Access the dataset information
         self.data_frame_raw, _, _, self.attribute_names = self.dataset.get_data(dataset_format='dataframe')
+        self.attribute_names.remove(LABEL_COL)
         self.dataset_dictionary = {}
         if self.correct_class not in self.data_frame_raw[LABEL_COL].unique():
             raise ValueError(f'Dataframe is does not contain correct class {self.correct_class}')
@@ -36,7 +37,7 @@ class OpenMLDatasetReader(metaclass=ABCMeta):
         vulnerable_classes_str = description.split('\n')[-1].split("vulnerable_classes ")[-1]
         vulnerable_classes_str = vulnerable_classes_str.strip('[]')
         self.vulnerable_classes = [s.strip() for s in vulnerable_classes_str.split(',')]
-        self.n_features = len(self.dataset.features)
+        self.n_features = len(self.dataset.features) - 1
         self.fold_id = int(description.split('\n')[-2].split("fold_id ")[-1])
         self.delay = int(description.split('Bleichenbacher Timing Attack: ')[-1].split(" micro seconds")[0])
 
@@ -73,8 +74,7 @@ class OpenMLDatasetReader(metaclass=ABCMeta):
             if label == self.correct_class:
                 continue
             else:
-                X, y = self.get_data(class_label=j)
-                self.dataset_dictionary[label] = (X, y)
+                self.dataset_dictionary[label] = self.get_data(class_label=j)
 
     def get_data(self, class_label=1):
         df = pd.DataFrame.copy(self.data_frame)
@@ -93,9 +93,9 @@ class OpenMLDatasetReader(metaclass=ABCMeta):
             self.logger.info(f"Before processing----ratio {n_1 / n_0} p {self.imbalance}, n_0 {n_0}, n_1 {n_1}----")
             ind0 = np.where(y == 0)[0]
             ind1 = self.random_state.choice(np.where(y == 1)[0], n_1)
-            # if n_1 < 200:
-            #    ind0 = np.concatenate((ind0, ind0))
-            #    ind1 = self.random_state.choice(np.where(y == 1)[0], 2 * n_1)
+            if n_1 < 200:
+                ind0 = np.concatenate((ind0, ind0))
+                ind1 = self.random_state.choice(np.where(y == 1)[0], 2 * n_1)
             indx = np.concatenate((ind0, ind1))
             self.random_state.shuffle(indx)
             X, y = X[indx], y[indx]

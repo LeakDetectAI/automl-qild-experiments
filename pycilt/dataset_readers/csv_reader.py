@@ -7,6 +7,7 @@ import pandas as pd
 import seaborn as sns
 from sklearn.preprocessing import LabelEncoder
 
+from pycilt.dataset_readers.utils import clean_class_label
 from pycilt.utils import print_dictionary
 
 sns.set(color_codes=True)
@@ -48,8 +49,7 @@ class CSVReader(metaclass=ABCMeta):
             df[LABEL_COL] = df[LABEL_COL].apply(lambda x: ' '.join(x.split('_')).title())
             if self.correct_class not in df[LABEL_COL].unique():
                 raise ValueError(f'Dataframe is does not contain correct class {self.correct_class}')
-
-        self.data_frame[LABEL_COL] = self.data_frame[LABEL_COL].apply(lambda x: ' '.join(x.split('_')).title())
+        self.data_frame[LABEL_COL] = self.data_frame[LABEL_COL].apply(lambda x: clean_class_label(x))
         labels = list(self.data_frame[LABEL_COL].unique())
         labels.sort()
         labels.remove(self.correct_class)
@@ -60,7 +60,8 @@ class CSVReader(metaclass=ABCMeta):
         self.label_mapping = {**{self.correct_class: 0}, **self.label_mapping}
         self.inverse_label_mapping = dict((v, k) for k, v in self.label_mapping.items())
         self.n_labels = len(self.label_mapping)
-
+        if len(self.data_frame[MISSING_CCS_FIN].unique()) == 1:
+            del self.data_frame[MISSING_CCS_FIN]
         self.data_raw = pd.DataFrame.copy(self.data_frame)
         self.data_frame[LABEL_COL].replace(self.label_mapping, inplace=True)
         self.logger.info(f"Label Mapping {print_dictionary(self.label_mapping)}")

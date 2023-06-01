@@ -1,5 +1,3 @@
-import hashlib
-
 from netcal.binning import IsotonicRegression, HistogramBinning
 from netcal.scaling import LogisticCalibration, BetaCalibration, TemperatureScaling
 from sklearn.metrics import confusion_matrix, accuracy_score
@@ -7,6 +5,8 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 from pycilt.contants import *
 from pycilt.metrics import mid_point_mi, log_loss_estimation, pc_softmax_estimation
 
+__all__ = ['mi_estimation_metrics', 'classification_leakage_detection_methods', 'mi_leakage_detection_methods',
+           'leakage_detection_methods', 'calibrators', 'calibrator_params']
 mi_estimation_metrics = {
     ACCURACY: accuracy_score,
     CONFUSION_MATRIX: confusion_matrix,
@@ -20,11 +20,13 @@ mi_estimation_metrics = {
     PC_SOFTMAX_MI_ESTIMATION: pc_softmax_estimation
 }
 
-leakage_detection_methods = {
+classification_leakage_detection_methods = {
     PAIRED_TTEST: ACCURACY,
     FISHER_EXACT_TEST_MEAN: CONFUSION_MATRIX,
     FISHER_EXACT_TEST_MEDIAN: CONFUSION_MATRIX,
-    EXPECTED_MUTUAL_INFORMATION: EXPECTED_MUTUAL_INFORMATION,
+}
+mi_leakage_detection_methods = {
+    ESTIMATED_MUTUAL_INFORMATION: ESTIMATED_MUTUAL_INFORMATION,
     MID_POINT_MI_ESTIMATION: MID_POINT_MI_ESTIMATION,
     LOG_LOSS_MI_ESTIMATION: LOG_LOSS_MI_ESTIMATION,
     LOG_LOSS_MI_ESTIMATION_ISOTONIC_REGRESSION: LOG_LOSS_MI_ESTIMATION_ISOTONIC_REGRESSION,
@@ -34,7 +36,7 @@ leakage_detection_methods = {
     LOG_LOSS_MI_ESTIMATION_HISTOGRAM_BINNING: LOG_LOSS_MI_ESTIMATION_HISTOGRAM_BINNING,
     PC_SOFTMAX_MI_ESTIMATION: PC_SOFTMAX_MI_ESTIMATION
 }
-
+leakage_detection_methods = {**classification_leakage_detection_methods, **mi_leakage_detection_methods}
 calibrators = {ISOTONIC_REGRESSION: IsotonicRegression,
                PLATT_SCALING: LogisticCalibration,
                HISTOGRAM_BINNING: HistogramBinning,
@@ -45,5 +47,3 @@ calibrator_params = {ISOTONIC_REGRESSION: {'detection': False, 'independent_prob
                      HISTOGRAM_BINNING: {'detection': False, 'independent_probabilities': False},
                      BETA_CALIBRATION: {'detection': False, 'independent_probabilities': False},
                      TEMPERATURE_SCALING: {'detection': False, 'independent_probabilities': False}}
-
-

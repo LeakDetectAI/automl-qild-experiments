@@ -14,7 +14,7 @@ from statsmodels.stats.multitest import multipletests
 from pycilt.bayes_search_utils import get_scores
 from pycilt.classifiers import MajorityVoting
 from pycilt.contants import *
-from pycilt.detectors.utils import leakage_detection_methods, mi_estimation_metrics, calibrators, calibrator_params
+from pycilt.detectors.utils import *
 from pycilt.metrics import probability_calibration
 from pycilt.statistical_tests import paired_ttest
 from pycilt.utils import log_exception_error, create_directory_safely
@@ -243,13 +243,17 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             model_results = self.read_results_file(detection_method)
             model_p_values = {}
             for model_name, metric_vals in model_results.items():
-                if 'MI' in detection_method:
+                p_value = 1.0
+                if detection_method in mi_leakage_detection_methods.keys():
                     base_mi = self.random_state.rand(len(metric_vals)) * 1e-2
                     p_value = paired_ttest(base_mi, metric_vals, n_training_folds, n_test_folds, correction=True)
+                    self.logger.info("Applying Normal Paired T-Test for Normal MI estimation Technique")
                 elif detection_method == PAIRED_TTEST:
                     accuracies = np.array(self.results[MAJORITY_VOTING][ACCURACY])
                     p_value = paired_ttest(accuracies, metric_vals, n_training_folds, n_test_folds, correction=True)
-                elif 'fishers' in detection_method:
+                    self.logger.info("Applying Normal Paired T-Test for accuracy comparison with majority")
+                elif detection_method in [FISHER_EXACT_TEST_MEAN, FISHER_EXACT_TEST_MEDIAN]:
+                    self.logger.info("Applying Fisher's Exact-Test for confusion matrix")
                     metric_vals = [np.array([[tn, fp], [fn, tp]]) for [tn, fp, fn, tp] in metric_vals]
                     p_values = np.array([fisher_exact(cm)[1] for cm in metric_vals])
                     if detection_method == FISHER_EXACT_TEST_MEAN:

@@ -95,7 +95,7 @@ classification_metrics = {
     # AUC_SCORE: auc_score,
     MCC: matthews_corrcoef,
     # INFORMEDNESS: balanced_accuracy_score,
-    EXPECTED_MUTUAL_INFORMATION_SCORE: mutual_info_score,
+    ESTIMATED_MUTUAL_INFORMATION_SCORE: mutual_info_score,
     SANTHIUB: santhi_vardi_upper_bound,
     HELLMANUB: helmann_raviv_upper_bound,
     FANOSLB: fanos_lower_bound,
@@ -129,7 +129,7 @@ ild_metrics = {
     FNR: false_negative_rate
 }
 mi_metrics = {
-    EXPECTED_MUTUAL_INFORMATION: None,
+    ESTIMATED_MUTUAL_INFORMATION: None,
     MCMC_MI_ESTIMATION: None,
     MCMC_LOG_LOSS: None,
     MCMC_PC_SOFTMAX: None,

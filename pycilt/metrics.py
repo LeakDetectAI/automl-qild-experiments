@@ -135,6 +135,16 @@ def false_negative_rate(y_true, y_pred):
     return fn / (tp + fn)
 
 
+def remove_nan_values(y_pred, y_true=None):
+    nan_rows = np.isnan(y_pred).any(axis=1)
+    logger = logging.getLogger("Nan Values")
+    logger.info(f"Nan Rows Train {nan_rows}")
+    y_pred = y_pred[~nan_rows]
+    if y_true is not None:
+        y_true = y_true[~nan_rows]
+    return y_pred, y_true
+
+
 def probability_calibration(X_train, y_train, X_test, classifier, calibrator, logger):
     if isinstance(classifier, AbstractModel):
         n_features = X_train.shape[-1]
@@ -147,11 +157,13 @@ def probability_calibration(X_train, y_train, X_test, classifier, calibrator, lo
         y_pred_train = np.hstack(((1 - y_pred_train)[:, None], y_pred_train[:, None]))
     if len(y_pred_test.shape) == 1:
         y_pred_test = np.hstack(((1 - y_pred_test)[:, None], y_pred_test[:, None]))
+    y_pred_train, y_train = remove_nan_values(y_pred_train, y_true=y_train)
+    y_pred_test, _ = remove_nan_values(y_pred_test, y_true=None)
     calibrator.fit(y_pred_train, y_train)
     y_pred_cal = calibrator.transform(y_pred_test)
     if len(y_pred_cal.shape) == 1:
-        #logger.info(f"Calibration Type {type(calibrator).__name__}")
-        #logger.info(f"Calibrated Class 1 Probs {y_pred_cal[0:3]} \n Original Probs {y_pred_test[0:3]}")
+        # logger.info(f"Calibration Type {type(calibrator).__name__}")
+        # logger.info(f"Calibrated Class 1 Probs {y_pred_cal[0:3]} \n Original Probs {y_pred_test[0:3]}")
         y_pred_cal = np.hstack(((1 - y_pred_cal)[:, None], y_pred_cal[:, None]))
     return y_pred_cal
 
@@ -168,6 +180,7 @@ def get_entropy_y(y_true):
 def pc_softmax_estimation(y_true, y_pred):
     y_pred[y_pred == 0] = np.finfo(float).eps
     y_pred[y_pred == 1] = 1 - np.finfo(float).eps
+    y_pred, y_true = remove_nan_values(y_pred, y_true=y_true)
     classes, counts = np.unique(y_true, return_counts=True)
     pys = counts / np.sum(counts)
     mis = []
@@ -187,6 +200,7 @@ def pc_softmax_estimation(y_true, y_pred):
 def log_loss_estimation(y_true, y_pred):
     y_pred[y_pred == 0] = np.finfo(float).eps
     y_pred[y_pred == 1] = 1 - np.finfo(float).eps
+    y_pred, y_true = remove_nan_values(y_pred, y_true=y_true)
     mi_pp = get_entropy_y(y_true)
     if len(y_pred.shape) == 1:
         pyx = (y_pred * np.log2(y_pred) + (1 - y_pred) * np.log2(1 - y_pred))

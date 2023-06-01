@@ -1,5 +1,5 @@
 from .sklearn_classifier_leakage_detector import SklearnClassifierLeakageDetector
-from ..contants import EXPECTED_MUTUAL_INFORMATION, GMM_MI_ESTIMATOR, MINE_MI_ESTIMATOR
+from ..contants import ESTIMATED_MUTUAL_INFORMATION, GMM_MI_ESTIMATOR, MINE_MI_ESTIMATOR
 from ..mi_estimators import GMMMIEstimator, MineMIEstimatorHPO
 
 
@@ -22,7 +22,7 @@ class MIEstimationLeakageDetector(SklearnClassifierLeakageDetector):
     def __initialize_objects__(self):
         for i in range(self.n_hypothesis):
             self.results[f'model_{i}'] = {}
-            self.results[f'model_{i}'][EXPECTED_MUTUAL_INFORMATION] = []
+            self.results[f'model_{i}'][ESTIMATED_MUTUAL_INFORMATION] = []
 
     def perform_hyperparameter_optimization(self, X, y):
         return super().perform_hyperparameter_optimization(X, y)
@@ -41,7 +41,7 @@ class MIEstimationLeakageDetector(SklearnClassifierLeakageDetector):
                     self.logger.info(f"************************************ Model {i} ************************************")
                     model.fit(X=X_train, y=y_train)
                     metric_loss = model.estimate_mi(X, y)
-                    self.logger.info(f"Metric {EXPECTED_MUTUAL_INFORMATION}: Value {metric_loss}")
+                    self.logger.info(f"Metric {ESTIMATED_MUTUAL_INFORMATION}: Value {metric_loss}")
                     model_name = list(self.results.keys())[i]
-                    self.results[model_name][EXPECTED_MUTUAL_INFORMATION].append(metric_loss)
+                    self.results[model_name][ESTIMATED_MUTUAL_INFORMATION].append(metric_loss)
             self.store_results()

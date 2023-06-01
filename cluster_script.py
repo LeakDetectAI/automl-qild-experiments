@@ -226,7 +226,7 @@ if __name__ == "__main__":
                             metric_loss = evaluation_metric(y_true, p_pred)
                     elif metric_name in [MCMC_LOG_LOSS, MCMC_MI_ESTIMATION, MCMC_PC_SOFTMAX, MCMC_SOFTMAX]:
                         metric_loss = dataset_reader.get_bayes_mi(metric_name)
-                    elif metric_name == EXPECTED_MUTUAL_INFORMATION:
+                    elif metric_name == ESTIMATED_MUTUAL_INFORMATION:
                         metric_loss = estimated_mi
                     else:
                         if metric_name == F_SCORE:
