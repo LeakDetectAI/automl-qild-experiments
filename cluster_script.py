@@ -214,8 +214,7 @@ if __name__ == "__main__":
                             c_params = calibrator_params[calibrator_technique]
                             calibrator = calibrator(**c_params)
                             try:
-                                p_pred_cal = probability_calibration(X_train, y_train, X_test, estimator, calibrator,
-                                                                     logger)
+                                p_pred_cal = probability_calibration(X_train, y_train, X_test, estimator, calibrator)
                                 metric_loss = evaluation_metric(y_test, p_pred_cal)
                             except Exception as error:
                                 log_exception_error(logger, error)

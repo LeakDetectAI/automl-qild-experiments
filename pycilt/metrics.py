@@ -139,13 +139,13 @@ def false_negative_rate(y_true, y_pred):
 
 
 def remove_nan_values(y_pred, y_true=None):
-    logger.info(f"y_pred shape {y_pred.shape} y_pred {y_pred}")
+    logger.info(f"y_pred shape {y_pred.shape}")
     nan_rows = np.isnan(y_pred).any(axis=1)
 
     y_pred = y_pred[~nan_rows]
     if y_true is not None:
         y_true = y_true[~nan_rows]
-    logger.info(f"nan_rows {len(nan_rows)}")
+    logger.info(f"nan_rows {np.sum(nan_rows)}")
     return y_pred, y_true
 
 
