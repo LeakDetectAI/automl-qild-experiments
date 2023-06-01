@@ -150,7 +150,7 @@ class GMMMIEstimator(MIEstimatorBase):
                 select = SelectVars(self.best_gmm_model, selection_mode='backward')
                 select.fit(X, y, verbose=verbose, eps=np.finfo(np.float32).eps)
                 mi_mean, _ = select.get_info().values[0][1], select.get_info().values[0][2]
-                mi_estimated = np.max([mi_mean, 0.0]) * np.log2(np.e)
+                mi_estimated = np.nanmax([mi_mean, 0.0]) * np.log2(np.e)
                 if verbose:
                     print(f'Model Number: {iter_}, Estimated MI: {mi_estimated}')
                 self.logger.info(f'Model Number: {iter_}, Estimated MI: {mi_estimated}')

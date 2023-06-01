@@ -204,6 +204,9 @@ if __name__ == "__main__":
                 results = {'job_id': str(job_id), 'cluster_id': str(cluster_id)}
 
                 for metric_name, evaluation_metric in lp_metric_dict[learning_problem].items():
+                    X_test_copy, X_train_copy, y_train_copy, y_test_copy = np.copy(X_test), np.copy(X_train), np.copy(
+                        y_train), np.copy(y_test)
+                    y_pred_copy, p_pred_copy = np.copy(y_pred), np.copy(p_pred)
                     if LOG_LOSS_MI_ESTIMATION in metric_name or PC_SOFTMAX_MI_ESTIMATION in metric_name:
                         calibrator_technique = None
                         for key in calibrators.keys():
@@ -214,16 +217,16 @@ if __name__ == "__main__":
                             c_params = calibrator_params[calibrator_technique]
                             calibrator = calibrator(**c_params)
                             try:
-                                p_pred_cal = probability_calibration(X_train, y_train, X_test, estimator, calibrator,
-                                                                     logger)
-                                metric_loss = evaluation_metric(y_test, p_pred_cal)
+                                p_pred_cal = probability_calibration(X_train=X_train_copy, y_train=y_train_copy,
+                                                                     X_test=X_test_copy, classifier=estimator,
+                                                                     calibrator=calibrator)
+                                metric_loss = evaluation_metric(y_test_copy, p_pred_cal)
                             except Exception as error:
                                 log_exception_error(logger, error)
-                                logger.error("Error while calibrating the probabilities setting mi using non"
-                                             "calibrated probabilities")
-                                metric_loss = evaluation_metric(y_test, p_pred)
+                                logger.error("Error while calibrating the probabilities")
+                                metric_loss = evaluation_metric(y_test_copy, p_pred_copy)
                         else:
-                            metric_loss = evaluation_metric(y_true, p_pred)
+                            metric_loss = evaluation_metric(y_test_copy, p_pred_copy)
                     elif metric_name in [MCMC_LOG_LOSS, MCMC_MI_ESTIMATION, MCMC_PC_SOFTMAX, MCMC_SOFTMAX]:
                         metric_loss = dataset_reader.get_bayes_mi(metric_name)
                     elif metric_name == ESTIMATED_MUTUAL_INFORMATION:
@@ -231,11 +234,11 @@ if __name__ == "__main__":
                     else:
                         if metric_name == F_SCORE:
                             if n_classes > 2:
-                                metric_loss = evaluation_metric(y_true, y_pred, average='macro')
+                                metric_loss = evaluation_metric(y_true, y_pred_copy, average='macro')
                             else:
-                                metric_loss = evaluation_metric(y_true, y_pred)
+                                metric_loss = evaluation_metric(y_true, y_pred_copy)
                         else:
-                            metric_loss = evaluation_metric(y_true, y_pred)
+                            metric_loss = evaluation_metric(y_true, y_pred_copy)
 
                     if np.isnan(metric_loss) or np.isinf(metric_loss):
                         results[metric_name] = "\'Infinity\'"

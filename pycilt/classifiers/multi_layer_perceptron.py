@@ -3,6 +3,7 @@ import logging
 import numpy as np
 from keras import Input, Model
 from keras import backend as K
+from keras import optimizers
 from keras.callbacks import EarlyStopping
 from keras.layers import Dense, Activation
 from keras.regularizers import l2
@@ -11,7 +12,6 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.utils import check_random_state
 from sklearn.utils import class_weight
-from tensorflow import optimizers
 
 from .layers import NormalizedDense
 
@@ -34,7 +34,12 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
             self.activation = activation
         self.loss_function = loss_function
         self.optimizer_str = optimizer_str
-        self.optimizer = optimizers.get(optimizer_str)
+        if optimizer_str == 'adam':
+            self.optimizer = optimizers.Adam()
+        elif optimizer_str == 'sgd':
+            self.optimizer = optimizers.SGD()
+        else:
+            self.optimizer = optimizers.get(optimizer_str)
         self._optimizer_config = self.optimizer.get_config()
         K.set_value(self.optimizer.lr, learning_rate)
         self.metrics = metrics
@@ -42,7 +47,7 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
         self.early_stopping = early_stopping
         self.model_save_path = model_save_path
         self.reg_strength = reg_strength
-        self.kernel_regularizer = l2(l=float(self.reg_strength))
+        self.kernel_regularizer = l2(l=self.reg_strength)
         self.kernel_initializer = kernel_initializer
         self.kwargs = kwargs
         self.random_state = check_random_state(random_state)

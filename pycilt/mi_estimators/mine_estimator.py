@@ -173,5 +173,6 @@ class MineMIEstimator(MIEstimatorBase):
             self.logger.info(f'Estimated MIs: {mi_hats[-10:]} Mean {mi_estimated}')
             mi_estimated = np.max([mi_estimated, 0.0])
             final_mis.append(mi_estimated)
-        final_mi = np.median(final_mis)
+        final_mi = np.nanmedian(final_mis)
+        final_mi = np.nanmax([final_mi, 0.0])
         return final_mi

@@ -131,6 +131,9 @@ class InformationLeakageDetector(metaclass=ABCMeta):
 
     def evaluate_scores(self, X_test, X_train, y_test, y_train, y_pred, p_pred, model, i):
         for metric_name, evaluation_metric in mi_estimation_metrics.items():
+            X_test_copy, X_train_copy, y_train_copy, y_test_copy = np.copy(X_test), np.copy(X_train), np.copy(
+                y_train), np.copy(y_test)
+            y_pred_copy, p_pred_copy = np.copy(y_pred), np.copy(p_pred)
             if LOG_LOSS_MI_ESTIMATION in metric_name or PC_SOFTMAX_MI_ESTIMATION in metric_name:
                 calibrator_technique = None
                 for key in calibrators.keys():
@@ -141,17 +144,18 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                     c_params = calibrator_params[calibrator_technique]
                     calibrator = calibrator(**c_params)
                     try:
-                        p_pred_cal = probability_calibration(X_train, y_train, X_test, model, calibrator,
-                                                             self.logger)
-                        metric_loss = evaluation_metric(y_test, p_pred_cal)
+                        p_pred_cal = probability_calibration(X_train=X_train_copy, y_train=y_train_copy,
+                                                             X_test=X_test_copy, classifier=model,
+                                                             calibrator=calibrator)
+                        metric_loss = evaluation_metric(y_test_copy, p_pred_cal)
                     except Exception as error:
                         log_exception_error(self.logger, error)
                         self.logger.error("Error while calibrating the probabilities")
-                        metric_loss = evaluation_metric(y_test, p_pred)
+                        metric_loss = evaluation_metric(y_test_copy, p_pred_copy)
                 else:
-                    metric_loss = evaluation_metric(y_test, p_pred)
+                    metric_loss = evaluation_metric(y_test_copy, p_pred_copy)
             else:
-                metric_loss = evaluation_metric(y_test, y_pred)
+                metric_loss = evaluation_metric(y_test_copy, y_pred_copy)
             if metric_name == CONFUSION_MATRIX:
                 # metric_loss = np.array(metric_loss)
                 (tn, fp, fn, tp) = metric_loss.ravel()

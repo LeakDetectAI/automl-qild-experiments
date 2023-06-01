@@ -6,13 +6,16 @@ from sklearn.metrics import accuracy_score, roc_auc_score
 
 from pycilt import AutoGluonClassifier
 from pycilt.bayes_search_utils import get_scores
-from pycilt.utils import normalize
+from pycilt.utils import normalize, log_exception_error
 
 __all__ = ['bin_ce', 'helmann_raviv_function', 'helmann_raviv_upper_bound', 'santhi_vardi_upper_bound',
            'fanos_lower_bound', 'fanos_adjusted_lower_bound', 'auc_score', 'pc_softmax_estimation',
            'log_loss_estimation', 'mid_point_mi', 'false_positive_rate', 'false_negative_rate']
 
+logger = logging.getLogger("Metrics")
 
+
+# logger.info(f"Nan Rows Train {nan_rows}")
 def bin_ce(p_e):
     if p_e == 0:
         p_e = p_e + np.finfo(np.float32).eps
@@ -136,16 +139,17 @@ def false_negative_rate(y_true, y_pred):
 
 
 def remove_nan_values(y_pred, y_true=None):
+    logger.info(f"y_pred shape {y_pred.shape} y_pred {y_pred}")
     nan_rows = np.isnan(y_pred).any(axis=1)
-    logger = logging.getLogger("Nan Values")
-    logger.info(f"Nan Rows Train {nan_rows}")
+
     y_pred = y_pred[~nan_rows]
     if y_true is not None:
         y_true = y_true[~nan_rows]
+    logger.info(f"nan_rows {len(nan_rows)}")
     return y_pred, y_true
 
 
-def probability_calibration(X_train, y_train, X_test, classifier, calibrator, logger):
+def probability_calibration(X_train, y_train, X_test, classifier, calibrator):
     if isinstance(classifier, AbstractModel):
         n_features = X_train.shape[-1]
         n_classes = len(np.unique(y_train))
@@ -157,14 +161,20 @@ def probability_calibration(X_train, y_train, X_test, classifier, calibrator, lo
         y_pred_train = np.hstack(((1 - y_pred_train)[:, None], y_pred_train[:, None]))
     if len(y_pred_test.shape) == 1:
         y_pred_test = np.hstack(((1 - y_pred_test)[:, None], y_pred_test[:, None]))
+
     y_pred_train, y_train = remove_nan_values(y_pred_train, y_true=y_train)
     y_pred_test, _ = remove_nan_values(y_pred_test, y_true=None)
-    calibrator.fit(y_pred_train, y_train)
-    y_pred_cal = calibrator.transform(y_pred_test)
-    if len(y_pred_cal.shape) == 1:
-        # logger.info(f"Calibration Type {type(calibrator).__name__}")
-        # logger.info(f"Calibrated Class 1 Probs {y_pred_cal[0:3]} \n Original Probs {y_pred_test[0:3]}")
-        y_pred_cal = np.hstack(((1 - y_pred_cal)[:, None], y_pred_cal[:, None]))
+    try:
+        calibrator.fit(y_pred_train, y_train)
+        y_pred_cal = calibrator.transform(y_pred_test)
+        if len(y_pred_cal.shape) == 1:
+            # logger.info(f"Calibration Type {type(calibrator).__name__}")
+            # logger.info(f"Calibrated Class 1 Probs {y_pred_cal[0:3]} \n Original Probs {y_pred_test[0:3]}")
+            y_pred_cal = np.hstack(((1 - y_pred_cal)[:, None], y_pred_cal[:, None]))
+    except Exception as error:
+        log_exception_error(logger, error)
+        logger.error("Problem with predicted probabilities ")
+        y_pred_cal = y_pred_test
     return y_pred_cal
 
 
@@ -193,7 +203,7 @@ def pc_softmax_estimation(y_true, y_pred):
         softmax = own_softmax[i, int(y_t)]
         mis.append(np.log2(softmax))
     estimated_mi = np.nanmean(mis)
-    estimated_mi = np.max([estimated_mi, 0.0])
+    estimated_mi = np.nanmax([estimated_mi, 0.0])
     return estimated_mi
 
 
@@ -207,8 +217,6 @@ def log_loss_estimation(y_true, y_pred):
     else:
         pyx = (y_pred * np.log2(y_pred)).sum(axis=1)
     mi_bp = pyx.mean()
-    mi = mi_bp + mi_pp
-    mi = np.max([mi, 0.0])
-    return mi
-
-
+    estimated_mi = mi_bp + mi_pp
+    estimated_mi = np.nanmax([estimated_mi, 0.0])
+    return estimated_mi
