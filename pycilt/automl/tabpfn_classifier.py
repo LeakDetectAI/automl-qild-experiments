@@ -31,6 +31,7 @@ class AutoTabPFNClassifier(AutomlClassifier):
                 raise ValueError(f"Dataset passed does not contain {self.n_features}")
             if self.n_classes != len(np.unique(y)):
                 raise ValueError(f"Dataset passed does not contain {self.n_classes}")
+            self.logger.info("Fitting the reduction model")
             self.selection_model.fit(X, y)
             self.__is_fitted__ = True
         if self.n_features > 100:

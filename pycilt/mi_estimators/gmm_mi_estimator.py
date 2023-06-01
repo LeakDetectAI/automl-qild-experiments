@@ -112,7 +112,7 @@ class GMMMIEstimator(MIEstimatorBase):
         return self
 
     def create_classification_model(self, X, y, **kwd):
-        X = self.transform(X)
+        X = self.transform(X, y)
         self.logger.debug(f"Best Model is not None out of {self.n_models} seed {self.best_seed}")
 
         if self.best_model is not None:
