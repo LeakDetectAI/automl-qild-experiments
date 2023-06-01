@@ -57,12 +57,6 @@ class AutoGluonClassifier(AutomlClassifier):
                 log_exception_error(self.logger, error)
                 self.logger.error(f"Cannot load the trained model at {self.output_folder}")
                 self.model = None
-                try:
-                    shutil.rmtree(self.output_folder)
-                    self.logger.error(f"The folder '{self.output_folder}' and its contents are deleted successfully.")
-                except OSError as error:
-                    log_exception_error(self.logger, error)
-                    self.logger.error(f"Error: {error.strerror}")
 
         if self.model is not None:
             self.leaderboard = self.model.leaderboard(extra_info=True)
@@ -71,6 +65,13 @@ class AutoGluonClassifier(AutomlClassifier):
             self.logger.info(f"Fitting time of the model {time_taken} and remaining {difference}")
             if difference >= 100:
                 self.model = None
+        if self.model is None:
+            try:
+                shutil.rmtree(self.output_folder)
+                self.logger.error(f"The folder '{self.output_folder}' and its contents are deleted successfully.")
+            except OSError as error:
+                log_exception_error(self.logger, error)
+                self.logger.error(f"Folder does not exist")
 
     def fit_timed(self, X, y, **kwd):
         self.logger.info("Timed Fitting")
@@ -86,7 +87,8 @@ class AutoGluonClassifier(AutomlClassifier):
                                hyperparameter_tune_kwargs=self.hyperparameter_tune_kwargs, auto_stack=self.auto_stack)
             except Exception as error:
                 log_exception_error(self.logger, error)
-                self.logger.error("Fit function execution timed out so loading the already trained model")
+                self.logger.error("Fit function did not work")
+                self.check_if_fitted()
 
     def fit(self, X, y, **kwd):
         # Set the alarm to trigger after the specified time limit

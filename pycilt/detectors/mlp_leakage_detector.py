@@ -1,8 +1,8 @@
-from .sklearn_classifier_leakage_detector import SklearnClassifierLeakageDetector
+from .sklearn_classifier_leakage_detector import SklearnLeakageDetector
 from ..classifiers import MultiLayerPerceptron
 
 
-class MLPLeakageDetector(SklearnClassifierLeakageDetector):
+class MLPLeakageDetector(SklearnLeakageDetector):
     def __init__(self, padding_name, learner_params, fit_params, hash_value, cv_iterations, n_hypothesis,
                  base_directory, search_space, hp_iters, n_inner_folds, validation_loss, random_state=None, **kwargs):
         super().__init__(padding_name=padding_name, learner_params=learner_params, fit_params=fit_params,

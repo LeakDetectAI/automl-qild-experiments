@@ -11,7 +11,7 @@ from ..contants import OPTIMIZER_FOLDER
 from ..utils import log_exception_error, create_directory_safely
 
 
-class SklearnClassifierLeakageDetector(InformationLeakageDetector):
+class SklearnLeakageDetector(InformationLeakageDetector):
     def __init__(self, padding_name, learner_params, fit_params, hash_value, cv_iterations, n_hypothesis,
                  base_directory, search_space, hp_iters, n_inner_folds, validation_loss, random_state=None, **kwargs):
         super().__init__(padding_name=padding_name, learner_params=learner_params, fit_params=fit_params,
@@ -26,7 +26,7 @@ class SklearnClassifierLeakageDetector(InformationLeakageDetector):
         self.optimizers_file_path = os.path.join(base_directory, OPTIMIZER_FOLDER, hash_value,
                                                  f"{self.padding_code}.pkl")
         create_directory_safely(self.optimizers_file_path, True)
-        self.logger = logging.getLogger(SklearnClassifierLeakageDetector.__name__)
+        self.logger = logging.getLogger(SklearnLeakageDetector.__name__)
         self.n_jobs = 10
 
     def perform_hyperparameter_optimization(self, X, y):

@@ -131,9 +131,6 @@ class InformationLeakageDetector(metaclass=ABCMeta):
 
     def evaluate_scores(self, X_test, X_train, y_test, y_train, y_pred, p_pred, model, i):
         for metric_name, evaluation_metric in mi_estimation_metrics.items():
-            X_test_copy, X_train_copy, y_train_copy, y_test_copy = np.copy(X_test), np.copy(X_train), np.copy(
-                y_train), np.copy(y_test)
-            y_pred_copy, p_pred_copy = np.copy(y_pred), np.copy(p_pred)
             if LOG_LOSS_MI_ESTIMATION in metric_name or PC_SOFTMAX_MI_ESTIMATION in metric_name:
                 calibrator_technique = None
                 for key in calibrators.keys():
@@ -144,18 +141,18 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                     c_params = calibrator_params[calibrator_technique]
                     calibrator = calibrator(**c_params)
                     try:
-                        p_pred_cal = probability_calibration(X_train=X_train_copy, y_train=y_train_copy,
-                                                             X_test=X_test_copy, classifier=model,
+                        p_pred_cal = probability_calibration(X_train=X_train, y_train=y_train,
+                                                             X_test=X_test, classifier=model,
                                                              calibrator=calibrator)
-                        metric_loss = evaluation_metric(y_test_copy, p_pred_cal)
+                        metric_loss = evaluation_metric(y_test, p_pred_cal)
                     except Exception as error:
                         log_exception_error(self.logger, error)
                         self.logger.error("Error while calibrating the probabilities")
-                        metric_loss = evaluation_metric(y_test_copy, p_pred_copy)
+                        metric_loss = evaluation_metric(y_test, p_pred)
                 else:
-                    metric_loss = evaluation_metric(y_test_copy, p_pred_copy)
+                    metric_loss = evaluation_metric(y_test, p_pred)
             else:
-                metric_loss = evaluation_metric(y_test_copy, y_pred_copy)
+                metric_loss = evaluation_metric(y_test, y_pred)
             if metric_name == CONFUSION_MATRIX:
                 # metric_loss = np.array(metric_loss)
                 (tn, fp, fn, tp) = metric_loss.ravel()
@@ -251,13 +248,13 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                 if detection_method in mi_leakage_detection_methods.keys():
                     base_mi = self.random_state.rand(len(metric_vals)) * 1e-2
                     p_value = paired_ttest(base_mi, metric_vals, n_training_folds, n_test_folds, correction=True)
-                    self.logger.info("Applying Normal Paired T-Test for Normal MI estimation Technique")
+                    self.logger.info("Normal Paired T-Test for MI estimation Technique")
                 elif detection_method == PAIRED_TTEST:
                     accuracies = np.array(self.results[MAJORITY_VOTING][ACCURACY])
                     p_value = paired_ttest(accuracies, metric_vals, n_training_folds, n_test_folds, correction=True)
-                    self.logger.info("Applying Normal Paired T-Test for accuracy comparison with majority")
+                    self.logger.info("Paired T-Test for accuracy comparison with majority")
                 elif detection_method in [FISHER_EXACT_TEST_MEAN, FISHER_EXACT_TEST_MEDIAN]:
-                    self.logger.info("Applying Fisher's Exact-Test for confusion matrix")
+                    self.logger.info("Fisher's Exact-Test for confusion matrix")
                     metric_vals = [np.array([[tn, fp], [fn, tp]]) for [tn, fp, fn, tp] in metric_vals]
                     p_values = np.array([fisher_exact(cm)[1] for cm in metric_vals])
                     if detection_method == FISHER_EXACT_TEST_MEAN:
@@ -265,5 +262,6 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                     elif detection_method == FISHER_EXACT_TEST_MEDIAN:
                         p_value = np.median(p_values)
                 model_p_values[model_name] = p_value
+                self.logger.info(f"Model {model_name} p-value {p_value}")
             p_vals, pvals_corrected, rejected = holm_bonferroni(list(model_p_values.values()))
         return np.any(rejected), np.sum(rejected)

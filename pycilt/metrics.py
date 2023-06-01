@@ -6,7 +6,7 @@ from sklearn.metrics import accuracy_score, roc_auc_score
 
 from pycilt import AutoGluonClassifier
 from pycilt.bayes_search_utils import get_scores
-from pycilt.utils import normalize, log_exception_error
+from pycilt.utils import normalize
 
 __all__ = ['bin_ce', 'helmann_raviv_function', 'helmann_raviv_upper_bound', 'santhi_vardi_upper_bound',
            'fanos_lower_bound', 'fanos_adjusted_lower_bound', 'auc_score', 'pc_softmax_estimation',
@@ -145,7 +145,7 @@ def remove_nan_values(y_pred, y_true=None):
     y_pred = y_pred[~nan_rows]
     if y_true is not None:
         y_true = y_true[~nan_rows]
-    logger.info(f"nan_rows {np.sum(nan_rows)}")
+    logger.info(f"Nan rows {np.sum(nan_rows)} y_pred shape {y_pred.shape}")
     return y_pred, y_true
 
 
@@ -164,17 +164,12 @@ def probability_calibration(X_train, y_train, X_test, classifier, calibrator):
 
     y_pred_train, y_train = remove_nan_values(y_pred_train, y_true=y_train)
     y_pred_test, _ = remove_nan_values(y_pred_test, y_true=None)
-    try:
-        calibrator.fit(y_pred_train, y_train)
-        y_pred_cal = calibrator.transform(y_pred_test)
-        if len(y_pred_cal.shape) == 1:
-            # logger.info(f"Calibration Type {type(calibrator).__name__}")
-            # logger.info(f"Calibrated Class 1 Probs {y_pred_cal[0:3]} \n Original Probs {y_pred_test[0:3]}")
-            y_pred_cal = np.hstack(((1 - y_pred_cal)[:, None], y_pred_cal[:, None]))
-    except Exception as error:
-        log_exception_error(logger, error)
-        logger.error("Problem with predicted probabilities ")
-        y_pred_cal = y_pred_test
+    calibrator.fit(y_pred_train, y_train)
+    y_pred_cal = calibrator.transform(y_pred_test)
+    if len(y_pred_cal.shape) == 1:
+        # logger.info(f"Calibration Type {type(calibrator).__name__}")
+        # logger.info(f"Calibrated Class 1 Probs {y_pred_cal[0:3]} \n Original Probs {y_pred_test[0:3]}")
+        y_pred_cal = np.hstack(((1 - y_pred_cal)[:, None], y_pred_cal[:, None]))
     return y_pred_cal
 
 
@@ -191,19 +186,22 @@ def pc_softmax_estimation(y_true, y_pred):
     y_pred[y_pred == 0] = np.finfo(float).eps
     y_pred[y_pred == 1] = 1 - np.finfo(float).eps
     y_pred, y_true = remove_nan_values(y_pred, y_true=y_true)
-    classes, counts = np.unique(y_true, return_counts=True)
-    pys = counts / np.sum(counts)
-    mis = []
-    x_exp = np.exp(y_pred)
-    weighted_x_exp = x_exp * pys
-    # weighted_x_exp = x_exp
-    x_exp_sum = np.sum(weighted_x_exp, axis=1, keepdims=True)
-    own_softmax = x_exp / x_exp_sum
-    for i, y_t in enumerate(y_true):
-        softmax = own_softmax[i, int(y_t)]
-        mis.append(np.log2(softmax))
-    estimated_mi = np.nanmean(mis)
-    estimated_mi = np.nanmax([estimated_mi, 0.0])
+    if len(y_true) != 0:
+        classes, counts = np.unique(y_true, return_counts=True)
+        pys = counts / np.sum(counts)
+        mis = []
+        x_exp = np.exp(y_pred)
+        weighted_x_exp = x_exp * pys
+        # weighted_x_exp = x_exp
+        x_exp_sum = np.sum(weighted_x_exp, axis=1, keepdims=True)
+        own_softmax = x_exp / x_exp_sum
+        for i, y_t in enumerate(y_true):
+            softmax = own_softmax[i, int(y_t)]
+            mis.append(np.log2(softmax))
+        estimated_mi = np.nanmean(mis)
+        estimated_mi = np.nanmax([estimated_mi, 0.0])
+    else:
+        estimated_mi = 0.0
     return estimated_mi
 
 
@@ -211,12 +209,15 @@ def log_loss_estimation(y_true, y_pred):
     y_pred[y_pred == 0] = np.finfo(float).eps
     y_pred[y_pred == 1] = 1 - np.finfo(float).eps
     y_pred, y_true = remove_nan_values(y_pred, y_true=y_true)
-    mi_pp = get_entropy_y(y_true)
-    if len(y_pred.shape) == 1:
-        pyx = (y_pred * np.log2(y_pred) + (1 - y_pred) * np.log2(1 - y_pred))
+    if len(y_true) != 0:
+        mi_pp = get_entropy_y(y_true)
+        if len(y_pred.shape) == 1:
+            pyx = (y_pred * np.log2(y_pred) + (1 - y_pred) * np.log2(1 - y_pred))
+        else:
+            pyx = (y_pred * np.log2(y_pred)).sum(axis=1)
+        mi_bp = pyx.mean()
+        estimated_mi = mi_bp + mi_pp
+        estimated_mi = np.nanmax([estimated_mi, 0.0])
     else:
-        pyx = (y_pred * np.log2(y_pred)).sum(axis=1)
-    mi_bp = pyx.mean()
-    estimated_mi = mi_bp + mi_pp
-    estimated_mi = np.nanmax([estimated_mi, 0.0])
+        estimated_mi = 0.0
     return estimated_mi

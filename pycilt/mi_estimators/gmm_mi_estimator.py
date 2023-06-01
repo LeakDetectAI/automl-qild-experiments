@@ -6,12 +6,13 @@ from infoselect import get_gmm, SelectVars
 from sklearn.linear_model import LogisticRegression
 
 from .mi_base_class import MIEstimatorBase
+from .reduction_techniques_gmm import reduction_techniques
 from ..utils import log_exception_error
 
 
 class GMMMIEstimator(MIEstimatorBase):
     def __init__(self, n_classes, n_features, y_cat=False, covariance_type='full', reg_covar=1e-06, val_size=0.30,
-                 random_state=42):
+                 reduction_technique="select_from_model_et", random_state=42):
         super().__init__(n_classes=n_classes, n_features=n_features, random_state=random_state)
         self.y_cat = y_cat
         self.num_comps = list(np.arange(2, 20, 1))
@@ -19,6 +20,9 @@ class GMMMIEstimator(MIEstimatorBase):
         self.n_models = 10
         self.covariance_type = covariance_type
         self.val_size = val_size
+        self.selection_model = reduction_techniques[reduction_technique]
+        self.__is_fitted__ = False
+
         # Classification Model
         self.cls_model = None
         self.best_model = None
@@ -55,7 +59,21 @@ class GMMMIEstimator(MIEstimatorBase):
             n_components = gmm.n_components
         return aic_fit, bic_fit, likelihood, n_components
 
+    def transform(self, X, y=None):
+        if not self.__is_fitted__:
+            if self.n_features != X.shape[-1]:
+                raise ValueError(f"Dataset passed does not contain {self.n_features}")
+            if self.n_classes != len(np.unique(y)):
+                raise ValueError(f"Dataset passed does not contain {self.n_classes}")
+            self.logger.info("Fitting the reduction model")
+            self.selection_model.fit(X, y)
+            self.__is_fitted__ = True
+        if self.n_features > 100:
+            X = self.selection_model.transform(X)
+        return X
+
     def fit(self, X, y, verbose=0, **kwd):
+        X = self.transform(X, y)
         self.best_likelihood = -np.inf
         seed = self.random_state.randint(2 ** 31, dtype="uint32")
         for iter_ in range(self.n_models):
@@ -94,6 +112,7 @@ class GMMMIEstimator(MIEstimatorBase):
         return self
 
     def create_classification_model(self, X, y, **kwd):
+        X = self.transform(X)
         self.logger.debug(f"Best Model is not None out of {self.n_models} seed {self.best_seed}")
 
         if self.best_model is not None:
@@ -113,11 +132,13 @@ class GMMMIEstimator(MIEstimatorBase):
             self.cls_model.fit(X, y)
 
     def predict(self, X, verbose=0):
+        X = self.transform(X)
         if self.best_model is not None:
             X = self.best_model.transform(X, rd=self.round)
         return self.cls_model.predict(X=X)
 
     def score(self, X, y, sample_weight=None, verbose=0):
+        X = self.transform(X, y)
         try:
             aic, bic, likelihood, n_components = self.get_goodnessof_fit(self.best_model.gmm, X, y)
             mi_mean, _ = self.best_model.get_info().values[0][1], self.best_model.get_info().values[0][2]
@@ -133,16 +154,19 @@ class GMMMIEstimator(MIEstimatorBase):
         return score
 
     def predict_proba(self, X, verbose=0):
+        X = self.transform(X)
         if self.best_model is not None:
             X = self.best_model.transform(X, rd=self.round)
         return self.cls_model.predict_proba(X=X)
 
     def decision_function(self, X, verbose=0):
+        X = self.transform(X)
         if self.best_model is not None:
             X = self.best_model.transform(X, rd=self.round)
         return self.cls_model.decision_function(X=X)
 
     def estimate_mi(self, X, y, verbose=0, **kwd):
+        X = self.transform(X, y)
         iter_ = 0
         while True:
             try:
