@@ -17,7 +17,7 @@ class MIEstimationLeakageDetector(SklearnLeakageDetector):
             self.n_jobs = 1
         if mi_technique == GMM_MI_ESTIMATOR:
             self.base_detector = GMMMIEstimator
-            self.n_jobs = 10
+            self.n_jobs = 4
 
     def __initialize_objects__(self):
         for i in range(self.n_hypothesis):

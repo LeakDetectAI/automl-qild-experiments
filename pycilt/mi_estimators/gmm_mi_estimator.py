@@ -17,10 +17,10 @@ class GMMMIEstimator(MIEstimatorBase):
         self.y_cat = y_cat
         self.num_comps = list(np.arange(2, 20, 1))
         self.reg_covar = reg_covar
-        self.n_models = 10
+        self.n_models = 5
         self.covariance_type = covariance_type
         self.val_size = val_size
-        self.reduction_technique =  reduction_technique
+        self.reduction_technique = reduction_technique
         self.selection_model = reduction_techniques[reduction_technique]
         self.__is_fitted__ = False
 

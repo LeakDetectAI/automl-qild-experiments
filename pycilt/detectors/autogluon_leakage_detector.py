@@ -27,7 +27,7 @@ class AutoGluonLeakageDetector(InformationLeakageDetector):
         X_train, y_train = self.get_training_dataset(X, y)
         self.learner = self.base_detector(**self.learner_params)
         self.learner.fit(X_train, y_train)
-        for i in range(self.n_hypothesis * 2):
+        for i in range(self.n_hypothesis * 3):
             model = self.learner.get_k_rank_model(i + 1)
             self.estimators.append(model)
         train_size = X_train.shape[0]
@@ -59,11 +59,11 @@ class AutoGluonLeakageDetector(InformationLeakageDetector):
                         n_repeat_start = 0
                         model.fit(X=X_t, y=y_t, n_repeat_start=n_repeat_start)
                         p_pred, y_pred = get_scores(test_data, model)
-                        self.evaluate_scores(X_test, X_train, y_test, y_train, y_pred, p_pred, model, i)
+                        self.evaluate_scores(X_test, X_train, y_test, y_train, y_pred, p_pred, model, n_hypothesis)
                         n_hypothesis += 1
                         self.logger.info(f"Hypothesis Done {n_hypothesis} out of {self.n_hypothesis}")
                     except Exception as error:
                         log_exception_error(self.logger, error)
-                        self.logger.error("Problem with fitting the model")
+                        self.logger.error(f"Problem with fitting the model")
 
             self.store_results()

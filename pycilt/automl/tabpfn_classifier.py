@@ -24,6 +24,7 @@ class AutoTabPFNClassifier(AutomlClassifier):
         self.n_ensembles = n_ensembles
         self.__is_fitted__ = False
         self.model = None
+        self.n_jobs = 8
 
     def transform(self, X, y=None):
         if not self.__is_fitted__:
@@ -40,6 +41,7 @@ class AutoTabPFNClassifier(AutomlClassifier):
 
     def fit(self, X, y, **kwd):
         X = self.transform(X, y)
+        self.n_jobs = 1
         self.model = TabPFNClassifier(device=self.device, N_ensemble_configurations=self.n_ensembles)
         self.model.fit(X, y, overwrite_warning=True)
 
@@ -47,7 +49,7 @@ class AutoTabPFNClassifier(AutomlClassifier):
         X = self.transform(X)
         self.logger.info("Predict Transform Done")
         y_pred = self.model.predict(X, return_winning_probability=False, normalize_with_test=False)
-        self.logger.info("Predictions Done")
+        self.logger.info("Predict Done")
         return y_pred
 
     def score(self, X, y, sample_weight=None, verbose=0):
@@ -63,6 +65,4 @@ class AutoTabPFNClassifier(AutomlClassifier):
         return y_pred
 
     def decision_function(self, X, verbose=0):
-        X = self.transform(X)
-        y_pred = self.model.predict_proba(X, normalize_with_test=True, return_logits=False)
-        return y_pred
+        return self.predict_proba(X, verbose)

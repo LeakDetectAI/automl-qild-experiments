@@ -129,7 +129,9 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             log_exception_error(self.logger, error)
             self.logger.error("Cannot open the file since it does not exist")
 
-    def evaluate_scores(self, X_test, X_train, y_test, y_train, y_pred, p_pred, model, i):
+    def evaluate_scores(self, X_test, X_train, y_test, y_train, y_pred, p_pred, model, n_model):
+        model_name = list(self.results.keys())[n_model]
+        self.logger.info(f"Appending results for model {model_name}")
         for metric_name, evaluation_metric in mi_estimation_metrics.items():
             if LOG_LOSS_MI_ESTIMATION in metric_name or PC_SOFTMAX_MI_ESTIMATION in metric_name:
                 calibrator_technique = None
@@ -161,7 +163,6 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                 self.logger.info(f"Metric {metric_name}: Value: {cm_string}")
             else:
                 self.logger.info(f"Metric {metric_name}: Value: {metric_loss}")
-            model_name = list(self.results.keys())[i]
             self.results[model_name][metric_name].append(metric_loss)
 
     def store_results(self):

@@ -15,6 +15,7 @@ Options:
   --schema=<schema>                     Schema containing the job information
 """
 import inspect
+import json
 import logging
 import os
 import sys
@@ -143,7 +144,10 @@ if __name__ == "__main__":
                 f.create_dataset('ground_truth', data=y_true)
                 f.create_dataset('values_of_m', data=values_of_m_array)
                 f.close()
+
                 results = {'job_id': str(job_id), 'cluster_id': str(cluster_id)}
+                results['hypothesis'] = json.dumps(values_of_m)
+                results['delay'] = f"{dataset_reader.delay}"
                 for metric_name, evaluation_metric in lp_metric_dict[learning_problem].items():
                     metric_loss = evaluation_metric(y_true, y_pred)
                     if np.isnan(metric_loss) or np.isinf(metric_loss):

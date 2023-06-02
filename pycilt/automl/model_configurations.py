@@ -56,7 +56,7 @@ hyperparameters = {
     },
     "KNN": {
         "weights": Categorical("uniform", "distance"),
-        "n_neighbors": Int(lower=3, upper=10, default=5),
+        "n_neighbors": Int(lower=3, upper=5, default=5),
         "p": Categorical(1, 2, 3),
     },
 }
