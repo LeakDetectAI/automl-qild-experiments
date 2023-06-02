@@ -52,10 +52,10 @@ class AutoGluonClassifier(AutomlClassifier):
         if os.path.exists(self.output_folder):
             try:
                 self.model = TabularPredictor.load(self.output_folder)
-                self.logger.info(f"Loading the model at {self.output_folder}")
+                self.logger.info(f"Loading the model at {os.path.basename(self.output_folder)}")
             except Exception as error:
                 log_exception_error(self.logger, error)
-                self.logger.error(f"Cannot load the trained model at {self.output_folder}")
+                self.logger.error(f"Cannot load the trained model at {os.path.basename(self.output_folder)}")
                 self.model = None
 
         if self.model is not None:
@@ -68,17 +68,17 @@ class AutoGluonClassifier(AutomlClassifier):
         if self.model is None:
             try:
                 shutil.rmtree(self.output_folder)
-                self.logger.error(f"The folder '{self.output_folder}' and its contents are deleted successfully.")
+                self.logger.error(f"Since the model is not completely fitted, \n"
+                                  f"The folder '{os.path.basename(self.output_folder)}' and its contents are deleted successfully.")
             except OSError as error:
                 log_exception_error(self.logger, error)
                 self.logger.error(f"Folder does not exist")
-
-    def fit_timed(self, X, y, **kwd):
-        self.logger.info("Timed Fitting")
+    def fit(self, X, y, **kwd):
+        # Set the alarm to trigger after the specified time limit
+        self.logger.info("Fitting Started")
         train_data = self.convert_to_dataframe(X, y)
         self.check_if_fitted()
-        self.time_limit_reached = False
-        if self.model is None:
+        while self.model is not None:
             try:
                 self.model = TabularPredictor(label=self.class_label, sample_weight=self.sample_weight,
                                               problem_type=self.problem_type, eval_metric=self.eval_metric,
@@ -88,12 +88,7 @@ class AutoGluonClassifier(AutomlClassifier):
             except Exception as error:
                 log_exception_error(self.logger, error)
                 self.logger.error("Fit function did not work")
-                self.check_if_fitted()
-
-    def fit(self, X, y, **kwd):
-        # Set the alarm to trigger after the specified time limit
-        self.logger.info("Fitting Started")
-        self.fit_timed(X, y, **kwd)
+                self.model = None
         self.leaderboard = self.model.leaderboard(extra_info=True)
         if self.delete_tmp_folder_after_terminate:
             self.model.delete_models(models_to_keep='best', dry_run=False)
