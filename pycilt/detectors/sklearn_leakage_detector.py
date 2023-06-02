@@ -40,7 +40,7 @@ class SklearnLeakageDetector(InformationLeakageDetector):
         search_keys = list(self.search_space.keys())
         search_keys.sort()
         self.logger.info(f"Search Keys {search_keys}")
-        callback = log_callback(self.logger, search_keys)
+        callback = log_callback(search_keys)
         try:
             bayes_search.fit(X_train, y_train, groups=None, callback=callback, **self.fit_params)
         except Exception as error:
@@ -50,7 +50,7 @@ class SklearnLeakageDetector(InformationLeakageDetector):
         learner_params = copy.deepcopy(self.learner_params)
         for i in range(self.n_hypothesis):
             self.logger.info("**************************************************************************************")
-            loss, learner_params = update_params_at_k(bayes_search, search_keys, learner_params, self.logger, k=i)
+            loss, learner_params = update_params_at_k(bayes_search, search_keys, learner_params, k=i)
             learner = self.base_detector(**learner_params)
             self.logger.info(f"Model {i} with loss {loss} and parameters {learner_params}")
             self.estimators.append(learner)

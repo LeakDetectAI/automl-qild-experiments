@@ -175,14 +175,14 @@ if __name__ == "__main__":
                     search_keys = list(search_space.keys())
                     search_keys.sort()
                     logger.info(f"Search Keys {search_keys}")
-                    callback = log_callback(logger, search_keys)
+                    callback = log_callback(search_keys)
                     try:
                         bayes_search.fit(X_train, y_train, groups=None, callback=callback, **fit_params)
                     except Exception as error:
                         log_exception_error(logger, error)
                         logger.error("Cannot fit the Bayes SearchCV ")
                     logger.info("Fitting the model with best parameters")
-                    best_loss, learner_params = update_params_at_k(bayes_search, search_keys, learner_params, logger)
+                    best_loss, learner_params = update_params_at_k(bayes_search, search_keys, learner_params, k=0)
                     logger.info(f"Setting the best parameters {print_dictionary(learner_params)}")
                     estimator = learner(**learner_params)
                     estimator.fit(X_train, y_train, **fit_params)

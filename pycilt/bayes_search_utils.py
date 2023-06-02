@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import sklearn
 from autogluon.core.models import AbstractModel
@@ -7,7 +9,7 @@ from sklearn.svm import LinearSVC
 
 from pycilt.utils import print_dictionary, sigmoid
 
-
+logger = logging.getLogger("BayesSearchUtils")
 def convert_value(value):
     try:
         # Try converting to integer
@@ -37,7 +39,7 @@ def get_parameters_at_k(optimizers, search_keys, k):
     return best_loss, best_params
 
 
-def update_params_at_k(bayes_search, search_keys, learner_params, logger, k=0):
+def update_params_at_k(bayes_search, search_keys, learner_params, k=0):
     loss, best_params = get_parameters_at_k(optimizers=bayes_search.optimizers_, search_keys=search_keys, k=k)
     if version.parse(sklearn.__version__) < version.parse("0.25.0"):
         if 'criterion' in best_params.keys():
@@ -46,11 +48,11 @@ def update_params_at_k(bayes_search, search_keys, learner_params, logger, k=0):
     learner_params.update(best_params)
     params_str = print_dictionary(learner_params, sep='\t')
     logger.info(f"Parameters at position k:{k} are {params_str} with objective of: {-loss}\n")
-    logger.info(f"Model {k} with loss {loss} and parameters {learner_params}")
+    # logger.info(f"Model {k} with loss {loss} and parameters {learner_params}")
     return loss, learner_params
 
 
-def log_callback(logger, parameters):
+def log_callback(parameters):
     def on_step(opt_result):
         """
         Callback meant to view scores after

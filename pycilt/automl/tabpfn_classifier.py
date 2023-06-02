@@ -6,7 +6,7 @@ from sklearn.utils import check_random_state
 from tabpfn import TabPFNClassifier
 
 from pycilt.automl.automl_core import AutomlClassifier
-from pycilt.automl.reduction_techniques_tabpfn import reduction_techniques
+from pycilt.automl.reduction_techniques_tabpfn import reduction_techniques, n_reduced
 
 
 class AutoTabPFNClassifier(AutomlClassifier):
@@ -31,7 +31,7 @@ class AutoTabPFNClassifier(AutomlClassifier):
                 raise ValueError(f"Dataset passed does not contain {self.n_features}")
             if self.n_classes != len(np.unique(y)):
                 raise ValueError(f"Dataset passed does not contain {self.n_classes}")
-            self.logger.info("Fitting the reduction model")
+            self.logger.info(f"Fitting the reduction model to reduce the {self.n_features} to {n_reduced}")
             self.selection_model.fit(X, y)
             self.__is_fitted__ = True
         if self.n_features > 100:
@@ -45,9 +45,9 @@ class AutoTabPFNClassifier(AutomlClassifier):
 
     def predict(self, X, verbose=0):
         X = self.transform(X)
-        self.logger.info("Transform Done")
+        self.logger.info("Predict Transform Done")
         y_pred = self.model.predict(X, return_winning_probability=False, normalize_with_test=False)
-        self.logger.info("Predicting Done")
+        self.logger.info("Predictions Done")
         return y_pred
 
     def score(self, X, y, sample_weight=None, verbose=0):
@@ -57,9 +57,9 @@ class AutoTabPFNClassifier(AutomlClassifier):
 
     def predict_proba(self, X, verbose=0):
         X = self.transform(X)
-        self.logger.info("Transform Done")
+        self.logger.info("Predict_proba Transform Done")
         y_pred = self.model.predict_proba(X, normalize_with_test=True, return_logits=False)
-        self.logger.info("Predicting Done")
+        self.logger.info("Predict_proba Done")
         return y_pred
 
     def decision_function(self, X, verbose=0):

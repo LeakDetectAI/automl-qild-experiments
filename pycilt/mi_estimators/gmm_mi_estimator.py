@@ -6,7 +6,7 @@ from infoselect import get_gmm, SelectVars
 from sklearn.linear_model import LogisticRegression
 
 from .mi_base_class import MIEstimatorBase
-from .reduction_techniques_gmm import reduction_techniques
+from .reduction_techniques_gmm import reduction_techniques, n_reduced
 from ..utils import log_exception_error
 
 
@@ -66,7 +66,7 @@ class GMMMIEstimator(MIEstimatorBase):
                 raise ValueError(f"Dataset passed does not contain {self.n_features}")
             if self.n_classes != len(np.unique(y)):
                 raise ValueError(f"Dataset passed does not contain {self.n_classes}")
-            self.logger.info("Fitting the reduction model")
+            self.logger.info(f"Fitting the reduction model to reduce the {self.n_features} to {n_reduced}")
             self.selection_model.fit(X, y)
             self.__is_fitted__ = True
         if self.n_features > 100:
