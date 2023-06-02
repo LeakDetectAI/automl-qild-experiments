@@ -1,4 +1,4 @@
-from .sklearn_classifier_leakage_detector import SklearnLeakageDetector
+from .sklearn_leakage_detector import SklearnLeakageDetector
 from ..automl import AutoTabPFNClassifier
 
 

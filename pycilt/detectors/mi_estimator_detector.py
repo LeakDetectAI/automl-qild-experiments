@@ -1,4 +1,4 @@
-from .sklearn_classifier_leakage_detector import SklearnLeakageDetector
+from .sklearn_leakage_detector import SklearnLeakageDetector
 from ..contants import ESTIMATED_MUTUAL_INFORMATION, GMM_MI_ESTIMATOR, MINE_MI_ESTIMATOR
 from ..mi_estimators import GMMMIEstimator, MineMIEstimatorHPO
 

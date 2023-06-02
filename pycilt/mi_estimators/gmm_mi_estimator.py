@@ -20,6 +20,7 @@ class GMMMIEstimator(MIEstimatorBase):
         self.n_models = 10
         self.covariance_type = covariance_type
         self.val_size = val_size
+        self.reduction_technique =  reduction_technique
         self.selection_model = reduction_techniques[reduction_technique]
         self.__is_fitted__ = False
 
