@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 
 import dill
 import numpy as np
+import openml
 import sklearn
 import tensorflow as tf
 import torch
@@ -25,8 +26,6 @@ from sklearn.svm import LinearSVC
 from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
 from sklearn.utils import check_random_state
 from skopt.space import Real, Categorical, Integer
-from tensorflow.core.protobuf.config_pb2 import ConfigProto
-from tensorflow.python.client.session import Session
 
 from pycilt import *
 from pycilt.contants import *
@@ -274,7 +273,7 @@ def setup_random_seed(random_state=1234):
     n_gpus = len(devices)
     logger.info("Number of GPUS {}".format(n_gpus))
     if n_gpus == 0:
-        config = ConfigProto(
+        config = tf.compat.v1.ConfigProto(
             intra_op_parallelism_threads=1,
             inter_op_parallelism_threads=1,
             allow_soft_placement=True,
@@ -282,14 +281,14 @@ def setup_random_seed(random_state=1234):
             device_count={"CPU": multiprocessing.cpu_count() - 2},
         )
     else:
-        config = ConfigProto(
+        config = tf.compat.v1.ConfigProto(
             allow_soft_placement=True,
             log_device_placement=True,
             intra_op_parallelism_threads=2,
             inter_op_parallelism_threads=2,
         )
         config.gpu_options.allow_growth = True
-    sess = Session(config=config)
+    sess = tf.compat.v1.Session(config=config)
     K.set_session(sess)
 
 
@@ -309,3 +308,17 @@ def get_automl_learned_estimator(optimizers_file_path, logger):
         logger.error(f"No such file or directory: {optimizers_file_path}")
         estimator = None
     return estimator
+
+
+def get_openml_datasets():
+    YOUR_API_KEY = '2e5bf0586e06bc552a66c263cbdbd52f'
+    USER_ID = "2086"
+    openml.config.apikey = YOUR_API_KEY
+    datasets = openml.datasets.list_datasets()
+    openml_datasets = {}
+    for dataset_id, dataset in datasets.items():
+        # print(dataset)
+        if dataset['uploader'] == USER_ID:
+            # print(dataset['name'])
+            openml_datasets[dataset_id] = {'name': dataset['name'], 'link': f"https://www.openml.org/d/{dataset_id}"}
+    return openml_datasets

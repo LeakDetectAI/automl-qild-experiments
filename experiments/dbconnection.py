@@ -1,7 +1,9 @@
+import copy
 import hashlib
 import json
 import logging
 import os
+import re
 from abc import ABCMeta
 from datetime import timedelta, datetime
 
@@ -9,11 +11,10 @@ import numpy as np
 import psycopg2
 from psycopg2.extras import DictCursor
 
-from experiments.utils import get_duration_seconds, duration_till_now
-from pycilt.contants import SYNTHETIC_DISTANCE_DATASET, SYNTHETIC_DATASET, SYNTHETIC_IMBALANCED_DATASET, \
-    SYNTHETIC_DISTANCE_IMBALANCED_DATASET
+from experiments.utils import get_duration_seconds, duration_till_now, get_openml_datasets
+from pycilt.contants import *
 from pycilt.dataset_readers import GEN_TYPES, generate_samples_per_class
-from pycilt.dataset_readers.datasets import openml_datasets
+from pycilt.detectors.utils import leakage_detector_methods
 from pycilt.utils import print_dictionary
 
 LEARNERS = ['gmm_mi_estimator', 'gmm_mi_estimator_more_instances', 'gmm_mi_estimator_true',
@@ -66,9 +67,57 @@ class DBConnector(metaclass=ABCMeta):
         current_hash_values = []
         for job_c in jobs_check:
             job_c = dict(job_c)
-            hash_value = self.get_hash_value_for_job(job_c)
+            if self.schema == LEAKAGE_DETECTION:
+                hash_value = self.get_hash_value_for_job_ild_check(job_c)
+            else:
+                hash_value = self.get_hash_value_for_job(job_c)
             current_hash_values.append(hash_value)
         return current_hash_values
+
+    def get_hash_value_for_job(self, job):
+        keys = [
+            "fold_id",
+            "base_learner",
+            "learner",
+            "dataset_params",
+            "fit_params",
+            "learner_params",
+            "hp_ranges",
+            "inner_folds",
+            "validation_loss",
+            "dataset"
+        ]
+        hash_string = ""
+        for k in keys:
+            if k in job.keys():
+                hash_string = hash_string + str(k) + ":" + str(job[k])
+        hash_object = hashlib.sha1(hash_string.encode())
+        hex_dig = hash_object.hexdigest()
+        # self.logger.info(   "Job_id {} Hash_string {}".format(job.get("job_id", None), str(hex_dig)))
+        return str(hex_dig)
+
+    def get_hash_value_for_job_ild_check(self, job):
+        keys = [
+            "fold_id",
+            "base_learner",
+            "learner",
+            "dataset_params",
+            "fit_params",
+            "learner_params",
+            "hp_ranges",
+            "inner_folds",
+            "validation_loss",
+            "dataset",
+            "detector_method"
+        ]
+        hash_string = ""
+        for k in keys:
+            if k in job.keys():
+                hash_string = hash_string + str(k) + ":" + str(job[k])
+        hash_object = hashlib.sha1(hash_string.encode())
+        hex_dig = hash_object.hexdigest()
+        # self.logger.info(   "Job_id {} Hash_string {}".format(job.get("job_id", None), str(hex_dig)))
+        return str(hex_dig)
 
     def init_connection(self, cursor_factory=DictCursor):
         self.connection = psycopg2.connect(**self.connect_params)
@@ -480,11 +529,77 @@ class DBConnector(metaclass=ABCMeta):
         return new_job_id
 
     def check_exists(self, job):
-        hash_value_new = self.get_hash_value_for_job(job)
+        if self.schema == LEAKAGE_DETECTION:
+            hash_value_new = self.get_hash_value_for_job_ild_check(job)
+        else:
+            hash_value_new = self.get_hash_value_for_job(job)
         for hash_value_existing in self.current_hash_values:
             if hash_value_existing == hash_value_new:
                 return True
         return False
+
+    def insert_new_jobs_openml(self, dataset="openml_dataset", max_job_id=15):
+        self.init_connection()
+        avail_jobs = "{}.avail_jobs".format(self.schema)
+        select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND" \
+                     f" {avail_jobs}.job_id<={max_job_id} ORDER  BY {avail_jobs}.job_id"
+
+        self.cursor_db.execute(select_job)
+        jobs_all = self.cursor_db.fetchall()
+        self.logger.info(jobs_all)
+        imbalances = [0.1, 0.3, 0.5]
+        dataset_ids = list(get_openml_datasets().keys())
+        detector_methods = list(leakage_detector_methods.keys())
+        mi_detector_method = re.sub(r'(?<!^)(?=[A-Z])', '_', ESTIMATED_MUTUAL_INFORMATION).lower()
+        detector_methods.remove(mi_detector_method)
+        for job in jobs_all:
+            job = dict(job)
+            del job["job_id"]
+            del job["job_allocated_time"]
+            del job['job_end_time']
+            job['evaluation_time'] = 0
+            self.logger.info("###########################################################")
+            self.logger.info(print_dictionary(job))
+            for dataset_id in dataset_ids:
+                for imbalance in imbalances:
+                    self.logger.info(f"Inserting job with {imbalance}, dataset_id {dataset_id}")
+                    base_learner = job["base_learner"]
+                    if base_learner in [GMM_MI_ESTIMATOR, MINE_MI_ESTIMATOR]:
+                        methods = [mi_detector_method]
+                    elif base_learner in [AUTO_GLUON, TABPNF, MULTI_LAYER_PERCEPTRON]:
+                        methods = copy.deepcopy(detector_methods)
+                    for detector_method in methods:
+                        job['detector_method'] = detector_method
+                        keys = list(job.keys())
+                        values = list(job.values())
+                        columns = ", ".join(list(job.keys()))
+                        values_str = []
+                        for i, (key, val) in enumerate(zip(keys, values)):
+                            if isinstance(val, dict):
+                                if key == 'dataset_params':
+                                    val['dataset_id'] = dataset_id
+                                    val['imbalance'] = imbalance
+                                    self.logger.info(f"Dataset Params {val}")
+                                val = json.dumps(val, cls=NpEncoder)
+                            else:
+                                val = str(val)
+                            values_str.append(val)
+                            if i == 0:
+                                str_values = "%s"
+                            else:
+                                str_values = str_values + ", %s"
+                        condition = self.check_exists(job)
+                        if not condition:
+                            insert_result = f"INSERT INTO {avail_jobs} ({columns}) VALUES ({str_values}) RETURNING job_id"
+                            self.cursor_db.execute(insert_result, tuple(values_str))
+                            id_of_new_row = self.cursor_db.fetchone()[0]
+                            self.logger.info("Inserting results: {} {}".format(insert_result, values_str))
+                            if self.cursor_db.rowcount == 1:
+                                self.logger.info(f"Results inserted for the job {id_of_new_row}")
+                            self.connection.commit()
+                        else:
+                            self.logger.info(f"Job already exist")
+        self.close_connection()
 
     def insert_new_jobs_with_different_fold(self, dataset="synthetic", folds=4):
         self.init_connection()
@@ -661,77 +776,5 @@ class DBConnector(metaclass=ABCMeta):
                                 self.logger.info(f"Job already exist")
         self.close_connection()
 
-    def insert_new_jobs_openml(self, dataset="openml_dataset", max_job_id=5):
-        self.init_connection()
-        avail_jobs = "{}.avail_jobs".format(self.schema)
-        select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND " \
-                     f"{avail_jobs}.fold_id =0 and {avail_jobs}.job_id<={max_job_id} ORDER  BY {avail_jobs}.job_id"
 
-        self.cursor_db.execute(select_job)
-        jobs_all = self.cursor_db.fetchall()
-        print(jobs_all)
-        imbalances = [0.1, 0.3, 0.5]
-        dataset_ids = list(openml_datasets.keys())
-        for job in jobs_all:
-            job = dict(job)
-            del job["job_id"]
-            del job["job_allocated_time"]
-            del job['job_end_time']
-            job['evaluation_time'] = 0
-            self.logger.info("###########################################################")
-            self.logger.info(print_dictionary(job))
-            for dataset_id in dataset_ids:
-                for imbalance in imbalances:
-                    self.logger.info(f"Inserting job with {imbalance}, dataset_id {dataset_id}")
-                    keys = list(job.keys())
-                    values = list(job.values())
-                    columns = ", ".join(list(job.keys()))
-                    values_str = []
-                    for i, (key, val) in enumerate(zip(keys, values)):
-                        if isinstance(val, dict):
-                            if key == 'dataset_params':
-                                val['dataset_id'] = dataset_id
-                                val['imbalance'] = imbalance
-                                self.logger.info(f"Dataset Params {val}")
-                            val = json.dumps(val, cls=NpEncoder)
-                        else:
-                            val = str(val)
-                        values_str.append(val)
-                        if i == 0:
-                            str_values = "%s"
-                        else:
-                            str_values = str_values + ", %s"
-                    condition = self.check_exists(job)
-                    if not condition:
-                        insert_result = f"INSERT INTO {avail_jobs} ({columns}) VALUES ({str_values}) RETURNING job_id"
-                        self.cursor_db.execute(insert_result, tuple(values_str))
-                        id_of_new_row = self.cursor_db.fetchone()[0]
-                        self.logger.info("Inserting results: {} {}".format(insert_result, values_str))
-                        if self.cursor_db.rowcount == 1:
-                            self.logger.info(f"Results inserted for the job {id_of_new_row}")
-                        self.connection.commit()
-                    else:
-                        self.logger.info(f"Job already exist")
-        self.close_connection()
 
-    def get_hash_value_for_job(self, job):
-        keys = [
-            "fold_id",
-            "base_learner",
-            "learner",
-            "dataset_params",
-            "fit_params",
-            "learner_params",
-            "hp_ranges",
-            "inner_folds",
-            "validation_loss",
-            "dataset"
-        ]
-        hash_string = ""
-        for k in keys:
-            if k in job.keys():
-                hash_string = hash_string + str(k) + ":" + str(job[k])
-        hash_object = hashlib.sha1(hash_string.encode())
-        hex_dig = hash_object.hexdigest()
-        # self.logger.info(   "Job_id {} Hash_string {}".format(job.get("job_id", None), str(hex_dig)))
-        return str(hex_dig)

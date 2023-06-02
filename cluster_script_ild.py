@@ -60,9 +60,8 @@ if __name__ == "__main__":
         if dbConnector.job_description is not None:
             try:
                 seed = int(dbConnector.job_description["seed"])
-                fold_id = int(dbConnector.job_description["fold_id"])
                 job_id = int(dbConnector.job_description["job_id"])
-                dataset_name = dbConnector.job_description["dataset_name"]
+                dataset_name = dbConnector.job_description["dataset"]
                 dataset_params = dbConnector.job_description["dataset_params"]
 
                 base_learner = dbConnector.job_description["base_learner"]
@@ -85,7 +84,7 @@ if __name__ == "__main__":
                 LEARNING_PROBLEM = learning_problem.lower()
                 if validation_loss == 'None':
                     validation_loss = None
-                random_state = np.random.RandomState(seed=seed + fold_id)
+                random_state = np.random.RandomState(seed=seed + dataset_params.get('dataset_id', 0))
                 # Generate different seeds for given random_states
                 BASE_DIR = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM)
                 create_directory_safely(BASE_DIR, False)

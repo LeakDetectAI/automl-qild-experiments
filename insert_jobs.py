@@ -15,7 +15,7 @@ if __name__ == "__main__":
     setup_logging(log_path=log_path)
     logger = logging.getLogger('Experiment')
     logger.info(f"DB config filePath {config_file_path}")
-    for schema in [MUTUAL_INFORMATION, AUTO_ML]:
+    for schema in [LEAKAGE_DETECTION]:
         logger.info(f"Inserting new jobs into {schema}")
         dbConnector = DBConnector(config_file_path=config_file_path, is_gpu=False, schema=schema, create_hash_list=True)
         if schema == CLASSIFICATION:
@@ -26,14 +26,15 @@ if __name__ == "__main__":
             max_job_id = 5
         if schema == AUTO_ML:
             max_job_id = 12
+        if schema == LEAKAGE_DETECTION:
+            max_job_id = 5
+        dbConnector.insert_new_jobs_openml(dataset=OPENML_DATASET, max_job_id=max_job_id)
+        # dbConnector.insert_new_jobs_different_configurations(max_job_id=max_job_id, dataset=SYNTHETIC_DATASET)
+        # dbConnector.insert_new_jobs_different_configurations(max_job_id=max_job_id, dataset=SYNTHETIC_DISTANCE_DATASET)
+        # dbConnector.insert_new_jobs_imbalanced(max_job_id=max_job_id, dataset=SYNTHETIC_IMBALANCED_DATASET)
+        # dbConnector.insert_new_jobs_imbalanced(max_job_id=max_job_id, dataset=SYNTHETIC_DISTANCE_IMBALANCED_DATASET)
 
-        #dbConnector.insert_new_jobs_different_configurations(max_job_id=max_job_id, dataset=SYNTHETIC_DATASET)
-        #dbConnector.insert_new_jobs_different_configurations(max_job_id=max_job_id, dataset=SYNTHETIC_DISTANCE_DATASET)
-        #dbConnector.insert_new_jobs_imbalanced(max_job_id=max_job_id, dataset=SYNTHETIC_IMBALANCED_DATASET)
-        #dbConnector.insert_new_jobs_imbalanced(max_job_id=max_job_id, dataset=SYNTHETIC_DISTANCE_IMBALANCED_DATASET)
-
-        #dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DATASET)
-        #dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DISTANCE_DATASET)
-        #dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_IMBALANCED_DATASET)
-        #dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DISTANCE_IMBALANCED_DATASET)
-
+        # dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DATASET)
+        # dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DISTANCE_DATASET)
+        # dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_IMBALANCED_DATASET)
+        # dbConnector.insert_new_jobs_with_different_fold(dataset=SYNTHETIC_DISTANCE_IMBALANCED_DATASET)
