@@ -8,7 +8,7 @@ from autogluon.tabular import TabularPredictor
 from sklearn.utils import check_random_state
 
 from pycilt.automl.automl_core import AutomlClassifier
-from pycilt.automl.model_configurations import hyperparameters
+from pycilt.automl.model_configurations import hyperparameters, reduced_hyperparameters
 from pycilt.utils import log_exception_error
 
 
@@ -16,7 +16,7 @@ class AutoGluonClassifier(AutomlClassifier):
 
     def __init__(self, n_features, n_classes, time_limit=1800, output_folder=None, eval_metric='accuracy',
                  use_hyperparameters=True, delete_tmp_folder_after_terminate=True, auto_stack=False,
-                 random_state=None, **kwargs):
+                 remove_boosting_models=False, random_state=None, **kwargs):
         self.logger = logging.getLogger(name=AutoGluonClassifier.__name__)
         self.random_state = check_random_state(random_state)
         self.output_folder = output_folder
@@ -25,9 +25,16 @@ class AutoGluonClassifier(AutomlClassifier):
         self.eval_metric = eval_metric
         self.use_hyperparameters = use_hyperparameters
         if self.use_hyperparameters:
-            self.hyperparameters = hyperparameters
+            if remove_boosting_models:
+                self.hyperparameters = hyperparameters
+            else:
+                self.hyperparameters = reduced_hyperparameters
         else:
             self.hyperparameters = None
+        if remove_boosting_models:
+            self.exclude_model_types = ['GBM', 'CAT', 'XGB', 'LGB']
+        else:
+            self.exclude_model_types = []
         self.auto_stack = auto_stack
         self.n_features = n_features
         self.n_classes = n_classes
@@ -41,7 +48,6 @@ class AutoGluonClassifier(AutomlClassifier):
         if self.n_classes == 2:
             self.problem_type = 'binary'
         self.leaderboard = None
-        self.time_limit_reached = None
         #        if "pc2" in os.environ["HOME"]:
         #            tmp_dir_path = os.path.join(os.environ["PFS_FOLDER"], "tmp")
         #            if not os.path.isdir(tmp_dir_path):
@@ -65,7 +71,7 @@ class AutoGluonClassifier(AutomlClassifier):
             time_taken = self.leaderboard['fit_time'].sum() + self.leaderboard['pred_time_val'].sum()
             difference = self.time_limit - time_taken
             self.logger.info(f"Fitting time of the model {time_taken} and remaining {difference}")
-            if difference >= 100:
+            if difference >= 200:
                 self.model = None
         if self.model is None:
             try:
@@ -86,7 +92,8 @@ class AutoGluonClassifier(AutomlClassifier):
                                               problem_type=self.problem_type, eval_metric=self.eval_metric,
                                               path=self.output_folder)
                 self.model.fit(train_data, time_limit=self.time_limit, hyperparameters=hyperparameters,
-                               hyperparameter_tune_kwargs=self.hyperparameter_tune_kwargs, auto_stack=self.auto_stack)
+                               hyperparameter_tune_kwargs=self.hyperparameter_tune_kwargs, auto_stack=self.auto_stack,
+                               excluded_model_types=self.exclude_model_types)
             except Exception as error:
                 log_exception_error(self.logger, error)
                 self.logger.error("Fit function did not work, checking the saved models")

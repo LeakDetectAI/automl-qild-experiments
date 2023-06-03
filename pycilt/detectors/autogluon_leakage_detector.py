@@ -21,6 +21,7 @@ class AutoGluonLeakageDetector(InformationLeakageDetector):
         self.learner_params['output_folder'] = output_folder
         self.learner_params['eval_metric'] = validation_loss
         self.learner_params['delete_tmp_folder_after_terminate'] = False
+        self.learner_params['remove_boosting_models'] = True
         self.logger = logging.getLogger(AutoGluonLeakageDetector.__name__)
 
     def perform_hyperparameter_optimization(self, X, y):

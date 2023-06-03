@@ -1,4 +1,4 @@
-from autogluon.core.space import Real, Int, Categorical
+from autogluon.core.space import Real, Int, Categorical, Space
 
 hyperparameters = {
     "NN_TORCH": {
@@ -30,6 +30,43 @@ hyperparameters = {
         "gamma": Real(0.0, 1.0),
         "reg_alpha": Real(0.0, 1.0),
         "reg_lambda": Real(0.0, 1.0),
+    },
+    "FASTAI": {
+        "learning_rate": Real(1e-5, 1e-1, default=5e-4, log=True),
+        "wd": Real(1e-6, 1e-1, default=5e-4, log=True),
+        "emb_drop": Real(0.0, 0.5),
+        "ps": Real(0.0, 0.5, ),
+        "smoothing": Real(0.0, 0.5),
+    },
+    "RF": {
+        "n_estimators": Int(20, 300),
+        "criterion": Categorical("gini", "entropy"),
+        "max_depth": Int(lower=6, upper=20, default=10),
+        "max_features": Categorical("sqrt", "log2"),
+        "min_samples_leaf": Int(lower=2, upper=50, default=10),
+        "min_samples_split": Int(lower=2, upper=50, default=10),
+    },
+    "XT": {
+        "n_estimators": Int(20, 300),
+        "criterion": Categorical("gini", "entropy"),
+        "max_depth": Int(lower=6, upper=20, default=10),
+        "max_features": Categorical("sqrt", "log2"),
+        "min_samples_leaf": Int(lower=2, upper=50, default=10),
+        "min_samples_split": Int(lower=2, upper=50, default=10),
+    },
+    "KNN": {
+        "weights": Categorical("uniform", "distance"),
+        "n_neighbors": Int(lower=3, upper=5, default=5),
+        "p": Categorical(1, 2, 3),
+    },
+}
+
+reduced_hyperparameters = {
+    "NN_TORCH": {
+        "learning_rate": Real(1e-5, 1e-1, default=5e-4, log=True),
+        "dropout_prob": Real(0.0, 0.5, default=0.1),
+        "num_layers": Int(lower=2, upper=20, default=5),
+        "hidden_size": Int(lower=8, upper=256, default=32),
     },
     "FASTAI": {
         "learning_rate": Real(1e-5, 1e-1, default=5e-4, log=True),

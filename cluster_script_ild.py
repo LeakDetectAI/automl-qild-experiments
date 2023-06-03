@@ -143,7 +143,7 @@ if __name__ == "__main__":
                 file.close()
 
                 results = {'job_id': str(job_id), 'cluster_id': str(cluster_id)}
-                results['hypothesis'] = json.dumps(values_of_m)
+                results['hypothesis'] = json.dumps(values_of_m, cls=NpEncoder)
                 results['delay'] = f"{dataset_reader.delay}"
                 for metric_name, evaluation_metric in lp_metric_dict[learning_problem].items():
                     metric_loss = evaluation_metric(y_true, y_pred)
