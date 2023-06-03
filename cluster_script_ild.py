@@ -26,10 +26,10 @@ import h5py
 import numpy as np
 from docopt import docopt
 
-from experiments.dbconnection import DBConnector
+from experiments.dbconnection import DBConnector, NpEncoder
 from experiments.utils import *
 from pycilt.utils import print_dictionary
-
+import pickle as pk
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 LOGS_FOLDER = 'logs'
 RESULT_FOLDER = 'results'
@@ -121,7 +121,6 @@ if __name__ == "__main__":
                 y_true = []
                 y_pred = []
                 values_of_m = {}
-                values_of_m_array = []
                 for label, (X, y) in dataset_reader.dataset_dictionary.items():
                     logger.info(f"Running the detector for label {label}")
                     detector_params['padding_name'] = label
@@ -133,16 +132,15 @@ if __name__ == "__main__":
                     y_true.append(ground_truth)
                     y_pred.append(predicted_decision)
                     values_of_m[label] = n_hypothesis_detection
-                    values_of_m_array.append([label, n_hypothesis_detection])
-                values_of_m_array = np.array(values_of_m_array)
-                result_file = os.path.join(BASE_DIR, RESULT_FOLDER, f"{hash_value}.h5")
+
+                result_file = os.path.join(BASE_DIR, RESULT_FOLDER, f"{hash_value}.pkl")
                 logger.info(f"Result file {result_file}")
                 create_directory_safely(result_file, True)
-                f = h5py.File(result_file, 'w')
-                f.create_dataset('predictions', data=y_pred)
-                f.create_dataset('ground_truth', data=y_true)
-                f.create_dataset('values_of_m', data=values_of_m_array)
-                f.close()
+                results = {'y_pred': y_pred, 'y_true': y_true, 'values_of_m': values_of_m}
+                logger.info(f"Results {print_dictionary(results)}")
+                file = open(result_file, 'wb')
+                pk.dump(results, file=file)
+                file.close()
 
                 results = {'job_id': str(job_id), 'cluster_id': str(cluster_id)}
                 results['hypothesis'] = json.dumps(values_of_m)
@@ -158,7 +156,7 @@ if __name__ == "__main__":
                             results[metric_name] = f"{np.around(metric_loss, 4)}"
                     logger.info(f"Out of sample error {metric_name} : {metric_loss}")
                     print(f"Out of sample error {metric_name} : {metric_loss}")
-                results['hypothesis'] = values_of_m
+                results['hypothesis'] = json.dumps(values_of_m, cls=NpEncoder)
                 dbConnector.insert_results(experiment_schema=experiment_schema, experiment_table=experiment_table,
                                            results=results)
                 dbConnector.mark_running_job_finished(job_id, start)

@@ -558,6 +558,7 @@ class DBConnector(metaclass=ABCMeta):
             del job["job_allocated_time"]
             del job['job_end_time']
             job['evaluation_time'] = 0
+            del job['hash_value']
             self.logger.info("###########################################################")
             self.logger.info(print_dictionary(job))
             for dataset_id in dataset_ids:
@@ -599,6 +600,61 @@ class DBConnector(metaclass=ABCMeta):
                             self.connection.commit()
                         else:
                             self.logger.info(f"Job already exist")
+        self.close_connection()
+
+    def insert_detection_methods(self, dataset="openml_dataset"):
+        self.init_connection()
+        avail_jobs = "{}.avail_jobs".format(self.schema)
+        select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' ORDER  BY {avail_jobs}.job_id"
+        self.cursor_db.execute(select_job)
+        jobs_all = self.cursor_db.fetchall()
+        self.logger.info(jobs_all)
+
+        cls_detector_methods = list(leakage_detector_methods.keys())
+        mi_detector_method = re.sub(r'(?<!^)(?=[A-Z])', '_', ESTIMATED_MUTUAL_INFORMATION).lower()
+        cls_detector_methods.remove(mi_detector_method)
+        mi_detection_methods = [mi_detector_method]
+        detection_methods = {MINE_MI_ESTIMATOR: mi_detection_methods, GMM_MI_ESTIMATOR: mi_detection_methods,
+                             AUTO_GLUON: cls_detector_methods, TABPNF: cls_detector_methods,
+                             MULTI_LAYER_PERCEPTRON: cls_detector_methods}
+        for job in jobs_all:
+            job = dict(job)
+            del job["job_id"]
+            del job["job_allocated_time"]
+            del job['job_end_time']
+            job['evaluation_time'] = 0
+            del job['hash_value']
+            self.logger.info("###########################################################")
+            self.logger.info(print_dictionary(job))
+            base_learner = job["base_learner"]
+            methods = detection_methods[base_learner]
+            for detector_method in methods:
+                job['detector_method'] = detector_method
+                keys = list(job.keys())
+                values = list(job.values())
+                columns = ", ".join(list(job.keys()))
+                values_str = []
+                for i, (key, val) in enumerate(zip(keys, values)):
+                    if isinstance(val, dict):
+                        val = json.dumps(val, cls=NpEncoder)
+                    else:
+                        val = str(val)
+                    values_str.append(val)
+                    if i == 0:
+                        str_values = "%s"
+                    else:
+                        str_values = str_values + ", %s"
+                condition = self.check_exists(job)
+                if not condition:
+                    insert_result = f"INSERT INTO {avail_jobs} ({columns}) VALUES ({str_values}) RETURNING job_id"
+                    self.cursor_db.execute(insert_result, tuple(values_str))
+                    id_of_new_row = self.cursor_db.fetchone()[0]
+                    self.logger.info("Inserting results: {} {}".format(insert_result, values_str))
+                    if self.cursor_db.rowcount == 1:
+                        self.logger.info(f"Results inserted for the job {id_of_new_row}")
+                    self.connection.commit()
+                else:
+                    self.logger.info(f"Job already exist")
         self.close_connection()
 
     def insert_new_jobs_with_different_fold(self, dataset="synthetic", folds=4):
