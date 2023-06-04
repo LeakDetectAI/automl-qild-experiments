@@ -134,9 +134,7 @@ class DBConnector(metaclass=ABCMeta):
         avail_jobs = "{}.avail_jobs".format(self.schema)
         running_jobs = "{}.running_jobs".format(self.schema)
         select_job = """SELECT * FROM {0} row WHERE EXISTS(SELECT job_id FROM {1} r WHERE r.interrupted = FALSE 
-                        AND r.finished = FALSE AND r.job_id = row.job_id)""".format(
-            avail_jobs, running_jobs
-        )
+                        AND r.finished = FALSE AND r.job_id = row.job_id)""".format(avail_jobs, running_jobs)
         self.cursor_db.execute(select_job)
         all_jobs = self.cursor_db.fetchall()
         # print(f"Running jobs are {all_jobs}")
@@ -161,9 +159,7 @@ class DBConnector(metaclass=ABCMeta):
         self.init_connection()
         avail_jobs = "{}.avail_jobs".format(self.schema)
         running_jobs = "{}.running_jobs".format(self.schema)
-        select_job = """SELECT * FROM {0}  WHERE {0}.job_id={1}""".format(
-            avail_jobs, job_id
-        )
+        select_job = f"""SELECT * FROM {avail_jobs}  WHERE {avail_jobs}.job_id={job_id}"""
         self.cursor_db.execute(select_job)
 
         if self.cursor_db.rowcount == 1:
@@ -171,49 +167,29 @@ class DBConnector(metaclass=ABCMeta):
                 self.job_description = self.cursor_db.fetchall()[0]
                 print("Jobs found {}".format(print_dictionary(self.job_description)))
                 start = datetime.now()
-                update_job = """UPDATE {} set job_allocated_time = %s WHERE job_id = %s""".format(
-                    avail_jobs
-                )
+                update_job = f"""UPDATE {avail_jobs} set job_allocated_time = %s WHERE job_id = %s"""
                 self.cursor_db.execute(update_job, (start, job_id))
                 select_job = """SELECT * FROM {0} WHERE {0}.job_id = {1} AND {0}.interrupted = {2} AND
-                                {0}.finished = {3} FOR UPDATE""".format(
-                    running_jobs, job_id, False, True
-                )
+                                {0}.finished = {3} FOR UPDATE""".format(running_jobs, job_id, False, True)
                 self.cursor_db.execute(select_job)
                 running_job = self.cursor_db.fetchall()
                 if len(running_job) == 0:
                     self.job_description = None
                     print("The job is not evaluated yet")
                 else:
-                    print(
-                        "Job with job_id {} present in the updating and row locked".format(
-                            job_id
-                        )
-                    )
-                    update_job = """UPDATE {} set cluster_id = %s, interrupted = %s, finished = %s 
-                                    WHERE job_id = %s""".format(
-                        running_jobs
-                    )
-                    self.cursor_db.execute(
-                        update_job, (cluster_id, "FALSE", "FALSE", job_id)
-                    )
+                    print(f"Job with job_id {job_id} present in the updating and row locked")
+                    update_job = f"""UPDATE {avail_jobs} set cluster_id = %s, interrupted = %s, finished = %s 
+                                    WHERE job_id = %s"""
+                    self.cursor_db.execute(update_job, (cluster_id, "FALSE", "FALSE", job_id))
                     if self.cursor_db.rowcount == 1:
-                        print("The job {} is updated".format(job_id))
+                        print(f"The job {job_id} is updated")
                 self.close_connection()
             except psycopg2.IntegrityError as e:
-                print(
-                    "IntegrityError for the job {}, already assigned to another node error {}".format(
-                        job_id, str(e)
-                    )
-                )
+                print(f"IntegrityError for the job {job_id}, already assigned to another node error {str(e)}")
                 self.job_description = None
                 self.connection.rollback()
             except (ValueError, IndexError) as e:
-                print(
-                    "Error as the all jobs are already assigned to another nodes {}".format(
-                        str(e)
-                    )
-                )
+                print(f"Error as the all jobs are already assigned to another nodes {str(e)}")
 
     def fetch_job_arguments(self, cluster_id):
         #self.add_jobs_in_avail_which_failed()
@@ -292,10 +268,12 @@ class DBConnector(metaclass=ABCMeta):
 
         end_time = datetime.now()
         time_taken = duration_till_now(start)
-        update_job = f"""UPDATE {avail_jobs} set job_end_time = %s, evaluation_time = evaluation_time + %s WHERE job_id = %s"""
+        update_job = f"""UPDATE {avail_jobs} set job_end_time = %s, evaluation_time = evaluation_time + %s WHERE 
+                         job_id = %s RETURNING evaluation_time"""
         self.cursor_db.execute(update_job, (end_time, time_taken, job_id))
         if self.cursor_db.rowcount == 1:
-            self.logger.info(f"The job {job_id} end time {end_time} is updated")
+            evaluation_time = self.cursor_db.fetchone()[0]
+            self.logger.info(f"The job {job_id} end time {end_time} is updated, total-time {evaluation_time}")
         self.close_connection()
 
     def insert_results(self, experiment_schema, experiment_table, results, **kwargs):
@@ -358,13 +336,11 @@ class DBConnector(metaclass=ABCMeta):
                         results[col] = "Infinity"
                     values_tuples.append(results[col])
             job_id = results["job_id"]
-            select_job = "SELECT * from {0} WHERE job_id={1}".format(
-                results_table, job_id
-            )
+            select_job = f"SELECT * from {results_table} WHERE job_id={job_id}"
             self.cursor_db.execute(select_job)
             old_results = self.cursor_db.fetchone()
 
-            update_result = "UPDATE {0} set {1} where job_id= %s ".format(results_table, update_str)
+            update_result = f"UPDATE {results_table} set {update_str} where job_id= %s "
             self.logger.info(update_result)
             values_tuples.append(results["job_id"])
             self.logger.info(f"Values {tuple(values_tuples)}")
@@ -376,20 +352,14 @@ class DBConnector(metaclass=ABCMeta):
 
     def append_error_string_in_running_job(self, job_id, error_message, **kwargs):
         self.init_connection(cursor_factory=None)
-        running_jobs = "{}.running_jobs".format(self.schema)
-        current_message = (
-            "SELECT cluster_id, error_history from {0} WHERE {0}.job_id = {1}".format(
-                running_jobs, job_id
-            )
-        )
+        running_jobs = f"{self.schema}.running_jobs"
+        current_message = (f"SELECT cluster_id, error_history from {running_jobs} WHERE {running_jobs}.job_id = {job_id}")
         self.cursor_db.execute(current_message)
         cur_message = self.cursor_db.fetchone()
         error_message = "cluster{}".format(cur_message[0]) + error_message
         if cur_message[1] != "NA":
             error_message = error_message + ";\n" + cur_message[1]
-        update_job = "UPDATE {0} SET error_history = %s, interrupted = %s, finished=%s WHERE job_id = %s".format(
-            running_jobs
-        )
+        update_job = f"UPDATE {running_jobs} SET error_history = %s, interrupted = %s, finished=%s WHERE job_id = %s"
         self.cursor_db.execute(update_job, (error_message, True, False, job_id))
         if self.cursor_db.rowcount == 1:
             self.logger.info("The job {} is interrupted".format(job_id))
@@ -557,7 +527,7 @@ class DBConnector(metaclass=ABCMeta):
         self.init_connection()
         avail_jobs = "{}.avail_jobs".format(self.schema)
         select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND" \
-                     f" {avail_jobs}.job_id<={max_job_id} ORDER  BY {avail_jobs}.job_id"
+                     f" {avail_jobs}.job_id<={max_job_id} ORDER  BY {avail_jobs}.base_learner, {avail_jobs}.job_id"
 
         self.cursor_db.execute(select_job)
         jobs_all = self.cursor_db.fetchall()

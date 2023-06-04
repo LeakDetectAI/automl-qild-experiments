@@ -6,7 +6,7 @@
 #SBATCH --mem=128G
 #SBATCH -A hpc-prf-autosca
 #SBATCH -t 3-00:00:00
-#SBATCH -p gpu
+#SBATCH -p largemem
 #SBATCH -o /scratch/hpc-prf-autosca/prithag/clusterout/%x-%j
 #SBATCH -e /scratch/hpc-prf-autosca/prithag/clusterout/%x-%j
 
@@ -15,8 +15,11 @@
 cd $PFS_FOLDER/information-leakage-techniques/
 ml lang
 ml Python/3.9.5
-echo $PYTHONUSERBASE
-echo $PATH
+ml load Python/3.9.5-GCCcore-10.3.0
+
+export PYTHONUSERBASE=$PFS_FOLDER/.local
+export PATH=$PFS_FOLDER/.bin:$PATH
+export PATH=$PFS_FOLDER/.local/bin:$PATH
 which python
 which pip
 

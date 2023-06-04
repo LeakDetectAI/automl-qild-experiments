@@ -145,6 +145,8 @@ if __name__ == "__main__":
                 results = {'job_id': str(job_id), 'cluster_id': str(cluster_id)}
                 results['hypothesis'] = json.dumps(values_of_m, cls=NpEncoder)
                 results['delay'] = f"{dataset_reader.delay}"
+                results['fold_id'] = f"{dataset_reader.fold_id}"
+                results['imbalance'] = f"{dataset_reader.imbalance}"
                 for metric_name, evaluation_metric in lp_metric_dict[learning_problem].items():
                     metric_loss = evaluation_metric(y_true, y_pred)
                     if np.isnan(metric_loss) or np.isinf(metric_loss):

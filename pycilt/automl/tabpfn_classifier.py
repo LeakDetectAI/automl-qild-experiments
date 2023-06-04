@@ -1,6 +1,7 @@
 import logging
 
 import numpy as np
+import torch
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.utils import check_random_state
 from tabpfn import TabPFNClassifier
@@ -10,7 +11,7 @@ from pycilt.automl.reduction_techniques_tabpfn import reduction_techniques, n_re
 
 
 class AutoTabPFNClassifier(AutomlClassifier):
-    def __init__(self, n_features, n_classes, n_ensembles=100, device='cpu', reduction_technique='select_from_model_rf',
+    def __init__(self, n_features, n_classes, n_ensembles=100, reduction_technique='select_from_model_rf',
                  random_state=None, **kwargs):
         self.n_features = n_features
         self.n_classes = n_classes
@@ -20,7 +21,12 @@ class AutoTabPFNClassifier(AutomlClassifier):
             raise ValueError(f"Reduction type {reduction_technique} not defined {reduction_techniques.keys()}")
         self.reduction_technique = reduction_technique
         self.selection_model = reduction_techniques[reduction_technique]
+        if torch.cuda.is_available():
+            device = 'cuda'
+        else:
+            device = 'cpu'
         self.device = device
+        self.logger.info(f"Device {self.device}")
         self.n_ensembles = n_ensembles
         self.__is_fitted__ = False
         self.model = None
