@@ -122,11 +122,11 @@ if __name__ == "__main__":
                 y_pred = []
                 values_of_m = {}
                 for label, (X, y) in dataset_reader.dataset_dictionary.items():
-                    logger.info(f"Running the detector for label {label}")
+                    ground_truth = label in dataset_reader.vulnerable_classes
+                    logger.info(f"Running the detector for label {label} vulnerable {ground_truth}")
                     detector_params['padding_name'] = label
                     ild_model = ild_learner(**detector_params)
                     ild_model.fit(X, y)
-                    ground_truth = label in dataset_reader.vulnerable_classes
                     predicted_decision, n_hypothesis_detection = ild_model.detect(detection_method=detector_method)
                     logger.info(f"The label is vulnerable {ground_truth} and predicted {predicted_decision}")
                     y_true.append(ground_truth)

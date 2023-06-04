@@ -322,9 +322,24 @@ class DBConnector(metaclass=ABCMeta):
             self.init_connection(cursor_factory=None)
 
         try:
-            insert_result = f"INSERT INTO {results_table} ({columns}) VALUES ({values_str})"
-            self.logger.info("Inserting results: {}".format(insert_result))
-            self.cursor_db.execute(insert_result)
+            keys = list(results.keys())
+            values = list(results.values())
+            columns = ", ".join(list(results.keys()))
+            values_str = []
+            for i, (key, val) in enumerate(zip(keys, values)):
+                if isinstance(val, dict):
+                    val = json.dumps(val, cls=NpEncoder)
+                else:
+                    val = str(val)
+                values_str.append(val)
+                if i == 0:
+                    str_values = "%s"
+                else:
+                    str_values = str_values + ", %s"
+
+            insert_result = f"INSERT INTO {results_table} ({columns}) VALUES ({str_values}) RETURNING job_id"
+            self.cursor_db.execute(insert_result, tuple(values_str))
+            self.logger.info(f"Inserting results: {insert_result} values {values_str}")
             if self.cursor_db.rowcount == 1:
                 self.logger.info(f"Results inserted for the job {results['job_id']}")
         except psycopg2.IntegrityError as e:
@@ -549,9 +564,6 @@ class DBConnector(metaclass=ABCMeta):
         self.logger.info(jobs_all)
         imbalances = [0.1, 0.3, 0.5]
         dataset_ids = list(get_openml_datasets().keys())
-        detector_methods = list(leakage_detector_methods.keys())
-        mi_detector_method = re.sub(r'(?<!^)(?=[A-Z])', '_', ESTIMATED_MUTUAL_INFORMATION).lower()
-        detector_methods.remove(mi_detector_method)
         for job in jobs_all:
             job = dict(job)
             del job["job_id"]
@@ -563,43 +575,35 @@ class DBConnector(metaclass=ABCMeta):
             self.logger.info(print_dictionary(job))
             for dataset_id in dataset_ids:
                 for imbalance in imbalances:
-                    self.logger.info(f"Inserting job with {imbalance}, dataset_id {dataset_id}")
-                    base_learner = job["base_learner"]
-                    if base_learner in [GMM_MI_ESTIMATOR, MINE_MI_ESTIMATOR]:
-                        methods = [mi_detector_method]
-                    elif base_learner in [AUTO_GLUON, TABPNF, MULTI_LAYER_PERCEPTRON]:
-                        methods = copy.deepcopy(detector_methods)
-                    for detector_method in methods:
-                        job['detector_method'] = detector_method
-                        keys = list(job.keys())
-                        values = list(job.values())
-                        columns = ", ".join(list(job.keys()))
-                        values_str = []
-                        for i, (key, val) in enumerate(zip(keys, values)):
-                            if isinstance(val, dict):
-                                if key == 'dataset_params':
-                                    val['dataset_id'] = dataset_id
-                                    val['imbalance'] = imbalance
-                                    self.logger.info(f"Dataset Params {val}")
-                                val = json.dumps(val, cls=NpEncoder)
-                            else:
-                                val = str(val)
-                            values_str.append(val)
-                            if i == 0:
-                                str_values = "%s"
-                            else:
-                                str_values = str_values + ", %s"
-                        condition = self.check_exists(job)
-                        if not condition:
-                            insert_result = f"INSERT INTO {avail_jobs} ({columns}) VALUES ({str_values}) RETURNING job_id"
-                            self.cursor_db.execute(insert_result, tuple(values_str))
-                            id_of_new_row = self.cursor_db.fetchone()[0]
-                            self.logger.info("Inserting results: {} {}".format(insert_result, values_str))
-                            if self.cursor_db.rowcount == 1:
-                                self.logger.info(f"Results inserted for the job {id_of_new_row}")
-                            self.connection.commit()
+                    keys = list(job.keys())
+                    values = list(job.values())
+                    columns = ", ".join(list(job.keys()))
+                    values_str = []
+                    for i, (key, val) in enumerate(zip(keys, values)):
+                        if isinstance(val, dict):
+                            if key == 'dataset_params':
+                                val['dataset_id'] = dataset_id
+                                val['imbalance'] = imbalance
+                                self.logger.info(f"Dataset Params {val}")
+                            val = json.dumps(val, cls=NpEncoder)
                         else:
-                            self.logger.info(f"Job already exist")
+                            val = str(val)
+                        values_str.append(val)
+                        if i == 0:
+                            str_values = "%s"
+                        else:
+                            str_values = str_values + ", %s"
+                    condition = self.check_exists(job)
+                    if not condition:
+                        insert_result = f"INSERT INTO {avail_jobs} ({columns}) VALUES ({str_values}) RETURNING job_id"
+                        self.cursor_db.execute(insert_result, tuple(values_str))
+                        id_of_new_row = self.cursor_db.fetchone()[0]
+                        self.logger.info("Inserting results: {} {}".format(insert_result, values_str))
+                        if self.cursor_db.rowcount == 1:
+                            self.logger.info(f"Results inserted for the job {id_of_new_row}")
+                        self.connection.commit()
+                    else:
+                        self.logger.info(f"Job already exist")
         self.close_connection()
 
     def insert_detection_methods(self, dataset="openml_dataset"):

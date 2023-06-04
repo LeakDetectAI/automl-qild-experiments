@@ -11,7 +11,7 @@
 #SBATCH -e /scratch/hpc-prf-autosca/prithag/clusterout/%x-%j
 
 
-#largemem
+#largemem, normal
 cd $PFS_FOLDER/information-leakage-techniques/
 ml lang
 ml Python/3.9.5
