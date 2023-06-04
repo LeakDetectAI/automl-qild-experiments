@@ -6,7 +6,7 @@
 #SBATCH --mem=128G
 #SBATCH -A hpc-prf-autosca
 #SBATCH -t 3-00:00:00
-#SBATCH -p normal
+#SBATCH -p gpu
 #SBATCH -o /scratch/hpc-prf-autosca/prithag/clusterout/%x-%j
 #SBATCH -e /scratch/hpc-prf-autosca/prithag/clusterout/%x-%j
 

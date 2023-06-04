@@ -1,4 +1,3 @@
-import copy
 import hashlib
 import json
 import logging
@@ -548,6 +547,7 @@ class DBConnector(metaclass=ABCMeta):
             hash_value_new = self.get_hash_value_for_job_ild_check(job)
         else:
             hash_value_new = self.get_hash_value_for_job(job)
+        self.logger.info(f"Hash Value {hash_value_new}")
         for hash_value_existing in self.current_hash_values:
             if hash_value_existing == hash_value_new:
                 return True
@@ -573,12 +573,15 @@ class DBConnector(metaclass=ABCMeta):
             del job['hash_value']
             self.logger.info("###########################################################")
             self.logger.info(print_dictionary(job))
-            for dataset_id in dataset_ids:
-                for imbalance in imbalances:
+            detector_method = job['detector_method']
+            base_learner = job["base_learner"]
+            for imbalance in imbalances:
+                for dataset_id in dataset_ids:
                     keys = list(job.keys())
                     values = list(job.values())
                     columns = ", ".join(list(job.keys()))
                     values_str = []
+                    self.logger.info(f"Learner {base_learner} Detector Method {detector_method}")
                     for i, (key, val) in enumerate(zip(keys, values)):
                         if isinstance(val, dict):
                             if key == 'dataset_params':
@@ -602,6 +605,8 @@ class DBConnector(metaclass=ABCMeta):
                         if self.cursor_db.rowcount == 1:
                             self.logger.info(f"Results inserted for the job {id_of_new_row}")
                         self.connection.commit()
+                        hash_value_new = self.get_hash_value_for_job_ild_check(job)
+                        self.current_hash_values.append(hash_value_new)
                     else:
                         self.logger.info(f"Job already exist")
         self.close_connection()
@@ -634,6 +639,7 @@ class DBConnector(metaclass=ABCMeta):
             methods = detection_methods[base_learner]
             for detector_method in methods:
                 job['detector_method'] = detector_method
+                self.logger.info(f"Learner {base_learner} Detector Method {detector_method}")
                 keys = list(job.keys())
                 values = list(job.values())
                 columns = ", ".join(list(job.keys()))
@@ -657,6 +663,8 @@ class DBConnector(metaclass=ABCMeta):
                     if self.cursor_db.rowcount == 1:
                         self.logger.info(f"Results inserted for the job {id_of_new_row}")
                     self.connection.commit()
+                    hash_value_new = self.get_hash_value_for_job_ild_check(job)
+                    self.current_hash_values.append(hash_value_new)
                 else:
                     self.logger.info(f"Job already exist")
         self.close_connection()
@@ -700,6 +708,8 @@ class DBConnector(metaclass=ABCMeta):
                     id_of_new_row = self.cursor_db.fetchone()[0]
                     if self.cursor_db.rowcount == 1:
                         self.logger.info("Results inserted for the job {}".format(id_of_new_row))
+                    hash_value_new = self.get_hash_value_for_job(job)
+                    self.current_hash_values.append(hash_value_new)
                     self.connection.commit()
         self.close_connection()
 
@@ -756,6 +766,8 @@ class DBConnector(metaclass=ABCMeta):
                             self.logger.info("Inserting results: {} {}".format(insert_result, values_str))
                             if self.cursor_db.rowcount == 1:
                                 self.logger.info(f"Results inserted for the job {id_of_new_row}")
+                            hash_value_new = self.get_hash_value_for_job(job)
+                            self.current_hash_values.append(hash_value_new)
                             self.connection.commit()
                         else:
                             self.logger.info(f"Job already exist")
@@ -831,6 +843,8 @@ class DBConnector(metaclass=ABCMeta):
                                 self.logger.info("Inserting results: {} {}".format(insert_result, values_str))
                                 if self.cursor_db.rowcount == 1:
                                     self.logger.info(f"Results inserted for the job {id_of_new_row}")
+                                hash_value_new = self.get_hash_value_for_job(job)
+                                self.current_hash_values.append(hash_value_new)
                                 self.connection.commit()
                             else:
                                 self.logger.info(f"Job already exist")
