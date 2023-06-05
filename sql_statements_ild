@@ -73,9 +73,6 @@ create table results.leakage_detection
 
 alter table results.leakage_detection owner to autoscaadmin;
 
-alter sequence leakage_detection.avail_jobs_job_id_seq restart with 16;
-alter sequence leakage_detection.avail_jobs_job_id_seq restart with 16;
-DELETE from leakage_detection.avail_jobs where job_id>=16;
 
 DELETE from leakage_detection.running_jobs where True;
 alter sequence leakage_detection.running_jobs_running_id_seq restart with 1;

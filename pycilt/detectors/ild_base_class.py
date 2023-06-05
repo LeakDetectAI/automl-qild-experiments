@@ -203,7 +203,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
         return keys
 
     def read_results_file(self, detection_method):
-        metric_name = leakage_detector_methods[detection_method]
+        metric_name = leakage_detection_methods[detection_method]
         model_results = {}
         if os.path.exists(self.results_file):
             file = h5py.File(self.results_file, 'r')
@@ -237,7 +237,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             pvals_corrected = [1.0] * len(p_values) + list(pvals_corrected)
             return p_values, pvals_corrected, reject
 
-        if detection_method not in leakage_detector_methods.keys():
+        if detection_method not in leakage_detection_methods.keys():
             raise ValueError(f"Invalid Detection Method {detection_method}")
         else:
             n_training_folds = self.cv_iterations - 1
@@ -246,7 +246,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             model_p_values = {}
             for model_name, metric_vals in model_results.items():
                 p_value = 1.0
-                if detection_method in mi_leakage_detector_methods.keys():
+                if detection_method in mi_leakage_detection_methods.keys():
                     base_mi = self.random_state.rand(len(metric_vals)) * 1e-2
                     p_value = paired_ttest(base_mi, metric_vals, n_training_folds, n_test_folds, correction=True)
                     self.logger.info("Normal Paired T-Test for MI estimation Technique")

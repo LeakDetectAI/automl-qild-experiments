@@ -1,4 +1,4 @@
-from autogluon.core.space import Real, Int, Categorical, Space
+from autogluon.core.space import Real, Int, Categorical
 
 hyperparameters = {
     "NN_TORCH": {
@@ -45,6 +45,7 @@ hyperparameters = {
         "max_features": Categorical("sqrt", "log2"),
         "min_samples_leaf": Int(lower=2, upper=50, default=10),
         "min_samples_split": Int(lower=2, upper=50, default=10),
+        "class_weight": Categorical("balanced", "balanced_subsample")
     },
     "XT": {
         "n_estimators": Int(20, 300),
@@ -53,6 +54,7 @@ hyperparameters = {
         "max_features": Categorical("sqrt", "log2"),
         "min_samples_leaf": Int(lower=2, upper=50, default=10),
         "min_samples_split": Int(lower=2, upper=50, default=10),
+        "class_weight": Categorical("balanced", "balanced_subsample")
     },
     "KNN": {
         "weights": Categorical("uniform", "distance"),
@@ -62,12 +64,6 @@ hyperparameters = {
 }
 
 reduced_hyperparameters = {
-    "NN_TORCH": {
-        "learning_rate": Real(1e-5, 1e-1, default=5e-4, log=True),
-        "dropout_prob": Real(0.0, 0.5, default=0.1),
-        "num_layers": Int(lower=2, upper=20, default=5),
-        "hidden_size": Int(lower=8, upper=256, default=32),
-    },
     "FASTAI": {
         "learning_rate": Real(1e-5, 1e-1, default=5e-4, log=True),
         "wd": Real(1e-6, 1e-1, default=5e-4, log=True),
@@ -82,6 +78,7 @@ reduced_hyperparameters = {
         "max_features": Categorical("sqrt", "log2"),
         "min_samples_leaf": Int(lower=2, upper=50, default=10),
         "min_samples_split": Int(lower=2, upper=50, default=10),
+        "class_weight": Categorical("balanced")
     },
     "XT": {
         "n_estimators": Int(20, 300),
@@ -90,11 +87,7 @@ reduced_hyperparameters = {
         "max_features": Categorical("sqrt", "log2"),
         "min_samples_leaf": Int(lower=2, upper=50, default=10),
         "min_samples_split": Int(lower=2, upper=50, default=10),
-    },
-    "KNN": {
-        "weights": Categorical("uniform", "distance"),
-        "n_neighbors": Int(lower=3, upper=5, default=5),
-        "p": Categorical(1, 2, 3),
+        "class_weight": Categorical("balanced")
     },
 }
 

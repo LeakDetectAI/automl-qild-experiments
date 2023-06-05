@@ -89,7 +89,7 @@ class MultiLayerPerceptron(BaseEstimator, ClassifierMixin):
             y = to_categorical(y, num_classes=self.n_classes)
         return y
 
-    def fit(self, X, y, epochs=50, batch_size=32, callbacks=None, validation_split=0.1, verbose=0, **kwd):
+    def fit(self, X, y, epochs=50, batch_size=32, callbacks=None, validation_split=0.1, verbose=1, **kwd):
         class_weights = class_weight.compute_class_weight('balanced', classes=np.unique(y), y=y)
         class_weights = dict(enumerate(class_weights))
         self._construct_layers(

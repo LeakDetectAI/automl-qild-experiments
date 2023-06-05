@@ -82,6 +82,7 @@ mi_estimators = {GMM_MI_ESTIMATOR: GMMMIEstimator,
 
 leakage_detectors = {AUTO_GLUON: AutoGluonLeakageDetector,
                      TABPNF: TabPFNLeakageDetector,
+                     RANDOM_FOREST: RandomForestLeakageDetector,
                      MULTI_LAYER_PERCEPTRON: MLPLeakageDetector,
                      MINE_MI_ESTIMATOR: MIEstimationLeakageDetector,
                      GMM_MI_ESTIMATOR: MIEstimationLeakageDetector}
@@ -211,7 +212,7 @@ def create_directory_safely(path, is_file_path=False):
         if is_file_path:
             path = os.path.dirname(path)
         if not os.path.exists(path):
-            os.mkdir(path)
+            os.makedirs(path, exist_ok=True)
     except Exception as e:
         print(str(e))
 

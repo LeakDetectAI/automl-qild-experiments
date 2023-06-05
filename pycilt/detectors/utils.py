@@ -7,8 +7,8 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 from pycilt.contants import *
 from pycilt.metrics import mid_point_mi, log_loss_estimation, pc_softmax_estimation
 
-__all__ = ['mi_estimation_metrics', 'classification_leakage_detector_methods', 'mi_leakage_detector_methods',
-           'leakage_detector_methods', 'calibrators', 'calibrator_params']
+__all__ = ['mi_estimation_metrics', 'classification_leakage_detection_methods', 'mi_leakage_detection_methods',
+           'leakage_detection_methods', 'calibrators', 'calibrator_params']
 mi_estimation_metrics = {
     ACCURACY: accuracy_score,
     CONFUSION_MATRIX: confusion_matrix,
@@ -22,20 +22,20 @@ mi_estimation_metrics = {
     PC_SOFTMAX_MI_ESTIMATION: pc_softmax_estimation
 }
 
-classification_leakage_detector_methods = {
+classification_leakage_detection_methods = {
     PAIRED_TTEST: ACCURACY,
     FISHER_EXACT_TEST_MEAN: CONFUSION_MATRIX,
     FISHER_EXACT_TEST_MEDIAN: CONFUSION_MATRIX,
 }
-mi_leakage_detector_methods = {}
+mi_leakage_detection_methods = {}
 for value in [ESTIMATED_MUTUAL_INFORMATION, MID_POINT_MI_ESTIMATION, LOG_LOSS_MI_ESTIMATION,
               LOG_LOSS_MI_ESTIMATION_ISOTONIC_REGRESSION, LOG_LOSS_MI_ESTIMATION_PLATT_SCALING,
               LOG_LOSS_MI_ESTIMATION_BETA_CALIBRATION, LOG_LOSS_MI_ESTIMATION_TEMPERATURE_SCALING,
               LOG_LOSS_MI_ESTIMATION_HISTOGRAM_BINNING, PC_SOFTMAX_MI_ESTIMATION]:
     key = re.sub(r'(?<!^)(?=[A-Z])', '_', value).lower()
     key = key.replace('m_i', "mi")
-    mi_leakage_detector_methods[key] = value
-leakage_detector_methods = {**classification_leakage_detector_methods, **mi_leakage_detector_methods}
+    mi_leakage_detection_methods[key] = value
+leakage_detection_methods = {**classification_leakage_detection_methods, **mi_leakage_detection_methods}
 calibrators = {ISOTONIC_REGRESSION: IsotonicRegression,
                PLATT_SCALING: LogisticCalibration,
                HISTOGRAM_BINNING: HistogramBinning,

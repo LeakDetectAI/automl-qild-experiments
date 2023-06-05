@@ -32,7 +32,7 @@ class AutoGluonClassifier(AutomlClassifier):
         else:
             self.hyperparameters = None
         if remove_boosting_models:
-            self.exclude_model_types = ['GBM', 'CAT', 'XGB', 'LGB']
+            self.exclude_model_types = ['GBM', 'CAT', 'XGB', 'LGB', 'KNN', 'NN_TORCH']
         else:
             self.exclude_model_types = []
         self.auto_stack = auto_stack
@@ -88,6 +88,7 @@ class AutoGluonClassifier(AutomlClassifier):
         train_data = self.convert_to_dataframe(X, y)
         while not self._is_fitted_:
             try:
+                self.logger.info("Fitting the model from the scratch")
                 self.model = TabularPredictor(label=self.class_label, sample_weight=self.sample_weight,
                                               problem_type=self.problem_type, eval_metric=self.eval_metric,
                                               path=self.output_folder)

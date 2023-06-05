@@ -29,7 +29,7 @@ if __name__ == "__main__":
         if schema == LEAKAGE_DETECTION:
             max_job_id = 15
         dbConnector.insert_new_jobs_openml(dataset=OPENML_DATASET, max_job_id=max_job_id)
-        #dbConnector.insert_detection_methods(dataset=OPENML_DATASET)
+        dbConnector.insert_detection_methods(dataset=OPENML_DATASET)
         # dbConnector.insert_new_jobs_different_configurations(max_job_id=max_job_id, dataset=SYNTHETIC_DATASET)
         # dbConnector.insert_new_jobs_different_configurations(max_job_id=max_job_id, dataset=SYNTHETIC_DISTANCE_DATASET)
         # dbConnector.insert_new_jobs_imbalanced(max_job_id=max_job_id, dataset=SYNTHETIC_IMBALANCED_DATASET)

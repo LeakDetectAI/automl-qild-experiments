@@ -6,6 +6,7 @@ from autogluon.core.models import AbstractModel
 from packaging import version
 from sklearn.linear_model import RidgeClassifier, SGDClassifier
 from sklearn.svm import LinearSVC
+from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
 
 from pycilt.utils import print_dictionary, sigmoid
 
@@ -67,12 +68,12 @@ def log_callback(parameters):
 
 
 def get_scores(X, estimator):
-    y_pred = estimator.predict(X)
     try:
         pred_prob = estimator.predict_proba(X)
     except:
         pred_prob = estimator.decision_function(X)
     # logger.info("Predict Probability shape {}, {}".format(pred_prob.shape, y_test.shape))
+
     if len(pred_prob.shape) == 2 and pred_prob.shape[-1] > 1:
         p_pred = pred_prob
     else:
@@ -85,8 +86,12 @@ def get_scores(X, estimator):
         p_pred = sigmoid(p_pred)
         if len(p_pred.shape) == 1:
             p_pred = np.hstack(((1 - p_pred)[:, None], p_pred[:, None]))
+    if isinstance(estimator, TabPFNClassifier):
+        y_pred = np.argmax(p_pred, axis=-1)
+    else:
+        y_pred = estimator.predict(X)
     y_pred = np.array(y_pred)
     p_pred = np.array(p_pred)
-    #logger = logging.getLogger("Score")
-    #logger.info(f"Scores Shape {p_pred.shape}, Classes {np.unique(y_pred)}")
+    # logger = logging.getLogger("Score")
+    # logger.info(f"Scores Shape {p_pred.shape}, Classes {np.unique(y_pred)}")
     return p_pred, y_pred

@@ -13,12 +13,8 @@ from psycopg2.extras import DictCursor
 from experiments.utils import get_duration_seconds, duration_till_now, get_openml_datasets
 from pycilt.contants import *
 from pycilt.dataset_readers import GEN_TYPES, generate_samples_per_class
-from pycilt.detectors.utils import leakage_detector_methods
+from pycilt.detectors.utils import leakage_detection_methods
 from pycilt.utils import print_dictionary
-
-LEARNERS = ['gmm_mi_estimator', 'gmm_mi_estimator_more_instances', 'gmm_mi_estimator_true',
-            'gmm_mi_estimator_more_instances_true', 'auto_gluon']
-turn_filter_on = False
 
 
 class NpEncoder(json.JSONEncoder):
@@ -107,7 +103,7 @@ class DBConnector(metaclass=ABCMeta):
             "inner_folds",
             "validation_loss",
             "dataset",
-            "detector_method"
+            "detection_method"
         ]
         hash_string = ""
         for k in keys:
@@ -192,18 +188,14 @@ class DBConnector(metaclass=ABCMeta):
                 print(f"Error as the all jobs are already assigned to another nodes {str(e)}")
 
     def fetch_job_arguments(self, cluster_id):
-        #self.add_jobs_in_avail_which_failed()
+        # self.add_jobs_in_avail_which_failed()
         self.init_connection()
         avail_jobs = f"{self.schema}.avail_jobs"
         running_jobs = f"{self.schema}.running_jobs"
-        if turn_filter_on:
-            select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu}) AND 
-                             learner=any(array{LEARNERS}) AND NOT EXISTS(SELECT job_id 
-                             FROM {running_jobs} r WHERE r.interrupted = FALSE AND r.job_id = row.job_id)"""
-        else:
-            select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu}) AND 
-                                    NOT EXISTS(SELECT job_id FROM {running_jobs} r WHERE r.interrupted = FALSE 
-                                    AND r.job_id = row.job_id)"""
+
+        select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu}) AND 
+                         NOT EXISTS(SELECT job_id FROM {running_jobs} r WHERE r.interrupted = FALSE 
+                         AND r.job_id = row.job_id)"""
         print(select_job)
         self.cursor_db.execute(select_job)
         job_ids = [j for i in self.cursor_db.fetchall() for j in i]
@@ -524,11 +516,13 @@ class DBConnector(metaclass=ABCMeta):
         return False
 
     def insert_new_jobs_openml(self, dataset="openml_dataset", max_job_id=15):
+        learners = [TABPNF, TABPNF]
+
         self.init_connection()
         avail_jobs = "{}.avail_jobs".format(self.schema)
         select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND" \
-                     f" {avail_jobs}.job_id<={max_job_id} ORDER  BY {avail_jobs}.base_learner, {avail_jobs}.job_id"
-
+                     f" {avail_jobs}.job_id<={max_job_id} and {avail_jobs}.base_learner NOT IN {tuple(learners)} " \
+                     f"ORDER BY {avail_jobs}.job_id"
         self.cursor_db.execute(select_job)
         jobs_all = self.cursor_db.fetchall()
         self.logger.info(jobs_all)
@@ -543,7 +537,7 @@ class DBConnector(metaclass=ABCMeta):
             del job['hash_value']
             self.logger.info("###########################################################")
             self.logger.info(print_dictionary(job))
-            detector_method = job['detector_method']
+            detection_method = job['detection_method']
             base_learner = job["base_learner"]
             for imbalance in imbalances:
                 for dataset_id in dataset_ids:
@@ -551,7 +545,7 @@ class DBConnector(metaclass=ABCMeta):
                     values = list(job.values())
                     columns = ", ".join(list(job.keys()))
                     values_str = []
-                    self.logger.info(f"Learner {base_learner} Detector Method {detector_method}")
+                    self.logger.info(f"Learner {base_learner} Detector Method {detection_method}")
                     for i, (key, val) in enumerate(zip(keys, values)):
                         if isinstance(val, dict):
                             if key == 'dataset_params':
@@ -589,13 +583,13 @@ class DBConnector(metaclass=ABCMeta):
         jobs_all = self.cursor_db.fetchall()
         self.logger.info(jobs_all)
 
-        cls_detector_methods = list(leakage_detector_methods.keys())
-        mi_detector_method = re.sub(r'(?<!^)(?=[A-Z])', '_', ESTIMATED_MUTUAL_INFORMATION).lower()
-        cls_detector_methods.remove(mi_detector_method)
-        mi_detection_methods = [mi_detector_method]
+        cls_detection_methods = list(leakage_detection_methods.keys())
+        mi_detection_method = re.sub(r'(?<!^)(?=[A-Z])', '_', ESTIMATED_MUTUAL_INFORMATION).lower()
+        cls_detection_methods.remove(mi_detection_method)
+        mi_detection_methods = [mi_detection_method]
         detection_methods = {MINE_MI_ESTIMATOR: mi_detection_methods, GMM_MI_ESTIMATOR: mi_detection_methods,
-                             AUTO_GLUON: cls_detector_methods, TABPNF: cls_detector_methods,
-                             MULTI_LAYER_PERCEPTRON: cls_detector_methods}
+                             AUTO_GLUON: cls_detection_methods, TABPNF: cls_detection_methods,
+                             MULTI_LAYER_PERCEPTRON: cls_detection_methods, RANDOM_FOREST: cls_detection_methods}
         for job in jobs_all:
             job = dict(job)
             del job["job_id"]
@@ -607,9 +601,9 @@ class DBConnector(metaclass=ABCMeta):
             self.logger.info(print_dictionary(job))
             base_learner = job["base_learner"]
             methods = detection_methods[base_learner]
-            for detector_method in methods:
-                job['detector_method'] = detector_method
-                self.logger.info(f"Learner {base_learner} Detector Method {detector_method}")
+            for detection_method in methods:
+                job['detection_method'] = detection_method
+                self.logger.info(f"Learner {base_learner} Detector Method {detection_method}")
                 keys = list(job.keys())
                 values = list(job.values())
                 columns = ", ".join(list(job.keys()))

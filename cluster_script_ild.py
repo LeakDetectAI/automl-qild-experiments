@@ -18,18 +18,18 @@ import inspect
 import json
 import logging
 import os
+import pickle as pk
 import sys
 import traceback
 from datetime import datetime
 
-import h5py
 import numpy as np
 from docopt import docopt
 
 from experiments.dbconnection import DBConnector, NpEncoder
 from experiments.utils import *
 from pycilt.utils import print_dictionary
-import pickle as pk
+
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 LOGS_FOLDER = 'logs'
 RESULT_FOLDER = 'results'
@@ -65,7 +65,7 @@ if __name__ == "__main__":
                 dataset_params = dbConnector.job_description["dataset_params"]
 
                 base_learner = dbConnector.job_description["base_learner"]
-                detector_method = dbConnector.job_description["detector_method"]
+                detection_method = dbConnector.job_description["detection_method"]
                 learning_problem = dbConnector.job_description["learning_problem"]
 
                 fit_params = dbConnector.job_description["fit_params"]
@@ -86,7 +86,7 @@ if __name__ == "__main__":
                     validation_loss = None
                 random_state = np.random.RandomState(seed=seed + dataset_params.get('dataset_id', 0))
                 # Generate different seeds for given random_states
-                BASE_DIR = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM)
+                BASE_DIR = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, base_learner.lower())
                 create_directory_safely(BASE_DIR, False)
                 log_path = os.path.join(BASE_DIR, LOGS_FOLDER, f"{hash_value}.log")
                 create_directory_safely(log_path, True)
@@ -94,7 +94,6 @@ if __name__ == "__main__":
                 setup_random_seed(random_state=random_state)
 
                 logger = logging.getLogger('Experiment')
-                print(lp_metric_dict[learning_problem].keys())
 
                 logger.info(f"DB config filePath {config_file_path}")
                 logger.info(f"Arguments {arguments}")
@@ -116,7 +115,6 @@ if __name__ == "__main__":
                                    'search_space': search_space, 'hp_iters': hp_iters, 'n_inner_folds': n_inner_folds,
                                    'validation_loss': validation_loss}
                 detector_params = convert_learner_params(detector_params)
-                print(detector_params)
                 logger.info(f"Time Taken till now: {seconds_to_time(duration_till_now(start))}  seconds")
                 y_true = []
                 y_pred = []
@@ -127,7 +125,7 @@ if __name__ == "__main__":
                     detector_params['padding_name'] = label
                     ild_model = ild_learner(**detector_params)
                     ild_model.fit(X, y)
-                    predicted_decision, n_hypothesis_detection = ild_model.detect(detection_method=detector_method)
+                    predicted_decision, n_hypothesis_detection = ild_model.detect(detection_method=detection_method)
                     logger.info(f"The label is vulnerable {ground_truth} and predicted {predicted_decision}")
                     y_true.append(ground_truth)
                     y_pred.append(predicted_decision)
@@ -147,6 +145,8 @@ if __name__ == "__main__":
                 results['delay'] = f"{dataset_reader.delay}"
                 results['fold_id'] = f"{dataset_reader.fold_id}"
                 results['imbalance'] = f"{dataset_reader.imbalance}"
+                results['base_detector'] = f"{base_learner}"
+                results['detection_method'] = f"{detection_method}"
                 for metric_name, evaluation_metric in lp_metric_dict[learning_problem].items():
                     metric_loss = evaluation_metric(y_true, y_pred)
                     if np.isnan(metric_loss) or np.isinf(metric_loss):
