@@ -81,6 +81,7 @@ mi_estimators = {GMM_MI_ESTIMATOR: GMMMIEstimator,
                  'pc_softmax_mi_estimator': PCSoftmaxMIEstimator}
 
 leakage_detectors = {AUTO_GLUON: AutoGluonLeakageDetector,
+                     AUTO_GLUON_STACK: AutoGluonLeakageDetector,
                      TABPNF: TabPFNLeakageDetector,
                      RANDOM_FOREST: RandomForestLeakageDetector,
                      MULTI_LAYER_PERCEPTRON: MLPLeakageDetector,
