@@ -6,8 +6,8 @@ from autogluon.core.models import AbstractModel
 from packaging import version
 from sklearn.linear_model import RidgeClassifier, SGDClassifier
 from sklearn.svm import LinearSVC
-from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
 
+from pycilt import AutoTabPFNClassifier
 from pycilt.utils import print_dictionary, sigmoid
 
 logger = logging.getLogger("BayesSearchUtils")
@@ -86,7 +86,7 @@ def get_scores(X, estimator):
         p_pred = sigmoid(p_pred)
         if len(p_pred.shape) == 1:
             p_pred = np.hstack(((1 - p_pred)[:, None], p_pred[:, None]))
-    if isinstance(estimator, TabPFNClassifier):
+    if isinstance(estimator, AutoTabPFNClassifier):
         y_pred = np.argmax(p_pred, axis=-1)
     else:
         y_pred = estimator.predict(X)

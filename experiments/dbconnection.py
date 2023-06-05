@@ -249,7 +249,7 @@ class DBConnector(metaclass=ABCMeta):
                 print(f"Error as the all jobs are already assigned to another nodes {str(e)}")
                 break
 
-    def mark_running_job_finished(self, job_id, start, **kwargs):
+    def mark_running_job_finished(self, job_id, start, old_time_take=0, **kwargs):
         self.init_connection()
         running_jobs = "{}.running_jobs".format(self.schema)
         avail_jobs = "{}.avail_jobs".format(self.schema)
@@ -259,7 +259,7 @@ class DBConnector(metaclass=ABCMeta):
             self.logger.info(f"The job {job_id} is finished")
 
         end_time = datetime.now()
-        time_taken = duration_till_now(start)
+        time_taken = duration_till_now(start) + old_time_take
         update_job = f"""UPDATE {avail_jobs} set job_end_time = %s, evaluation_time = evaluation_time + %s WHERE 
                          job_id = %s RETURNING evaluation_time"""
         self.cursor_db.execute(update_job, (end_time, time_taken, job_id))

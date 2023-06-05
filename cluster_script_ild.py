@@ -36,6 +36,7 @@ RESULT_FOLDER = 'results'
 EXPERIMENTS = 'experiments'
 OPTIMIZER_FOLDER = 'optimizers'
 
+
 if __name__ == "__main__":
 
     ######################## DOCOPT ARGUMENTS: #################################
@@ -91,10 +92,10 @@ if __name__ == "__main__":
                 log_path = os.path.join(BASE_DIR, LOGS_FOLDER, f"{hash_value}.log")
                 create_directory_safely(log_path, True)
                 setup_logging(log_path=log_path)
+                time_taken = get_time_taken(log_path)
                 setup_random_seed(random_state=random_state)
-
                 logger = logging.getLogger('Experiment')
-
+                logger.info(f"Time Taken till old: {time_taken} seconds")
                 logger.info(f"DB config filePath {config_file_path}")
                 logger.info(f"Arguments {arguments}")
                 logger.info(f"Job Description {print_dictionary(dbConnector.job_description)}")
@@ -161,7 +162,7 @@ if __name__ == "__main__":
                 results['hypothesis'] = json.dumps(values_of_m, cls=NpEncoder)
                 dbConnector.insert_results(experiment_schema=experiment_schema, experiment_table=experiment_table,
                                            results=results)
-                dbConnector.mark_running_job_finished(job_id, start)
+                dbConnector.mark_running_job_finished(job_id=job_id, start=start, old_time_take=time_taken)
                 logger.info(f"Job finished")
                 print(f"Job finished")
             except Exception as e:

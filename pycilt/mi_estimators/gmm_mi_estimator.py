@@ -12,10 +12,10 @@ from ..utils import log_exception_error
 
 class GMMMIEstimator(MIEstimatorBase):
     def __init__(self, n_classes, n_features, y_cat=False, covariance_type='full', reg_covar=1e-06, val_size=0.30,
-                 reduction_technique="select_from_model_et", random_state=42):
+                 reduction_technique="select_from_model_rf", random_state=42, **kwargs):
         super().__init__(n_classes=n_classes, n_features=n_features, random_state=random_state)
         self.y_cat = y_cat
-        self.num_comps = list(np.arange(2, 20, 1))
+        self.num_comps = list(np.arange(2, 20, 2))
         self.reg_covar = reg_covar
         self.n_models = 5
         self.covariance_type = covariance_type
@@ -149,7 +149,7 @@ class GMMMIEstimator(MIEstimatorBase):
         except Exception as error:
             self.logger.debug("Best Model is None")
             log_exception_error(self.logger, error)
-            score = -10000
+            score = -1000000
         return score
 
     def predict_proba(self, X, verbose=0):

@@ -68,10 +68,14 @@ class AutoGluonClassifier(AutomlClassifier):
 
         if self.model is not None:
             self.leaderboard = self.model.leaderboard(extra_info=True)
-            time_taken = self.leaderboard['fit_time'].sum() + self.leaderboard['pred_time_val'].sum()
+            time_taken = self.leaderboard['fit_time'].sum() + self.leaderboard['pred_time_val'].sum() + 20
             difference = self.time_limit - time_taken
-            self.logger.info(f"Fitting time of the model {time_taken} and remaining {difference}")
-            if difference >= 150:
+            if 200 <= self.time_limit < 300:
+                limit = 150
+            else:
+                limit = 200
+            self.logger.info(f"Fitting time of the model {time_taken} and remaining {difference}, limit {limit}")
+            if difference >= limit:
                 self.model = None
         if self.model is None:
             try:

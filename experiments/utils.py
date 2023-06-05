@@ -36,7 +36,7 @@ __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_es
            "get_duration_seconds", "duration_till_now", "time_from_now", "get_dataset_reader", "seconds_to_time",
            "time_from_now", "create_search_space", "get_dataset_reader", "convert_learner_params",
            "create_directory_safely", "setup_logging", "setup_random_seed", "check_file_exists",
-           "get_automl_learned_estimator"]
+           "get_automl_learned_estimator", "get_time_taken", "get_openml_datasets"]
 
 from pycilt.utils import log_exception_error
 
@@ -324,3 +324,21 @@ def get_openml_datasets():
             # print(dataset['name'])
             openml_datasets[dataset_id] = {'name': dataset['name'], 'link': f"https://www.openml.org/d/{dataset_id}"}
     return openml_datasets
+
+
+def get_time_taken(log_path):
+    if os.path.exists(log_path):
+        with open(log_path, "r") as file:
+            log_content = file.read()
+
+        # Use regular expressions to find the time value in the log content
+        pattern = r"total-time\s+(\d+\.\d+)"
+        match = re.search(pattern, log_content)
+
+        if match:
+            time_value = float(match.group(1))
+            print("Time value:", time_value)
+        else:
+            print("Time value not found in the log file.")
+            time_value = 0
+    return time_value
