@@ -4,7 +4,7 @@ from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
 from sklearn.feature_selection import SelectFromModel
 from sklearn.manifold import TSNE
 
-n_reduced = 15
+n_reduced = 20
 # Create a dictionary to store the techniques and their options
 reduction_techniques = {
     'select_from_model_et': SelectFromModel(ExtraTreesClassifier(), max_features=n_reduced),

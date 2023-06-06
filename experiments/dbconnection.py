@@ -259,13 +259,13 @@ class DBConnector(metaclass=ABCMeta):
             self.logger.info(f"The job {job_id} is finished")
 
         end_time = datetime.now()
-        select_job = f"""SELECT evaluation_time from {avail_jobs} WHERE job_id = %s"""
+        select_job = f"""SELECT evaluation_time from {avail_jobs} WHERE job_id = {job_id}"""
         self.cursor_db.execute(select_job)
         evaluation_time = float(self.cursor_db.fetchone()[0])  # Retrieve the first column value from the result
         old_time_take = np.max([evaluation_time, old_time_take])
         time_taken = duration_till_now(start) + old_time_take
         self.logger.info(f"The job {job_id} is old time taken {old_time_take} time taken {duration_till_now(start)}")
-        update_job = f"""UPDATE {avail_jobs} set job_end_time = %s, evaluation_time = evaluation_time + %s WHERE 
+        update_job = f"""UPDATE {avail_jobs} set job_end_time = %s, evaluation_time = %s WHERE 
                          job_id = %s RETURNING evaluation_time"""
         self.cursor_db.execute(update_job, (end_time, time_taken, job_id))
         if self.cursor_db.rowcount == 1:
