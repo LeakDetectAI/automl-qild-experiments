@@ -45,7 +45,6 @@ class AutoGluonLeakageDetector(InformationLeakageDetector):
                 X_train, X_test = X[train_index], X[test_index]
                 y_train, y_test = y[train_index], y[test_index]
                 self.calculate_majority_voting_accuracy(X_train, y_train, X_test, y_test)
-
                 train_data = self.learner.convert_to_dataframe(X_train, y_train)
                 test_data = self.learner.convert_to_dataframe(X_test, None)
                 X_t = train_data.drop(columns=['class'])  # Extract the features from the training data

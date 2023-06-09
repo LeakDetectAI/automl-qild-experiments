@@ -1,13 +1,15 @@
+import os
 import sys
 import traceback
 import warnings
 
 import numpy as np
 from sklearn.preprocessing import RobustScaler
-import os
+
 warnings.filterwarnings('ignore')
 
-__all__ = ['logsumexp', 'softmax', 'progress_bar', 'print_dictionary', 'standardize_features', 'standardize_features', 'create_directory_safely']
+__all__ = ['logsumexp', 'softmax', 'progress_bar', 'print_dictionary', 'standardize_features', 'standardize_features',
+           'create_directory_safely']
 
 
 def logsumexp(x, axis=1):
@@ -107,6 +109,7 @@ def create_directory_safely(path, is_file_path=False):
     try:
         if is_file_path:
             path = os.path.dirname(path)
-        os.makedirs(path, exist_ok=True)
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
     except Exception as e:
         print(str(e))

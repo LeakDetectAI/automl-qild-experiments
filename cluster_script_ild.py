@@ -28,7 +28,7 @@ from docopt import docopt
 
 from experiments.dbconnection import DBConnector, NpEncoder
 from experiments.utils import *
-from pycilt.utils import print_dictionary
+from pycilt.utils import *
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 LOGS_FOLDER = 'logs'
@@ -93,6 +93,10 @@ if __name__ == "__main__":
                 create_directory_safely(log_path, True)
                 setup_logging(log_path=log_path)
                 time_taken = get_time_taken(log_path)
+                if job_id >= 1828:
+                    log_path = os.path.join(BASE_DIR, LOGS_FOLDER, f"{hash_value}_{detection_method}.log")
+                    setup_logging(log_path=log_path)
+
                 setup_random_seed(random_state=random_state)
                 logger = logging.getLogger('Experiment')
                 logger.info(f"Time Taken till old: {time_taken} seconds")

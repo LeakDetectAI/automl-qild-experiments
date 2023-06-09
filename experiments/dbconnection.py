@@ -514,7 +514,7 @@ class DBConnector(metaclass=ABCMeta):
             hash_value_new = self.get_hash_value_for_job_ild_check(job)
         else:
             hash_value_new = self.get_hash_value_for_job(job)
-        self.logger.info(f"Hash Value {hash_value_new}")
+        self.logger.info(f"Hash Value New {hash_value_new}")
         for hash_value_existing in self.current_hash_values:
             if hash_value_existing == hash_value_new:
                 return True
@@ -528,6 +528,8 @@ class DBConnector(metaclass=ABCMeta):
         select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND" \
                      f" {avail_jobs}.job_id<={max_job_id} and {avail_jobs}.base_learner NOT IN {tuple(learners)} " \
                      f"ORDER BY {avail_jobs}.job_id"
+        select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND" \
+                     f" {avail_jobs}.job_id<={max_job_id} ORDER BY {avail_jobs}.job_id"
         self.cursor_db.execute(select_job)
         jobs_all = self.cursor_db.fetchall()
         self.logger.info(jobs_all)
@@ -593,8 +595,9 @@ class DBConnector(metaclass=ABCMeta):
         cls_detection_methods.remove(mi_detection_method)
         mi_detection_methods = [mi_detection_method]
         detection_methods = {MINE_MI_ESTIMATOR: mi_detection_methods, GMM_MI_ESTIMATOR: mi_detection_methods,
-                             AUTO_GLUON: cls_detection_methods, TABPNF: cls_detection_methods,
-                             MULTI_LAYER_PERCEPTRON: cls_detection_methods, RANDOM_FOREST: cls_detection_methods}
+                             AUTO_GLUON: cls_detection_methods, AUTO_GLUON_STACK: cls_detection_methods,
+                             TABPNF: cls_detection_methods, MULTI_LAYER_PERCEPTRON: cls_detection_methods,
+                             RANDOM_FOREST: cls_detection_methods}
         for job in jobs_all:
             job = dict(job)
             del job["job_id"]

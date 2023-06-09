@@ -36,7 +36,7 @@ from pycilt.bayes_search_utils import update_params_at_k, log_callback, get_scor
 from pycilt.contants import *
 from pycilt.contants import LOGS_FOLDER, RESULT_FOLDER, EXPERIMENTS, OPTIMIZER_FOLDER
 from pycilt.metrics import probability_calibration
-from pycilt.utils import print_dictionary, log_exception_error
+from pycilt.utils import *
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 

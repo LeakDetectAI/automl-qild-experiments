@@ -70,6 +70,8 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                         for metric_name, results in metric_results.items():
                             conditions.append(metric_name in model_group)
                             self.logger.info(f"Results exists for metric {metric_name}")
+                            self.logger.info(f"Results {results}")
+
         if file is not None:
             file.close()
         if os.path.exists(self.results_file) and not np.all(conditions):
@@ -204,6 +206,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
 
     def read_results_file(self, detection_method):
         metric_name = leakage_detection_methods[detection_method]
+        self.logger.info(f"For the detection method {detection_method}, metric {metric_name}")
         model_results = {}
         if os.path.exists(self.results_file):
             file = h5py.File(self.results_file, 'r')
@@ -219,13 +222,34 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                     model_results[model_name] = np.array(model_group[metric_name])
                 except KeyError as e:
                     log_exception_error(self.logger, e)
-                    self.logger.error("Error while calibrating the probabilities")
+                    self.logger.error(f"Error while getting the metric {metric_name} for the"
+                                      f"detection method {detection_method}")
                     raise ValueError(f"Provided Metric Name {metric_name} is not applicable "
                                      f"for current base detector {self.base_detector} "
                                      f"so cannot apply the provided detection method {detection_method}")
             file.close()
             self.close_file()
             return model_results
+        else:
+            raise ValueError(f"The results are not found at the path {self.results_file}")
+
+    def read_majority_accuracies(self):
+        if os.path.exists(self.results_file):
+            file = h5py.File(self.results_file, 'r')
+            # self.logger.error(self.allkeys(file))
+            padding_name_group = file[self.padding_code]
+            # self.logger.error(self.allkeys(padding_name_group))
+            try:
+                model_group = padding_name_group[MAJORITY_VOTING]
+                accuracies = np.array(model_group[ACCURACY])
+
+            except KeyError as e:
+                log_exception_error(self.logger, e)
+                self.logger.error(f"Error while getting the metric {ACCURACY} for the"
+                                  f"detection method {PAIRED_TTEST}")
+            file.close()
+            self.close_file()
+            return accuracies
         else:
             raise ValueError(f"The results are not found at the path {self.results_file}")
 
@@ -251,7 +275,8 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                     p_value = paired_ttest(base_mi, metric_vals, n_training_folds, n_test_folds, correction=True)
                     self.logger.info("Normal Paired T-Test for MI estimation Technique")
                 elif detection_method == PAIRED_TTEST:
-                    accuracies = np.array(self.results[MAJORITY_VOTING][ACCURACY])
+                    accuracies = self.read_majority_accuracies()
+                    self.logger.info(f"Accuracies {accuracies} metric_vals {metric_vals}")
                     p_value = paired_ttest(accuracies, metric_vals, n_training_folds, n_test_folds, correction=True)
                     self.logger.info("Paired T-Test for accuracy comparison with majority")
                 elif detection_method in [FISHER_EXACT_TEST_MEAN, FISHER_EXACT_TEST_MEDIAN]:

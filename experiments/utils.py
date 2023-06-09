@@ -34,9 +34,9 @@ from pycilt.metrics import *
 __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_estimators", "get_dataset_reader",
            "learners", "classification_metrics", "mi_estimation_metrics", "mi_metrics", "lp_metric_dict",
            "get_duration_seconds", "duration_till_now", "time_from_now", "get_dataset_reader", "seconds_to_time",
-           "time_from_now", "create_search_space", "get_dataset_reader", "convert_learner_params",
-           "create_directory_safely", "setup_logging", "setup_random_seed", "check_file_exists",
-           "get_automl_learned_estimator", "get_time_taken", "get_openml_datasets"]
+           "time_from_now", "create_search_space", "get_dataset_reader", "convert_learner_params", "setup_logging",
+           "setup_random_seed", "check_file_exists", "get_automl_learned_estimator",
+           "get_time_taken", "get_openml_datasets"]
 
 from pycilt.utils import log_exception_error
 
@@ -207,17 +207,6 @@ def convert_learner_params(params):
             params[key] = None
     return params
 
-
-def create_directory_safely(path, is_file_path=False):
-    try:
-        if is_file_path:
-            path = os.path.dirname(path)
-        if not os.path.exists(path):
-            os.makedirs(path, exist_ok=True)
-    except Exception as e:
-        print(str(e))
-
-
 def setup_logging(log_path=None, level=logging.INFO):
     """Function setup as many logging for the experiments"""
     if log_path is None:
@@ -292,6 +281,8 @@ def setup_random_seed(random_state=1234):
         config.gpu_options.allow_growth = True
     sess = tf.compat.v1.Session(config=config)
     K.set_session(sess)
+    torch_gpu = torch.device('cuda' if torch.cuda.is_available() else "cpu")
+    logger.info("GPU device {}".format(torch_gpu))
 
 
 def check_file_exists(file_path):
@@ -341,4 +332,6 @@ def get_time_taken(log_path):
         else:
             print("Time value not found in the log file.")
             time_value = 0
+    else:
+        time_value = 0
     return time_value
