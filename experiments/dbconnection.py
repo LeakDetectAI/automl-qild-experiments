@@ -11,7 +11,7 @@ import psycopg2
 from psycopg2.extras import DictCursor
 
 from experiments.utils import get_duration_seconds, duration_till_now, get_openml_datasets
-from pycilt.contants import *
+from pycilt.constants import *
 from pycilt.dataset_readers import GEN_TYPES, generate_samples_per_class
 from pycilt.detectors.utils import leakage_detection_methods
 from pycilt.utils import print_dictionary
@@ -147,9 +147,7 @@ class DBConnector(metaclass=ABCMeta):
                     )
                 )
                 error_message = "exception{}".format("InterruptedDueToSomeError")
-                self.append_error_string_in_running_job(
-                    job_id=job_id, error_message=error_message
-                )
+                self.append_error_string_in_running_job(job_id=job_id, error_message=error_message)
 
     def get_job_for_id(self, cluster_id, job_id):
         self.init_connection()
@@ -193,9 +191,8 @@ class DBConnector(metaclass=ABCMeta):
         avail_jobs = f"{self.schema}.avail_jobs"
         running_jobs = f"{self.schema}.running_jobs"
 
-        select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu}) AND 
-                         NOT EXISTS(SELECT job_id FROM {running_jobs} r WHERE r.interrupted = FALSE 
-                         AND r.job_id = row.job_id)"""
+        select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu}) AND job_id<=1827 AND NOT 
+                         EXISTS(SELECT job_id FROM {running_jobs} r WHERE r.interrupted = FALSE AND r.job_id = row.job_id)"""
         print(select_job)
         self.cursor_db.execute(select_job)
         job_ids = [j for i in self.cursor_db.fetchall() for j in i]

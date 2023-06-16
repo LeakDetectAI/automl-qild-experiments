@@ -50,7 +50,7 @@ if __name__ == "__main__":
     os.environ["HIP_LAUNCH_BLOCKING"] = "1"
     os.environ["CUDA_LAUNCH_BLOCKING"] = "2"
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    for i in range(100):
+    for i in range(200):
         start = datetime.now()
         dbConnector.job_description = None
         if 'CCS_REQID' in os.environ.keys():
@@ -96,7 +96,6 @@ if __name__ == "__main__":
                 if job_id >= 1828:
                     log_path = os.path.join(BASE_DIR, LOGS_FOLDER, f"{hash_value}_{detection_method}.log")
                     setup_logging(log_path=log_path)
-
                 setup_random_seed(random_state=random_state)
                 logger = logging.getLogger('Experiment')
                 logger.info(f"Time Taken till old: {time_taken} seconds")

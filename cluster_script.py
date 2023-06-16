@@ -33,8 +33,7 @@ from experiments.utils import *
 from pycilt import *
 from pycilt.bayes_search import BayesSearchCV
 from pycilt.bayes_search_utils import update_params_at_k, log_callback, get_scores
-from pycilt.contants import *
-from pycilt.contants import LOGS_FOLDER, RESULT_FOLDER, EXPERIMENTS, OPTIMIZER_FOLDER
+from pycilt.constants import *
 from pycilt.metrics import probability_calibration
 from pycilt.utils import *
 

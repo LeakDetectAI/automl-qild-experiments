@@ -24,7 +24,7 @@ which python
 which pip
 
 export SCRIPT_FILE=$PFS_FOLDER/information-leakage-techniques/cluster_script_ild.py
-python $SCRIPT_FILE --cindex=$SLURM_JOB_ID --isgpu=0 --schema='leakage_detection'
+python $SCRIPT_FILE --cindex=$SLURM_JOB_ID --isgpu=0 --schema='leakage_detection_new'
 
 exit 0
 ~

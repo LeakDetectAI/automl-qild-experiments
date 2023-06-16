@@ -77,6 +77,12 @@ class AutoGluonClassifier(AutomlClassifier):
             self.logger.info(f"Fitting time of the model {time_taken} and remaining {difference}, limit {limit}")
             if difference >= limit:
                 self.model = None
+            num_models = len(self.leaderboard['fit_time'])
+            self.logger.info(f"Number of models trained is {num_models} ")
+            if num_models <= 50:
+                self.model = None
+                self.logger.info(f"Retraining the model since they are less than 50")
+
         if self.model is None:
             try:
                 shutil.rmtree(self.output_folder)

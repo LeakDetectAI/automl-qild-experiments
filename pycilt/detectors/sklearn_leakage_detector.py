@@ -7,7 +7,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from .ild_base_class import InformationLeakageDetector
 from ..bayes_search import BayesSearchCV
 from ..bayes_search_utils import get_scores, log_callback, update_params_at_k
-from ..contants import OPTIMIZER_FOLDER
+from ..constants import *
 from ..utils import log_exception_error, create_directory_safely
 
 

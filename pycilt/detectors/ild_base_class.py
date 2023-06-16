@@ -70,17 +70,17 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                         for metric_name, results in metric_results.items():
                             conditions.append(metric_name in model_group)
                             self.logger.info(f"Results exists for metric {metric_name}")
-                            self.logger.info(f"Results {results}")
+                            self.logger.info(f"Results {np.array(model_group[metric_name])}")
 
         if file is not None:
             file.close()
         if os.path.exists(self.results_file) and not np.all(conditions):
             if os.path.exists(self.results_file):
-                file = h5py.File(self.results_file, 'r')
+                file = h5py.File(self.results_file, 'w')
                 if self.padding_code in file:
                     del file[self.padding_code]
                     self.logger.info(f"Results for padding {self.padding_name} removed since it is "
-                                     f"incomplete {not np.all(conditions)}")
+                                     f"incomplete {not np.all(conditions)} {conditions}")
         if file is not None:
             file.close()
         self.close_file()
@@ -276,7 +276,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                     self.logger.info("Normal Paired T-Test for MI estimation Technique")
                 elif detection_method == PAIRED_TTEST:
                     accuracies = self.read_majority_accuracies()
-                    self.logger.info(f"Accuracies {accuracies} metric_vals {metric_vals}")
+                    self.logger.info(f"Majority Voting Accuracies {accuracies} learner {metric_vals}")
                     p_value = paired_ttest(accuracies, metric_vals, n_training_folds, n_test_folds, correction=True)
                     self.logger.info("Paired T-Test for accuracy comparison with majority")
                 elif detection_method in [FISHER_EXACT_TEST_MEAN, FISHER_EXACT_TEST_MEDIAN]:

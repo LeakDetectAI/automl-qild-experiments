@@ -9,7 +9,7 @@ from sklearn.preprocessing import RobustScaler
 warnings.filterwarnings('ignore')
 
 __all__ = ['logsumexp', 'softmax', 'progress_bar', 'print_dictionary', 'standardize_features', 'standardize_features',
-           'create_directory_safely']
+           'create_directory_safely', 'log_exception_error']
 
 
 def logsumexp(x, axis=1):
@@ -27,9 +27,11 @@ def softmax(x, axis=1):
     lse = logsumexp(x, axis=axis)
     return np.exp(x - lse)
 
+
 def sigmoid(x):
     x = 1.0 / (1.0 + np.exp(-x))
     return x
+
 
 def normalize(x, axis=1):
     """
@@ -39,6 +41,7 @@ def normalize(x, axis=1):
     :return: normalize the array around the axis=1
     """
     return x / np.sum(x, axis=axis, keepdims=True)
+
 
 def progress_bar(count, total, status=''):
     bar_len = 60
@@ -58,6 +61,7 @@ def print_dictionary(dictionary, sep='\n'):
         else:
             output = output + str(key) + " => " + str(value)
     return output
+
 
 def standardize_features(x_train, x_test):
     standardize = Standardize()
@@ -104,6 +108,7 @@ def log_exception_error(logger, e):
         message = e
     logger.error(traceback.format_exc())
     logger.error(message)
+
 
 def create_directory_safely(path, is_file_path=False):
     try:

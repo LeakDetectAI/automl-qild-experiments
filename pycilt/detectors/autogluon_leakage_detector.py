@@ -4,7 +4,7 @@ import os.path
 from .ild_base_class import InformationLeakageDetector
 from .. import AutoGluonClassifier
 from ..bayes_search_utils import get_scores
-from ..contants import *
+from ..constants import *
 from ..utils import create_directory_safely, log_exception_error
 
 
@@ -29,6 +29,7 @@ class AutoGluonLeakageDetector(InformationLeakageDetector):
         self.learner = self.base_detector(**self.learner_params)
         self.learner.fit(X_train, y_train)
         for i in range(self.n_hypothesis * 3):
+            self.logger.info(f"Getting model at {i}")
             model = self.learner.get_k_rank_model(i + 1)
             self.estimators.append(model)
         train_size = X_train.shape[0]

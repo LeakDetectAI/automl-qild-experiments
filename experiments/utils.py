@@ -28,7 +28,7 @@ from sklearn.utils import check_random_state
 from skopt.space import Real, Categorical, Integer
 
 from pycilt import *
-from pycilt.contants import *
+from pycilt.constants import *
 from pycilt.metrics import *
 
 __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_estimators", "get_dataset_reader",
@@ -76,7 +76,7 @@ mi_estimators = {GMM_MI_ESTIMATOR: GMMMIEstimator,
                  'gmm_mi_estimator_true': GMMMIEstimator,
                  'gmm_mi_estimator_more_instances_true': GMMMIEstimator,
                  MINE_MI_ESTIMATOR: MineMIEstimator,
-                 'mine_mi_estimator_hpo': MineMIEstimatorHPO,
+                 MINE_MI_ESTIMATOR_HPO: MineMIEstimatorHPO,
                  'softmax_mi_estimator': PCSoftmaxMIEstimator,
                  'pc_softmax_mi_estimator': PCSoftmaxMIEstimator}
 
