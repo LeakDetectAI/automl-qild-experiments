@@ -6,8 +6,8 @@ from scipy.stats import multivariate_normal
 from scipy.stats import ortho_group
 from sklearn.utils import check_random_state, shuffle
 
-from ..constants import *
 from pycilt.utils import softmax
+from ..constants import *
 
 
 def pdf(dist, x):

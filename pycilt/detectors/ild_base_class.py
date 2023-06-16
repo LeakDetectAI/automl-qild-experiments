@@ -13,11 +13,11 @@ from statsmodels.stats.multitest import multipletests
 
 from pycilt.bayes_search_utils import get_scores
 from pycilt.classifiers import MajorityVoting
-from pycilt.contants import *
 from pycilt.detectors.utils import *
 from pycilt.metrics import probability_calibration
 from pycilt.statistical_tests import paired_ttest
 from pycilt.utils import log_exception_error, create_directory_safely
+from ..constants import *
 
 
 class InformationLeakageDetector(metaclass=ABCMeta):

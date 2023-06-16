@@ -4,7 +4,7 @@ from netcal.binning import IsotonicRegression, HistogramBinning
 from netcal.scaling import LogisticCalibration, BetaCalibration, TemperatureScaling
 from sklearn.metrics import confusion_matrix, accuracy_score
 
-from pycilt.contants import *
+from ..constants import *
 from pycilt.metrics import mid_point_mi, log_loss_estimation, pc_softmax_estimation
 
 __all__ = ['mi_estimation_metrics', 'classification_leakage_detection_methods', 'mi_leakage_detection_methods',
