@@ -134,9 +134,8 @@ if __name__ == "__main__":
                     logger.info(f"Running the detector for label {label} vulnerable {ground_truth}")
                     detector_params['padding_name'] = label
                     ild_model = ild_learner(**detector_params)
-                    ild_model.make_copy_result_file(detection_method=detection_method)
                     ild_model.fit(X, y)
-                    predicted_decision, n_hypothesis_detection = ild_model.detect(detection_method=detection_method)
+                    predicted_decision, n_hypothesis_detection = ild_model.detect()
                     logger.info(f"The label is vulnerable {ground_truth} and predicted {predicted_decision}")
                     y_true.append(ground_truth)
                     y_pred.append(predicted_decision)

@@ -1,7 +1,6 @@
 import hashlib
 import logging
 import os
-import shutil
 from abc import ABCMeta
 
 import h5py
@@ -57,23 +56,105 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             raise ValueError(f"Invalid Detection Method {self.detection_method}")
         hv_dm = leakage_detection_names[self.detection_method]
         self.results_file = os.path.join(self.base_directory, RESULT_FOLDER, f"{self.hash_value}_{hv_dm}_eval.h5")
-        self.result_file_backup = os.path.join(self.base_directory, RESULT_FOLDER, f"{self.hash_value}_eval.h5")
-        if os.path.exists(self.result_file_backup):
-            shutil.copy(self.result_file_backup, self.results_file)
+        self.results_file_backup = os.path.join(self.base_directory, RESULT_FOLDER, f"{self.hash_value}_eval.h5")
         create_directory_safely(self.results_file, True)
+        self.update_result_file_for_padding_group()
 
-    def format_name(self, padding_name):
-        padding_name = '_'.join(padding_name.split(' ')).lower()
-        padding_name = padding_name.replace(" ", "")
-        hash_object = hashlib.sha1()
-        hash_object.update(padding_name.encode())
-        hex_dig = str(hash_object.hexdigest())[:16]
-        # self.logger.info(   "Job_id {} Hash_string {}".format(job.get("job_id", None), str(hex_dig)))
-        self.logger.info(f"For padding name {padding_name} the hex value is {hex_dig}")
-        return padding_name, hex_dig
+    def update_result_file_for_padding_group(self):
+        if os.path.exists(self.results_file_backup):
+            if self._is_backup_fitted_:
+                if os.path.isfile(self.results_file):
+                    dest_h5 = h5py.File(self.results_file, 'a')
+                    if self.padding_code in dest_h5:
+                        del dest_h5[self.padding_code]
+                        self.logger.info(f"Deleting old results for the padding {self.padding_name}")
+                    dest_h5.close()
+
+                source_h5 = h5py.File(self.results_file_backup, 'r')
+                destination_h5 = h5py.File(self.results_file, 'a')
+                if self.padding_code in source_h5:
+                    source_group = source_h5[self.padding_code]
+                    destination_h5.copy(source_group, destination_h5, name=self.padding_code)
+                    self.logger.info(f"Group '{self.padding_code}' copied to current result file {self.results_file} "
+                                     f"for padding {self.padding_name}")
+                else:
+                    self.logger.info(f"Group '{self.padding_code}' does not exist in backup file "
+                                     f"{self.results_file_backup} for padding {self.padding_name}")
+                # Close the HDF5 files
+                source_h5.close()
+                destination_h5.close()
+                self.close_file()
+                self.close_back_file()
+            else:
+                self.logger.info(f"Backup results is not fitted completely for padding {self.padding_name}")
+        else:
+            self.logger.info(f"Backup results file does not exists {self.results_file_backup}")
+
+    def create_backup_for_padding_group(self):
+        if os.path.exists(self.results_file):
+            if os.path.isfile(self.results_file_backup):
+                dest_h5 = h5py.File(self.results_file_backup, 'a')
+                if self.padding_code in dest_h5:
+                    del dest_h5[self.padding_code]
+                    self.logger.info(f"Deleting old results for the padding from backup file {self.padding_name}")
+                dest_h5.close()
+            source_h5 = h5py.File(self.results_file, 'r')
+            destination_h5 = h5py.File(self.results_file_backup, 'a')
+            if self.padding_code in source_h5:
+                source_group = source_h5[self.padding_code]
+                destination_h5.copy(source_group, destination_h5, name=self.padding_code)
+                self.logger.info(f"Group '{self.padding_code}' copied to backup result file {self.results_file_backup} "
+                                 f"for padding {self.padding_name}")
+            else:
+                self.logger.info(f"Group '{self.padding_code}' does not exist in the results file "
+                                 f"{self.results_file} for padding {self.padding_name}")
+            # Close the HDF5 files
+            source_h5.close()
+            destination_h5.close()
+            self.close_file()
+            self.close_back_file()
+        else:
+            self.logger.info(f"Result File does not exists {self.results_file}")
+
+    @property
+    def _is_backup_fitted_(self) -> bool:
+        results_file = self.results_file_backup
+        conditions = [os.path.exists(results_file)]
+        file = None
+        self.logger.info(f"Checking backup file {self.results_file} for results for padding {self.padding_name}")
+        if os.path.exists(results_file):
+            file = h5py.File(results_file, 'r')
+            conditions.append(self.padding_code in file)
+            if self.padding_code in file:
+                self.logger.info(f"Simulations done for padding label {self.padding_code}")
+                for model_name, metric_results in self.results.items():
+                    padding_name_group = file[self.padding_code]
+                    conditions.append(model_name in padding_name_group)
+                    if model_name in padding_name_group:
+                        model_group = padding_name_group.get(model_name)
+                        self.logger.info(f"Predictions done for model {model_name}")
+                        for metric_name, results in metric_results.items():
+                            conditions.append(metric_name in model_group)
+                            self.logger.info(f"Results exists for metric {metric_name}")
+                            self.logger.info(f"Results {np.array(model_group[metric_name])}")
+
+        if file is not None:
+            file.close()
+        if os.path.exists(results_file) and not np.all(conditions):
+            if os.path.exists(results_file):
+                file = h5py.File(results_file, 'w')
+                if self.padding_code in file:
+                    del file[self.padding_code]
+                    self.logger.info(f"Results for padding {self.padding_name} removed since it is "
+                                     f"incomplete {not np.all(conditions)} {conditions}")
+                if file is not None:
+                    file.close()
+        self.close_file()
+        return np.all(conditions)
 
     @property
     def _is_fitted_(self) -> bool:
+        self.logger.info(f"Checking main file {self.results_file} for results for padding {self.padding_name}")
         conditions = [os.path.exists(self.results_file)]
         file = None
         if os.path.exists(self.results_file):
@@ -106,6 +187,16 @@ class InformationLeakageDetector(metaclass=ABCMeta):
         self.close_file()
         return np.all(conditions)
 
+    def format_name(self, padding_name):
+        padding_name = '_'.join(padding_name.split(' ')).lower()
+        padding_name = padding_name.replace(" ", "")
+        hash_object = hashlib.sha1()
+        hash_object.update(padding_name.encode())
+        hex_dig = str(hash_object.hexdigest())[:16]
+        # self.logger.info(   "Job_id {} Hash_string {}".format(job.get("job_id", None), str(hex_dig)))
+        self.logger.info(f"For padding name {padding_name} the hex value is {hex_dig}")
+        return padding_name, hex_dig
+
     def get_training_dataset(self, X, y):
         lengths = []
         for i, (train_index, test_index) in enumerate(self.cv_iterator.split(X, y)):
@@ -133,6 +224,19 @@ class InformationLeakageDetector(metaclass=ABCMeta):
     def close_file(self):
         try:
             file = h5py.File(self.results_file, 'r')
+            is_open = file.id.valid
+            if is_open:
+                self.logger.info("The file is open closing it")
+                file.close()
+            else:
+                self.logger.info("The file is not open.")
+        except Exception as error:
+            log_exception_error(self.logger, error)
+            self.logger.error("Cannot open the file since it does not exist")
+
+    def close_back_file(self):
+        try:
+            file = h5py.File(self.results_file_backup, 'r')
             is_open = file.id.valid
             if is_open:
                 self.logger.info("The file is open closing it")
@@ -179,14 +283,6 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                 self.logger.info(f"Metric {metric_name}: Value: {metric_loss}")
             self.results[model_name][metric_name].append(metric_loss)
 
-    def copy_to_backup(self):
-        if os.path.exists(self.result_file_backup):
-            os.remove(self.result_file_backup)
-            print(f"File '{self.result_file_backup}' has been removed.")
-        else:
-            print(f"File '{self.result_file_backup}' does not exist making backup")
-            shutil.copy(self.results_file, self.result_file_backup)
-
     def store_results(self):
         self.logger.info(f"Result file {self.results_file}")
         if os.path.exists(self.results_file):
@@ -212,7 +308,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
         finally:
             file.close()
         self.close_file()
-        self.copy_to_backup()
+        self.create_backup_for_padding_group()
 
     def allkeys(self, obj):
         "Recursively find all keys in an h5py.Group."

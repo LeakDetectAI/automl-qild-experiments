@@ -584,6 +584,7 @@ class DBConnector(metaclass=ABCMeta):
         learners = [TABPFN_VAR, TABPFN_VAR]
         select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND {avail_jobs}.base_learner " \
                      f"NOT IN {tuple(learners)} ORDER  BY {avail_jobs}.job_id "
+        select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' ORDER  BY {avail_jobs}.job_id "
         self.cursor_db.execute(select_job)
         jobs_all = self.cursor_db.fetchall()
         self.logger.info(jobs_all)
