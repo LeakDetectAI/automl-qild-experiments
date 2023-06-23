@@ -3,13 +3,14 @@ import sys
 import traceback
 import warnings
 
+import h5py
 import numpy as np
 from sklearn.preprocessing import RobustScaler
 
 warnings.filterwarnings('ignore')
 
 __all__ = ['logsumexp', 'softmax', 'progress_bar', 'print_dictionary', 'standardize_features', 'standardize_features',
-           'create_directory_safely', 'log_exception_error']
+           'create_directory_safely', 'log_exception_error', 'check_and_delete_corrupt_h5_file']
 
 
 def logsumexp(x, axis=1):
@@ -118,3 +119,31 @@ def create_directory_safely(path, is_file_path=False):
             os.makedirs(path, exist_ok=True)
     except Exception as e:
         print(str(e))
+
+
+def check_and_delete_corrupt_h5_file(file_path, logger):
+    basename = os.path.basename(file_path)
+    if os.path.exists(file_path):
+        try:
+            if os.path.getsize(file_path) == 0:
+                logger.info(f"The file '{basename}' is empty.")
+                os.remove(file_path)
+                logger.info(f"The file '{basename}' has been deleted.")
+                return
+            with h5py.File(file_path, 'r') as h5_file:
+                group_names = list(h5_file.keys())
+                if group_names:
+                    group_name = group_names[0]
+                    group = h5_file[group_name]
+                    logger.info(f"The first group '{group_name}' in the file '{basename}' has been "
+                                f"accessed successfully.")
+                else:
+                    logger.info(f"No groups found in the file '{basename}'.")
+            logger.info(f"The file '{basename}' is not corrupt.")
+        except (OSError, KeyError, ValueError, Exception) as error:
+            log_exception_error(logger, error)
+            logger.error(f"The file '{basename}' is corrupt.")
+            os.remove(file_path)
+            logger.error(f"The file '{basename}' has been deleted.")
+    else:
+        logger.info(f"File does not exist {basename}")

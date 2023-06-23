@@ -1,3 +1,4 @@
+import fcntl
 import hashlib
 import logging
 import os
@@ -17,7 +18,7 @@ from pycilt.classifiers import MajorityVoting
 from pycilt.detectors.utils import *
 from pycilt.metrics import probability_calibration
 from pycilt.statistical_tests import paired_ttest
-from pycilt.utils import log_exception_error, create_directory_safely
+from pycilt.utils import log_exception_error, create_directory_safely, check_and_delete_corrupt_h5_file
 from .utils import leakage_detection_names
 from ..constants import *
 
@@ -56,17 +57,19 @@ class InformationLeakageDetector(metaclass=ABCMeta):
         if self.detection_method not in leakage_detection_methods.keys():
             raise ValueError(f"Invalid Detection Method {self.detection_method}")
         hv_dm = leakage_detection_names[self.detection_method]
-        self.results_file = os.path.join(self.base_directory, RESULT_FOLDER, hv_dm, f"{self.hash_value}_{hv_dm}.h5")
-        self.results_file_backup = os.path.join(self.base_directory, RESULT_FOLDER, f"{self.hash_value}_backup.h5")
+        self.rf_name = f"{self.hash_value}_eval.h5"
+        self.results_file = os.path.join(self.base_directory, RESULT_FOLDER, hv_dm, self.rf_name)
+        self.rf_backup_name = f"{self.hash_value}_backup.h5"
+        self.results_file_backup = os.path.join(self.base_directory, RESULT_FOLDER, self.rf_backup_name)
         create_directory_safely(self.results_file, True)
         create_directory_safely(self.results_file_backup, True)
         self.create_results_from_backup()
 
     @property
     def _is_fitted_(self) -> bool:
-        self.logger.info(f"Checking main file {self.results_file} for results for padding {self.padding_name}")
+        self.logger.info(f"Checking main file {self.rf_name} for results for padding {self.padding_name}")
+        check_and_delete_corrupt_h5_file(self.results_file, self.logger)
         conditions = [os.path.exists(self.results_file)]
-        file = None
         if os.path.exists(self.results_file):
             file = h5py.File(self.results_file, 'r')
             conditions.append(self.padding_code in file)
@@ -86,9 +89,9 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                             length = len(vals)
                             self.logger.info(f"Results stored for {self.cv_iterations} and exist for {length}")
                             conditions.append(length == self.cv_iterations)
-
-        if file is not None:
             file.close()
+            self.close_file()
+
         if os.path.exists(self.results_file) and not np.all(conditions):
             if os.path.exists(self.results_file):
                 file = h5py.File(self.results_file, 'w')
@@ -96,19 +99,29 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                     del file[self.padding_code]
                     self.logger.info(f"Results for padding {self.padding_name} removed since it is incomplete "
                                      f"{not np.all(conditions)} {conditions}")
-                if file is not None:
                     file.close()
-        self.close_file()
+                    self.close_file()
         return np.all(conditions)
 
     def create_results_from_backup(self):
+        check_and_delete_corrupt_h5_file(self.results_file_backup, self.logger)
         if os.path.exists(self.results_file_backup):
             if not self._is_fitted_:
+                source = h5py.File(self.results_file_backup, 'r')
+                # Apply a shared lock on the source file
+                fcntl.flock(source.id.get_vfd_handle(), fcntl.LOCK_SH)
+                self.logger.info(f"Locked the backup file: {self.rf_backup_name}")
+                # Perform the file copy operation
                 shutil.copy(self.results_file_backup, self.results_file)
+                self.logger.info(f"Copied the file from {self.rf_backup_name} to "
+                                 f"{self.rf_name}")
+                # Release the lock on the source file
+                fcntl.flock(source.id.get_vfd_handle(), fcntl.LOCK_UN)
+                self.logger.info(f"Unlocked the backup file: {self.rf_backup_name}")
             else:
                 self.logger.info(f"Latest results already complete for the {self.padding_name}")
         else:
-            self.logger.info(f"Backup results file does not exists {self.results_file_backup}")
+            self.logger.info(f"Backup results file does not exists {self.rf_backup_name}")
 
     def update_backup_file(self):
         if os.path.exists(self.results_file):
@@ -123,18 +136,18 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             if self.padding_code in source_h5:
                 source_group = source_h5[self.padding_code]
                 destination_h5.copy(source_group, destination_h5, name=self.padding_code)
-                self.logger.info(f"Group '{self.padding_code}' copied to backup result file {self.results_file_backup} "
-                                 f"for padding {self.padding_name}")
+                self.logger.info(f"Group '{self.padding_code}' copied to backup result file "
+                                 f"{self.rf_backup_name} for padding {self.padding_name}")
             else:
                 self.logger.info(f"Group '{self.padding_code}' does not exist in the results file "
-                                 f"{self.results_file} for padding {self.padding_name}")
+                                 f"{self.rf_name} for padding {self.padding_name}")
             # Close the HDF5 files
             source_h5.close()
             destination_h5.close()
             self.close_file()
             self.close_back_file()
         else:
-            self.logger.info(f"Result File does not exists {self.results_file}")
+            self.logger.info(f"Result File does not exists {self.rf_name}")
 
     def format_name(self, padding_name):
         padding_name = '_'.join(padding_name.split(' ')).lower()
@@ -233,7 +246,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             self.results[model_name][metric_name].append(metric_loss)
 
     def store_results(self):
-        self.logger.info(f"Result file {self.results_file}")
+        self.logger.info(f"Result file {self.rf_name}")
         if os.path.exists(self.results_file):
             file = h5py.File(self.results_file, 'r+')
         else:
@@ -297,7 +310,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             self.close_file()
             return model_results
         else:
-            raise ValueError(f"The results are not found at the path {self.results_file}")
+            raise ValueError(f"The results are not found at the path {self.rf_name}")
 
     def read_majority_accuracies(self):
         if os.path.exists(self.results_file):
@@ -317,7 +330,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             self.close_file()
             return accuracies
         else:
-            raise ValueError(f"The results are not found at the path {self.results_file}")
+            raise ValueError(f"The results are not found at the path {self.rf_name}")
 
     def detect(self):
         # change for including holm-bonnfernoi
