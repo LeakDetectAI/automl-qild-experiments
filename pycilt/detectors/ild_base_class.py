@@ -81,8 +81,8 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                     del file[self.padding_code]
                     self.logger.info(f"Results for padding {self.padding_name} removed since it is "
                                      f"incomplete {not np.all(conditions)} {conditions}")
-        if file is not None:
-            file.close()
+                if file is not None:
+                    file.close()
         self.close_file()
         return np.all(conditions)
 
