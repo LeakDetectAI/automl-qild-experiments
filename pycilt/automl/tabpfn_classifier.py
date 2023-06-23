@@ -7,20 +7,23 @@ from sklearn.utils import check_random_state
 from tabpfn import TabPFNClassifier
 
 from pycilt.automl.automl_core import AutomlClassifier
-from pycilt.automl.reduction_techniques_tabpfn import reduction_techniques, n_reduced
+from ..dimensionality_reduction_techniques import create_dimensionality_reduction_model
 
 
 class AutoTabPFNClassifier(AutomlClassifier):
-    def __init__(self, n_features, n_classes, n_ensembles=100, reduction_technique='select_from_model_rf',
+    def __init__(self, n_features, n_classes, n_ensembles=100, n_reduced=20, reduction_technique='select_from_model_rf',
                  random_state=None, **kwargs):
         self.n_features = n_features
         self.n_classes = n_classes
         self.logger = logging.getLogger(name=AutoTabPFNClassifier.__name__)
         self.random_state = check_random_state(random_state)
-        if reduction_technique not in reduction_techniques.keys():
-            raise ValueError(f"Reduction type {reduction_technique} not defined {reduction_techniques.keys()}")
+
+        self.n_reduced = n_reduced
         self.reduction_technique = reduction_technique
-        self.selection_model = reduction_techniques[reduction_technique]
+        self.selection_model = create_dimensionality_reduction_model(reduction_technique=self.reduction_technique,
+                                                                     n_reduced=self.n_reduced)
+        self.__is_fitted__ = False
+
         if torch.cuda.is_available():
             device = 'cuda'
         else:
@@ -28,7 +31,6 @@ class AutoTabPFNClassifier(AutomlClassifier):
         self.device = device
         self.logger.info(f"Device {self.device}")
         self.n_ensembles = n_ensembles
-        self.__is_fitted__ = False
         self.model = None
 
     def transform(self, X, y=None):
@@ -37,7 +39,7 @@ class AutoTabPFNClassifier(AutomlClassifier):
                 raise ValueError(f"Dataset passed does not contain {self.n_features}")
             if self.n_classes != len(np.unique(y)):
                 raise ValueError(f"Dataset passed does not contain {self.n_classes}")
-            self.logger.info(f"Fitting the reduction model to reduce the {self.n_features} to {n_reduced}")
+            self.logger.info(f"Transforming and reducing the {self.n_features} features to {self.n_reduced}")
             self.selection_model.fit(X, y)
             self.__is_fitted__ = True
         if self.n_features > 100:

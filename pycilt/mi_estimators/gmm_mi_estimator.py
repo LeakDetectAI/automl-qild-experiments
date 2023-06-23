@@ -6,13 +6,13 @@ from infoselect import get_gmm, SelectVars
 from sklearn.linear_model import LogisticRegression
 
 from .mi_base_class import MIEstimatorBase
-from .reduction_techniques_gmm import reduction_techniques, n_reduced
+from ..dimensionality_reduction_techniques import create_dimensionality_reduction_model
 from ..utils import log_exception_error
 
 
 class GMMMIEstimator(MIEstimatorBase):
     def __init__(self, n_classes, n_features, y_cat=False, covariance_type='full', reg_covar=1e-06, val_size=0.30,
-                 reduction_technique="select_from_model_rf", random_state=42, **kwargs):
+                 n_reduced=20, reduction_technique='select_from_model_rf', random_state=42, **kwargs):
         super().__init__(n_classes=n_classes, n_features=n_features, random_state=random_state)
         self.y_cat = y_cat
         self.num_comps = list(np.arange(2, 20, 2))
@@ -20,8 +20,11 @@ class GMMMIEstimator(MIEstimatorBase):
         self.n_models = 5
         self.covariance_type = covariance_type
         self.val_size = val_size
+
+        self.n_reduced = n_reduced
         self.reduction_technique = reduction_technique
-        self.selection_model = reduction_techniques[reduction_technique]
+        self.selection_model = create_dimensionality_reduction_model(reduction_technique=self.reduction_technique,
+                                                                     n_reduced=self.n_reduced)
         self.__is_fitted__ = False
 
         # Classification Model
@@ -66,7 +69,7 @@ class GMMMIEstimator(MIEstimatorBase):
                 raise ValueError(f"Dataset passed does not contain {self.n_features}")
             if self.n_classes != len(np.unique(y)):
                 raise ValueError(f"Dataset passed does not contain {self.n_classes}")
-            self.logger.info(f"Fitting the reduction model to reduce the {self.n_features} to {n_reduced}")
+            self.logger.info(f"Transforming and reducing the {self.n_features} features to {self.n_reduced}")
             self.selection_model.fit(X, y)
             self.__is_fitted__ = True
         if self.n_features > 100:

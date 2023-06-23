@@ -46,6 +46,20 @@ if __name__ == "__main__":
     y_train, y_test = y[train_index], y[test_index]
     actual_mi = dataset_reader.bayes_predictor_mi()
     logger.info(f"Actual MI {actual_mi}")
+    n_features = X_train.shape[-1]
+    n_classes = len(np.unique(y_train))
+    params = {'n_classes': n_classes, 'n_features': n_features}
+    clf = MineMIEstimatorHPO(**params)
+    clf.fit(X_train, y_train, epochs=10000, verbose=1)
+    train_mi = clf.estimate_mi(X_train, y_train)
+    mi = clf.estimate_mi(X_test, y_test)
+    val_loss = np.abs((actual_mi - mi))
+    actual_loss = np.abs((actual_mi - train_mi))
+    train_mse = clf.score(X_train, y_train)
+    val_mse = clf.score(X_test, y_test)
+    logger.info(f"actual_loss: {actual_loss}, val_loss: {val_loss}")
+    logger.info(f"actual_mi: {actual_mi} val mi: {mi}, train mi: {train_mi}")
+    logger.info(f"train_mse: {train_mse} val_mse: {val_mse}")
 
 
     def main():

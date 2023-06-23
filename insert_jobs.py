@@ -4,8 +4,7 @@ import os
 
 from experiments.dbconnection import DBConnector
 from experiments.utils import setup_logging
-from pycilt.contants import *
-
+from pycilt.constants import *
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 EXPERIMENTS = 'experiments'
 
@@ -15,7 +14,7 @@ if __name__ == "__main__":
     setup_logging(log_path=log_path)
     logger = logging.getLogger('Experiment')
     logger.info(f"DB config filePath {config_file_path}")
-    for schema in [LEAKAGE_DETECTION]:
+    for schema in [LEAKAGE_DETECTION_NEW]:
         logger.info(f"Inserting new jobs into {schema}")
         dbConnector = DBConnector(config_file_path=config_file_path, is_gpu=False, schema=schema, create_hash_list=True)
         if schema == CLASSIFICATION:
@@ -28,6 +27,8 @@ if __name__ == "__main__":
             max_job_id = 12
         if schema == LEAKAGE_DETECTION:
             max_job_id = 15
+        if schema == LEAKAGE_DETECTION_NEW:
+            max_job_id = 24
         dbConnector.insert_new_jobs_openml(dataset=OPENML_DATASET, max_job_id=max_job_id)
         dbConnector.insert_detection_methods(dataset=OPENML_DATASET)
         # dbConnector.insert_new_jobs_different_configurations(max_job_id=max_job_id, dataset=SYNTHETIC_DATASET)

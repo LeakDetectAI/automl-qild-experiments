@@ -21,6 +21,7 @@ def get_optimizer_and_parameters(optimizer_str, learning_rate, reg_strength):
     optimizer_config = optimizer_parameters.get(optimizer_str, 'adam')
     optimizer_config['lr'] = learning_rate
     optimizer_config['weight_decay'] = reg_strength
+
     return optimizer, optimizer_config
 
 

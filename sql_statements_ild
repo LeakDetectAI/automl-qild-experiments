@@ -86,7 +86,21 @@ ALTER sequence leakage_detection_new.avail_jobs_job_id_seq restart with 14878
 SELECT nextval('leakage_detection_new.avail_jobs_job_id_seq')-1;
 SELECT nextval('leakage_detection_new.running_jobs_running_id_seq')-1;
 
+
+DELETE from leakage_detection_new.avail_jobs where job_id>=2605;
+ALTER sequence leakage_detection_new.avail_jobs_job_id_seq restart with 2605;
 UPDATE leakage_detection_new.avail_jobs
 SET job_end_time = leakage_detection.avail_jobs.job_end_time, job_allocated_time = leakage_detection.avail_jobs.job_allocated_time
 FROM leakage_detection.avail_jobs
 WHERE leakage_detection.avail_jobs.job_id = leakage_detection_new.avail_jobs.job_id;
+SELECT * FROM leakage_detection_new.avail_jobs row WHERE job_id<=1827 and EXISTS(SELECT job_id FROM leakage_detection_new.running_jobs r WHERE r.job_id = row.job_id and r.finished=False) order by job_id;
+SELECT * FROM leakage_detection_new.avail_jobs row WHERE job_id<=1827 and not EXISTS(SELECT job_id FROM leakage_detection_new.running_jobs r WHERE r.job_id = row.job_id) order by job_id;
+
+SELECT row.job_id, row.finished, row.cluster_id FROM leakage_detection_new.running_jobs row WHERE row.finished=False and EXISTS(SELECT job_id FROM leakage_detection_new.avail_jobs r WHERE r.job_id = row.job_id and r.is_gpu=False) order by cluster_id
+UPDATE leakage_detection_new.avail_jobs
+SET job_end_time = leakage_detection.avail_jobs.job_end_time,
+    job_allocated_time = leakage_detection.avail_jobs.job_allocated_time,
+    evaluation_time = leakage_detection.avail_jobs.evaluation_time
+FROM leakage_detection.avail_jobs
+WHERE leakage_detection.avail_jobs.job_id = leakage_detection_new.avail_jobs.job_id;
+UPDATE leakage_detection_new.avail_jobs set is_gpu=true where base_learner='mine_mi_estimator';

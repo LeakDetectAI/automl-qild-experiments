@@ -28,7 +28,8 @@ class MineMIEstimatorHPO(MIEstimatorBase):
         self.n_units = n_units
         self.loss_function = loss_function
         self.device = torch.device('cuda' if torch.cuda.is_available() else "cpu")
-        self.logger.info(f"device {self.device} cuda {torch.cuda.is_available()} device {torch.cuda.device_count()}")
+        self.logger.info(
+            f"device {self.device} cuda {torch.cuda.is_available()} gpu device {torch.cuda.device_count()}")
         self.optimizer = None
         self.stat_net = None
         self.dataset_properties = None
@@ -52,8 +53,8 @@ class MineMIEstimatorHPO(MIEstimatorBase):
         indices = rs.choice(xy_tilde.shape[0], size=batch_size)
         xy = xy[indices]
         xy_tilde = xy_tilde[indices]
-        tensor_xy = torch.tensor(xy, dtype=torch.float32)  # transform to torch tensor
-        tensor_xy_tilde = torch.tensor(xy_tilde, dtype=torch.float32)
+        tensor_xy = torch.tensor(xy, dtype=torch.float32).to(self.device)  # transform to torch tensor
+        tensor_xy_tilde = torch.tensor(xy_tilde, dtype=torch.float32).to(self.device)
         return tensor_xy, tensor_xy_tilde
 
     def fit(self, X, y, epochs=10000, batch_size=128, verbose=0, **kwd):
@@ -66,7 +67,8 @@ class MineMIEstimatorHPO(MIEstimatorBase):
         else:
             cls_enc = 1
         self.label_binarizer = LabelBinarizer().fit(y)
-        self.stat_net = StatNet(in_dim=self.n_features, cls_enc=cls_enc, n_hidden=self.n_hidden, n_units=self.n_units)
+        self.stat_net = StatNet(in_dim=self.n_features, cls_enc=cls_enc, n_hidden=self.n_hidden, n_units=self.n_units,
+                                device=self.device)
         self.stat_net.apply(init)
         self.stat_net.to(self.device)
         self.optimizer = self.optimizer_cls(self.stat_net.parameters(), **self._optimizer_config)
@@ -95,10 +97,10 @@ class MineMIEstimatorHPO(MIEstimatorBase):
                         mi_hats.append(eval_div.cpu().numpy())
                     mi_hat = np.mean(mi_hats)
                     if verbose:
-                        print(f'iter: {iter_}, MI hat: {mi_hat} Loss: {loss.detach().numpy()[0]}')
-                    self.logger.info(f'iter: {iter_}, MI hat: {mi_hat} Loss: {loss.detach().numpy()[0]}')
+                        print(f'iter: {iter_}, MI hat: {mi_hat} Loss: {loss.cpu().detach().numpy()[0]}')
+                    self.logger.info(f'iter: {iter_}, MI hat: {mi_hat} Loss: {loss.cpu().detach().numpy()[0]}')
                     all_estimates.append(mi_hat)
-        self.final_loss = sum_loss.detach().numpy()[0]
+        self.final_loss = sum_loss.cpu().detach().numpy()[0]
         mis = np.array(all_estimates)
         n = int(len(all_estimates) / 3)
         self.mi_val = np.nanmean(mis[np.argpartition(mis, -n)[-n:]])
@@ -114,8 +116,8 @@ class MineMIEstimatorHPO(MIEstimatorBase):
     def score(self, X, y, sample_weight=None, verbose=0):
         torch.no_grad()
         xy, xy_tilde = self.pytorch_tensor_dataset(X, y, batch_size=X.shape[0], i=0)
-        preds_xy = self.stat_net(xy).detach().numpy().flatten()
-        preds_xy_tilde = self.stat_net(xy_tilde).detach().numpy().flatten()
+        preds_xy = self.stat_net(xy).cpu().detach().numpy().flatten()
+        preds_xy_tilde = self.stat_net(xy_tilde).cpu().detach().numpy().flatten()
         mse = mean_squared_error(preds_xy, preds_xy_tilde)
         self.logger.info(f"MSE {mse}")
         self.logger.info(f"Memory allocated {torch.cuda.memory_allocated()} Cached {torch.cuda.memory_cached()}")
@@ -131,7 +133,7 @@ class MineMIEstimatorHPO(MIEstimatorBase):
         for n_class in range(self.n_classes):
             y = np.zeros(X.shape[0]) + n_class
             xy, xy_tilde = self.pytorch_tensor_dataset(X, y, batch_size=X.shape[0], i=0)
-            score = self.stat_net(xy).detach().numpy()
+            score = self.stat_net(xy).cpu().detach().numpy()
             # self.logger.info(f"Class {n_class} scores {score.flatten()}")
             if scores is None:
                 scores = score
@@ -146,7 +148,7 @@ class MineMIEstimatorHPO(MIEstimatorBase):
             preds_xy = self.stat_net(xy)
             preds_xy_tilde = self.stat_net(xy_tilde)
             eval_div = get_mine_loss(preds_xy, preds_xy_tilde, metric=self.loss_function)
-            mi_hat = eval_div.detach().numpy().flatten()[0]
+            mi_hat = eval_div.cpu().detach().numpy().flatten()[0]
             if verbose:
                 print(f'iter: {iter_}, MI hat: {mi_hat}')
             mi_hats.append(mi_hat)

@@ -48,8 +48,8 @@ class MineMIEstimator(MIEstimatorBase):
             xy = np.hstack((X, y[:, None]))
             y_s = rs.permutation(y)
             xy_tilde = np.hstack((X, y_s[:, None]))
-        tensor_xy = torch.tensor(xy, dtype=torch.float32)  # transform to torch tensor
-        tensor_xy_tilde = torch.tensor(xy_tilde, dtype=torch.float32)
+        tensor_xy = torch.tensor(xy, dtype=torch.float32).to(self.device)  # transform to torch tensor
+        tensor_xy_tilde = torch.tensor(xy_tilde, dtype=torch.float32).to(self.device)
         return tensor_xy, tensor_xy_tilde
 
     def fit(self, X, y, epochs=100000, verbose=0, **kwd):

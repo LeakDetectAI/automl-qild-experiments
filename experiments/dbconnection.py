@@ -62,7 +62,7 @@ class DBConnector(metaclass=ABCMeta):
         current_hash_values = []
         for job_c in jobs_check:
             job_c = dict(job_c)
-            if self.schema == LEAKAGE_DETECTION:
+            if self.schema in [LEAKAGE_DETECTION, LEAKAGE_DETECTION_NEW]:
                 hash_value = self.get_hash_value_for_job_ild_check(job_c)
             else:
                 hash_value = self.get_hash_value_for_job(job_c)
@@ -191,8 +191,8 @@ class DBConnector(metaclass=ABCMeta):
         avail_jobs = f"{self.schema}.avail_jobs"
         running_jobs = f"{self.schema}.running_jobs"
 
-        select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu}) AND job_id<=1827 AND NOT 
-                         EXISTS(SELECT job_id FROM {running_jobs} r WHERE r.interrupted = FALSE AND r.job_id = row.job_id)"""
+        select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu}) AND NOT EXISTS(SELECT 
+                         job_id FROM {running_jobs} r WHERE r.interrupted = FALSE AND r.job_id = row.job_id)"""
         print(select_job)
         self.cursor_db.execute(select_job)
         job_ids = [j for i in self.cursor_db.fetchall() for j in i]
@@ -507,7 +507,7 @@ class DBConnector(metaclass=ABCMeta):
         return new_job_id
 
     def check_exists(self, job):
-        if self.schema == LEAKAGE_DETECTION:
+        if self.schema in [LEAKAGE_DETECTION, LEAKAGE_DETECTION_NEW]:
             hash_value_new = self.get_hash_value_for_job_ild_check(job)
         else:
             hash_value_new = self.get_hash_value_for_job(job)
@@ -518,15 +518,13 @@ class DBConnector(metaclass=ABCMeta):
         return False
 
     def insert_new_jobs_openml(self, dataset="openml_dataset", max_job_id=15):
-        learners = [TABPNF, TABPNF]
-
         self.init_connection()
         avail_jobs = "{}.avail_jobs".format(self.schema)
-        select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND" \
-                     f" {avail_jobs}.job_id<={max_job_id} and {avail_jobs}.base_learner NOT IN {tuple(learners)} " \
-                     f"ORDER BY {avail_jobs}.job_id"
-        select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND" \
-                     f" {avail_jobs}.job_id<={max_job_id} ORDER BY {avail_jobs}.job_id"
+        # learners = [TABPNF, TABPNF]
+        # select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND" \
+        #             f" {avail_jobs}.job_id<={max_job_id} and {avail_jobs}.base_learner NOT IN {tuple(learners)} " \
+        #             f"ORDER BY {avail_jobs}.job_id"
+        select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND {avail_jobs}.job_id<={max_job_id} ORDER BY {avail_jobs}.job_id"
         self.cursor_db.execute(select_job)
         jobs_all = self.cursor_db.fetchall()
         self.logger.info(jobs_all)
@@ -582,7 +580,9 @@ class DBConnector(metaclass=ABCMeta):
     def insert_detection_methods(self, dataset="openml_dataset"):
         self.init_connection()
         avail_jobs = "{}.avail_jobs".format(self.schema)
-        select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' ORDER  BY {avail_jobs}.job_id"
+        learners = [TABPFN_VAR, TABPFN_VAR]
+        select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND {avail_jobs}.base_learner " \
+                     f"NOT IN {tuple(learners)} ORDER  BY {avail_jobs}.job_id "
         self.cursor_db.execute(select_job)
         jobs_all = self.cursor_db.fetchall()
         self.logger.info(jobs_all)
@@ -593,8 +593,8 @@ class DBConnector(metaclass=ABCMeta):
         mi_detection_methods = [mi_detection_method]
         detection_methods = {MINE_MI_ESTIMATOR: mi_detection_methods, GMM_MI_ESTIMATOR: mi_detection_methods,
                              AUTO_GLUON: cls_detection_methods, AUTO_GLUON_STACK: cls_detection_methods,
-                             TABPNF: cls_detection_methods, MULTI_LAYER_PERCEPTRON: cls_detection_methods,
-                             RANDOM_FOREST: cls_detection_methods}
+                             TABPNF: cls_detection_methods, TABPFN_VAR: cls_detection_methods,
+                             MULTI_LAYER_PERCEPTRON: cls_detection_methods, RANDOM_FOREST: cls_detection_methods}
         for job in jobs_all:
             job = dict(job)
             del job["job_id"]

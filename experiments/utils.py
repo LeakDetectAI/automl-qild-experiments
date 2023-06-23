@@ -40,6 +40,7 @@ __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_es
 
 from pycilt.utils import log_exception_error
 
+
 datasets = {SYNTHETIC_DATASET: SyntheticDatasetGenerator,
             SYNTHETIC_DISTANCE_DATASET: SyntheticDatasetGeneratorDistance,
             SYNTHETIC_IMBALANCED_DATASET: SyntheticDatasetGenerator,
@@ -82,6 +83,7 @@ mi_estimators = {GMM_MI_ESTIMATOR: GMMMIEstimator,
 
 leakage_detectors = {AUTO_GLUON: AutoGluonLeakageDetector,
                      AUTO_GLUON_STACK: AutoGluonLeakageDetector,
+                     TABPFN_VAR: TabPFNLeakageDetector,
                      TABPNF: TabPFNLeakageDetector,
                      RANDOM_FOREST: RandomForestLeakageDetector,
                      MULTI_LAYER_PERCEPTRON: MLPLeakageDetector,

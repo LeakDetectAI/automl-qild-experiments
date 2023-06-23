@@ -44,13 +44,15 @@ class ClassNet(nn.Module):
 
 
 class StatNet(nn.Module):
-    def __init__(self, in_dim, cls_enc=1, n_units=100, n_hidden=1):
+    def __init__(self, in_dim, cls_enc=1, n_units=100, n_hidden=1, device='cpu'):
         super(StatNet, self).__init__()
-        self.input = nn.Linear(in_dim + cls_enc, n_units)
-        self.hidden_layers = [nn.Linear(n_units, n_units) for x in range(n_hidden - 1)]
-        self.output = nn.Linear(n_units, 1)
+        self.device = device
+        self.input = nn.Linear(in_dim + cls_enc, n_units).to(self.device)
+        self.hidden_layers = [nn.Linear(n_units, n_units).to(self.device) for x in range(n_hidden - 1)]
+        self.output = nn.Linear(n_units, 1).to(self.device)
 
     def forward(self, x_in):
+        x_in = x_in.to(self.device)  # Move input tensor to the same device as the linear layer
         x_in = torch.relu(self.input(x_in))
         for i, hidden in enumerate(self.hidden_layers):
             x_in = torch.relu(hidden(x_in))
