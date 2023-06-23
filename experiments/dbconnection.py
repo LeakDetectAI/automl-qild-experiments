@@ -191,8 +191,9 @@ class DBConnector(metaclass=ABCMeta):
         avail_jobs = f"{self.schema}.avail_jobs"
         running_jobs = f"{self.schema}.running_jobs"
 
-        select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu}) AND {avail_jobs}.job_id<=2088 
-                         AND NOT EXISTS(SELECT job_id FROM {running_jobs} r WHERE r.interrupted = FALSE AND r.job_id = row.job_id)"""
+        select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu} AND job_id<=2088) 
+                         AND NOT EXISTS(SELECT job_id FROM {running_jobs} r WHERE r.interrupted = FALSE 
+                         AND r.job_id = row.job_id)"""
         print(select_job)
         self.cursor_db.execute(select_job)
         job_ids = [j for i in self.cursor_db.fetchall() for j in i]

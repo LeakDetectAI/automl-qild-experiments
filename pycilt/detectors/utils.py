@@ -1,11 +1,12 @@
+import hashlib
 import re
 
 from netcal.binning import IsotonicRegression, HistogramBinning
 from netcal.scaling import LogisticCalibration, BetaCalibration, TemperatureScaling
 from sklearn.metrics import confusion_matrix, accuracy_score
 
-from ..constants import *
 from pycilt.metrics import mid_point_mi, log_loss_estimation, pc_softmax_estimation
+from ..constants import *
 
 __all__ = ['mi_estimation_metrics', 'classification_leakage_detection_methods', 'mi_leakage_detection_methods',
            'leakage_detection_methods', 'calibrators', 'calibrator_params']
@@ -36,6 +37,11 @@ for value in [ESTIMATED_MUTUAL_INFORMATION, MID_POINT_MI_ESTIMATION, LOG_LOSS_MI
     key = key.replace('m_i', "mi")
     mi_leakage_detection_methods[key] = value
 leakage_detection_methods = {**classification_leakage_detection_methods, **mi_leakage_detection_methods}
+leakage_detection_names = {}
+for key in leakage_detection_methods.keys():
+    hash_object = hashlib.sha1()
+    hash_object.update(key.encode())
+    leakage_detection_names[key] = str(hash_object.hexdigest())[:8]
 calibrators = {ISOTONIC_REGRESSION: IsotonicRegression,
                PLATT_SCALING: LogisticCalibration,
                HISTOGRAM_BINNING: HistogramBinning,

@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+import shutil
 from abc import ABCMeta
 
 import h5py
@@ -17,12 +18,13 @@ from pycilt.detectors.utils import *
 from pycilt.metrics import probability_calibration
 from pycilt.statistical_tests import paired_ttest
 from pycilt.utils import log_exception_error, create_directory_safely
+from .utils import leakage_detection_names
 from ..constants import *
 
 
 class InformationLeakageDetector(metaclass=ABCMeta):
     def __init__(self, padding_name, learner_params, fit_params, hash_value, cv_iterations, n_hypothesis,
-                 base_directory, random_state, **kwargs):
+                 base_directory, detection_method, random_state, **kwargs):
         self.logger = logging.getLogger(InformationLeakageDetector.__name__)
         self.padding_name, self.padding_code = self.format_name(padding_name)
         self.fit_params = fit_params
@@ -38,9 +40,27 @@ class InformationLeakageDetector(metaclass=ABCMeta):
         self.results = {}
         self.base_detector = None
         self.base_directory = base_directory
-        self.results_file = os.path.join(self.base_directory, RESULT_FOLDER, f"{hash_value}_intermediate.h5")
-        create_directory_safely(self.results_file, True)
+        self.detection_method = detection_method
+        self.__init_results_files__()
         self.__initialize_objects__()
+
+    def __initialize_objects__(self):
+        for i in range(self.n_hypothesis):
+            self.results[f'model_{i}'] = {}
+            for metric_name, evaluation_metric in mi_estimation_metrics.items():
+                self.results[f'model_{i}'][metric_name] = []
+        self.results[MAJORITY_VOTING] = {}
+        self.results[MAJORITY_VOTING][ACCURACY] = []
+
+    def __init_results_files__(self):
+        if self.detection_method not in leakage_detection_methods.keys():
+            raise ValueError(f"Invalid Detection Method {self.detection_method}")
+        hv_dm = leakage_detection_names[self.detection_method]
+        self.results_file = os.path.join(self.base_directory, RESULT_FOLDER, f"{self.hash_value}_{hv_dm}_eval.h5")
+        self.result_file_backup = os.path.join(self.base_directory, RESULT_FOLDER, f"{self.hash_value}_eval.h5")
+        if os.path.exists(self.result_file_backup):
+            shutil.copy(self.result_file_backup, self.results_file)
+        create_directory_safely(self.results_file, True)
 
     def format_name(self, padding_name):
         padding_name = '_'.join(padding_name.split(' ')).lower()
@@ -85,14 +105,6 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                     file.close()
         self.close_file()
         return np.all(conditions)
-
-    def __initialize_objects__(self):
-        for i in range(self.n_hypothesis):
-            self.results[f'model_{i}'] = {}
-            for metric_name, evaluation_metric in mi_estimation_metrics.items():
-                self.results[f'model_{i}'][metric_name] = []
-        self.results[MAJORITY_VOTING] = {}
-        self.results[MAJORITY_VOTING][ACCURACY] = []
 
     def get_training_dataset(self, X, y):
         lengths = []
@@ -167,6 +179,14 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                 self.logger.info(f"Metric {metric_name}: Value: {metric_loss}")
             self.results[model_name][metric_name].append(metric_loss)
 
+    def copy_to_backup(self):
+        if os.path.exists(self.result_file_backup):
+            os.remove(self.result_file_backup)
+            print(f"File '{self.result_file_backup}' has been removed.")
+        else:
+            print(f"File '{self.result_file_backup}' does not exist making backup")
+            shutil.copy(self.results_file, self.result_file_backup)
+
     def store_results(self):
         self.logger.info(f"Result file {self.results_file}")
         if os.path.exists(self.results_file):
@@ -192,6 +212,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
         finally:
             file.close()
         self.close_file()
+        self.copy_to_backup()
 
     def allkeys(self, obj):
         "Recursively find all keys in an h5py.Group."
@@ -253,7 +274,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
         else:
             raise ValueError(f"The results are not found at the path {self.results_file}")
 
-    def detect(self, detection_method):
+    def detect(self):
         # change for including holm-bonnfernoi
         def holm_bonferroni(p_values):
             reject, pvals_corrected, _, alpha = multipletests(p_values, 0.01, method='holm', is_sorted=False)
@@ -261,33 +282,30 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             pvals_corrected = [1.0] * len(p_values) + list(pvals_corrected)
             return p_values, pvals_corrected, reject
 
-        if detection_method not in leakage_detection_methods.keys():
-            raise ValueError(f"Invalid Detection Method {detection_method}")
-        else:
-            n_training_folds = self.cv_iterations - 1
-            n_test_folds = 1
-            model_results = self.read_results_file(detection_method)
-            model_p_values = {}
-            for model_name, metric_vals in model_results.items():
-                p_value = 1.0
-                if detection_method in mi_leakage_detection_methods.keys():
-                    base_mi = self.random_state.rand(len(metric_vals)) * 1e-2
-                    p_value = paired_ttest(base_mi, metric_vals, n_training_folds, n_test_folds, correction=True)
-                    self.logger.info("Normal Paired T-Test for MI estimation Technique")
-                elif detection_method == PAIRED_TTEST:
-                    accuracies = self.read_majority_accuracies()
-                    self.logger.info(f"Majority Voting Accuracies {accuracies} learner {metric_vals}")
-                    p_value = paired_ttest(accuracies, metric_vals, n_training_folds, n_test_folds, correction=True)
-                    self.logger.info("Paired T-Test for accuracy comparison with majority")
-                elif detection_method in [FISHER_EXACT_TEST_MEAN, FISHER_EXACT_TEST_MEDIAN]:
-                    self.logger.info("Fisher's Exact-Test for confusion matrix")
-                    metric_vals = [np.array([[tn, fp], [fn, tp]]) for [tn, fp, fn, tp] in metric_vals]
-                    p_values = np.array([fisher_exact(cm)[1] for cm in metric_vals])
-                    if detection_method == FISHER_EXACT_TEST_MEAN:
-                        p_value = np.mean(p_values)
-                    elif detection_method == FISHER_EXACT_TEST_MEDIAN:
-                        p_value = np.median(p_values)
-                model_p_values[model_name] = p_value
-                self.logger.info(f"Model {model_name} p-value {p_value}")
-            p_vals, pvals_corrected, rejected = holm_bonferroni(list(model_p_values.values()))
+        n_training_folds = self.cv_iterations - 1
+        n_test_folds = 1
+        model_results = self.read_results_file(self.detection_method)
+        model_p_values = {}
+        for model_name, metric_vals in model_results.items():
+            p_value = 1.0
+            if self.detection_method in mi_leakage_detection_methods.keys():
+                base_mi = self.random_state.rand(len(metric_vals)) * 1e-2
+                p_value = paired_ttest(base_mi, metric_vals, n_training_folds, n_test_folds, correction=True)
+                self.logger.info("Normal Paired T-Test for MI estimation Technique")
+            elif self.detection_method == PAIRED_TTEST:
+                accuracies = self.read_majority_accuracies()
+                self.logger.info(f"Majority Voting Accuracies {accuracies} learner {metric_vals}")
+                p_value = paired_ttest(accuracies, metric_vals, n_training_folds, n_test_folds, correction=True)
+                self.logger.info("Paired T-Test for accuracy comparison with majority")
+            elif self.detection_method in [FISHER_EXACT_TEST_MEAN, FISHER_EXACT_TEST_MEDIAN]:
+                self.logger.info("Fisher's Exact-Test for confusion matrix")
+                metric_vals = [np.array([[tn, fp], [fn, tp]]) for [tn, fp, fn, tp] in metric_vals]
+                p_values = np.array([fisher_exact(cm)[1] for cm in metric_vals])
+                if self.detection_method == FISHER_EXACT_TEST_MEAN:
+                    p_value = np.mean(p_values)
+                elif self.detection_method == FISHER_EXACT_TEST_MEDIAN:
+                    p_value = np.median(p_values)
+            model_p_values[model_name] = p_value
+            self.logger.info(f"Model {model_name} p-value {p_value}")
+        p_vals, pvals_corrected, rejected = holm_bonferroni(list(model_p_values.values()))
         return np.any(rejected), np.sum(rejected)

@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import pickle as pk
+import re
 import sys
 import traceback
 from datetime import datetime
@@ -28,6 +29,7 @@ from docopt import docopt
 
 from experiments.dbconnection import DBConnector, NpEncoder
 from experiments.utils import *
+from pycilt.constants import *
 from pycilt.utils import *
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -93,9 +95,13 @@ if __name__ == "__main__":
                 create_directory_safely(log_path, True)
                 setup_logging(log_path=log_path)
                 time_taken = get_time_taken(log_path)
-                if job_id >= 1828:
+                other_detection_method_condition = detection_method not in [
+                    re.sub(r'(?<!^)(?=[A-Z])', '_', FISHER_EXACT_TEST_MEDIAN).lower(),
+                    re.sub(r'(?<!^)(?=[A-Z])', '_', ESTIMATED_MUTUAL_INFORMATION).lower()]
+                if other_detection_method_condition:
                     log_path = os.path.join(BASE_DIR, LOGS_FOLDER, f"{hash_value}_{detection_method}.log")
                     setup_logging(log_path=log_path)
+
                 setup_random_seed(random_state=random_state)
                 logger = logging.getLogger('Experiment')
                 logger.info(f"Time Taken till old: {time_taken} seconds")
@@ -117,7 +123,7 @@ if __name__ == "__main__":
                                    'fit_params': fit_params, 'hash_value': hash_value, 'cv_iterations': cv_iterations,
                                    'n_hypothesis': n_hypothesis, 'base_directory': BASE_DIR,
                                    'search_space': search_space, 'hp_iters': hp_iters, 'n_inner_folds': n_inner_folds,
-                                   'validation_loss': validation_loss}
+                                   'validation_loss': validation_loss, 'detection_method': detection_method}
                 detector_params = convert_learner_params(detector_params)
                 logger.info(f"Time Taken till now: {seconds_to_time(duration_till_now(start))}  seconds")
                 y_true = []
@@ -128,6 +134,7 @@ if __name__ == "__main__":
                     logger.info(f"Running the detector for label {label} vulnerable {ground_truth}")
                     detector_params['padding_name'] = label
                     ild_model = ild_learner(**detector_params)
+                    ild_model.make_copy_result_file(detection_method=detection_method)
                     ild_model.fit(X, y)
                     predicted_decision, n_hypothesis_detection = ild_model.detect(detection_method=detection_method)
                     logger.info(f"The label is vulnerable {ground_truth} and predicted {predicted_decision}")
