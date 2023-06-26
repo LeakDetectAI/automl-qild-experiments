@@ -113,10 +113,10 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                 self.logger.info(f"Locked the backup file: {self.rf_backup_name}")
                 # Perform the file copy operation
                 shutil.copy(self.results_file_backup, self.results_file)
-                self.logger.info(f"Copied the file from {self.rf_backup_name} to "
-                                 f"{self.rf_name}")
+                self.logger.info(f"Copied the file from {self.rf_backup_name} to {self.rf_name}")
                 # Release the lock on the source file
                 fcntl.flock(source.id.get_vfd_handle(), fcntl.LOCK_UN)
+                source.close()
                 self.logger.info(f"Unlocked the backup file: {self.rf_backup_name}")
             else:
                 self.logger.info(f"Latest results already complete for the {self.padding_name}")
