@@ -338,7 +338,8 @@ class DBConnector(metaclass=ABCMeta):
     def append_error_string_in_running_job(self, job_id, error_message, **kwargs):
         self.init_connection(cursor_factory=None)
         running_jobs = f"{self.schema}.running_jobs"
-        current_message = (f"SELECT cluster_id, error_history from {running_jobs} WHERE {running_jobs}.job_id = {job_id}")
+        current_message = (
+            f"SELECT cluster_id, error_history from {running_jobs} WHERE {running_jobs}.job_id = {job_id}")
         self.cursor_db.execute(current_message)
         cur_message = self.cursor_db.fetchone()
         error_message = "cluster{}".format(cur_message[0]) + error_message
@@ -810,6 +811,3 @@ class DBConnector(metaclass=ABCMeta):
                             else:
                                 self.logger.info(f"Job already exist")
         self.close_connection()
-
-
-

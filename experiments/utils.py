@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import dill
 import numpy as np
 import openml
+import psycopg2
 import sklearn
 import tensorflow as tf
 import torch
@@ -40,7 +41,6 @@ __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_es
            "get_openml_datasets", "NpEncoder", "insert_results_in_table", "create_results"]
 
 from pycilt.utils import log_exception_error
-
 
 datasets = {SYNTHETIC_DATASET: SyntheticDatasetGenerator,
             SYNTHETIC_DISTANCE_DATASET: SyntheticDatasetGeneratorDistance,
@@ -210,6 +210,7 @@ def convert_learner_params(params):
             params[key] = None
     return params
 
+
 def setup_logging(log_path=None, level=logging.INFO):
     """Function setup as many logging for the experiments"""
     if log_path is None:
@@ -366,12 +367,17 @@ def insert_results_in_table(db_connector, results, final_result_table, logger):
             str_values = "%s"
         else:
             str_values = str_values + ", %s"
-
-    insert_result = f"INSERT INTO {final_result_table} ({columns}) VALUES ({str_values}) RETURNING job_id"
-    db_connector.cursor_db.execute(insert_result, tuple(values_str))
-    logger.info(f"Inserting results: {insert_result} values {values_str}")
-    if db_connector.cursor_db.rowcount == 1:
-        logger.info(f"Results inserted for the job {results['job_id']}")
+    try:
+        insert_result = f"INSERT INTO {final_result_table} ({columns}) VALUES ({str_values}) RETURNING job_id"
+        db_connector.cursor_db.execute(insert_result, tuple(values_str))
+        logger.info(f"Inserting results: {insert_result} values {values_str}")
+        if db_connector.cursor_db.rowcount == 1:
+            logger.info(f"Results inserted for the job {results['job_id']}")
+    except psycopg2.IntegrityError as error:
+        log_exception_error(logger, error)
+        logger.error(f"IntegrityError for the job {results['job_id']} hypothesis {results['n_hypothesis_threshold']}, "
+                     f"results already inserted to another node error")
+        db_connector.connection.rollback()
 
 
 def create_results(result):
@@ -385,4 +391,5 @@ def create_results(result):
     results['fold_id'] = str(result['fold_id'])
     results['imbalance'] = str(result['imbalance'])
     results['dataset_id'] = str(result["dataset_params"].get("dataset_id"))
+    results['evaluation_time'] = str(result["evaluation_time"])
     return results
