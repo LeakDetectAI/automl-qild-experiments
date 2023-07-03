@@ -96,5 +96,6 @@ if __name__ == "__main__":
                             results_new[metric_name] = f"{np.around(metric_loss, 4)}"
                 logger.info(f"Results for threshold {threshold} is: {print_dictionary(results_new)}")
                 insert_results_in_table(db_connector, results_new, final_result_table, logger)
+            logger.info("##########################################################################################")
             db_connector.connection.commit()
         db_connector.close_connection()
