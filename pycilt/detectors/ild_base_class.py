@@ -99,8 +99,8 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                     del file[self.padding_code]
                     self.logger.info(f"Results for padding {self.padding_name} removed since it is incomplete "
                                      f"{not np.all(conditions)} {conditions}")
-                    file.close()
-                    self.close_file()
+                file.close()
+                self.close_file()
         return np.all(conditions)
 
     def create_results_from_backup(self):

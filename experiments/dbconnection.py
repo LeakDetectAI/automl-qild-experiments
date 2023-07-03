@@ -10,22 +10,11 @@ import numpy as np
 import psycopg2
 from psycopg2.extras import DictCursor
 
-from experiments.utils import get_duration_seconds, duration_till_now, get_openml_datasets
+from experiments.utils import get_duration_seconds, duration_till_now, get_openml_datasets, NpEncoder
 from pycilt.constants import *
 from pycilt.dataset_readers import GEN_TYPES, generate_samples_per_class
 from pycilt.detectors.utils import leakage_detection_methods
 from pycilt.utils import print_dictionary
-
-
-class NpEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        if isinstance(obj, np.floating):
-            return float(obj)
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return super(NpEncoder, self).default(obj)
 
 
 class DBConnector(metaclass=ABCMeta):
@@ -129,8 +118,8 @@ class DBConnector(metaclass=ABCMeta):
         self.init_connection()
         avail_jobs = "{}.avail_jobs".format(self.schema)
         running_jobs = "{}.running_jobs".format(self.schema)
-        select_job = """SELECT * FROM {0} row WHERE EXISTS(SELECT job_id FROM {1} r WHERE r.interrupted = FALSE 
-                        AND r.finished = FALSE AND r.job_id = row.job_id)""".format(avail_jobs, running_jobs)
+        select_job = f"""SELECT * FROM {avail_jobs} row WHERE EXISTS(SELECT job_id FROM {running_jobs} r 
+                         WHERE r.interrupted = FALSE AND r.finished = FALSE AND r.job_id = row.job_id)"""
         self.cursor_db.execute(select_job)
         all_jobs = self.cursor_db.fetchall()
         # print(f"Running jobs are {all_jobs}")
@@ -191,7 +180,7 @@ class DBConnector(metaclass=ABCMeta):
         avail_jobs = f"{self.schema}.avail_jobs"
         running_jobs = f"{self.schema}.running_jobs"
 
-        select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu} AND job_id<=2088) 
+        select_job = f"""SELECT job_id FROM {avail_jobs} row WHERE (is_gpu = {self.is_gpu}) 
                          AND NOT EXISTS(SELECT job_id FROM {running_jobs} r WHERE r.interrupted = FALSE 
                          AND r.job_id = row.job_id)"""
         print(select_job)
@@ -219,12 +208,13 @@ class DBConnector(metaclass=ABCMeta):
                 start = datetime.now()
                 update_job = f"""UPDATE {avail_jobs} set hash_value = %s, job_allocated_time = %s WHERE job_id = %s"""
                 self.cursor_db.execute(update_job, (hash_value, start, job_id))
-                select_job = f"""SELECT * FROM {running_jobs} WHERE {running_jobs}.job_id = {job_id} AND {running_jobs}.interrupted = {True} FOR UPDATE"""
+                select_job = f"""SELECT * FROM {running_jobs} WHERE {running_jobs}.job_id = {job_id} AND 
+                                 {running_jobs}.interrupted = {True} FOR UPDATE"""
                 self.cursor_db.execute(select_job)
                 count_ = len(self.cursor_db.fetchall())
                 if count_ == 0:
                     insert_job = f"""INSERT INTO {running_jobs} (job_id, cluster_id ,finished, interrupted) 
-                                    VALUES ({job_id}, {cluster_id},FALSE, FALSE)"""
+                                     VALUES ({job_id}, {cluster_id}, FALSE, FALSE)"""
                     self.cursor_db.execute(insert_job)
                     if self.cursor_db.rowcount == 1:
                         print(f"The job {job_id} is inserted")
@@ -273,7 +263,7 @@ class DBConnector(metaclass=ABCMeta):
 
     def insert_results(self, experiment_schema, experiment_table, results, **kwargs):
         self.init_connection(cursor_factory=None)
-        results_table = "{}.{}".format(experiment_schema, experiment_table)
+        results_table = f"{experiment_schema}.{experiment_table}"
         columns = ", ".join(list(results.keys()))
         values_str = ", ".join(list(results.values()))
 

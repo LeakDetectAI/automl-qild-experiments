@@ -27,7 +27,7 @@ from datetime import datetime
 import numpy as np
 from docopt import docopt
 
-from experiments.dbconnection import DBConnector, NpEncoder
+from experiments.dbconnection import DBConnector
 from experiments.utils import *
 from pycilt.constants import *
 from pycilt.utils import *
@@ -37,7 +37,6 @@ LOGS_FOLDER = 'logs'
 RESULT_FOLDER = 'results'
 EXPERIMENTS = 'experiments'
 OPTIMIZER_FOLDER = 'optimizers'
-
 
 if __name__ == "__main__":
 
@@ -168,7 +167,6 @@ if __name__ == "__main__":
                             results[metric_name] = f"{np.around(metric_loss, 4)}"
                     logger.info(f"Out of sample error {metric_name} : {metric_loss}")
                     print(f"Out of sample error {metric_name} : {metric_loss}")
-                results['hypothesis'] = json.dumps(values_of_m, cls=NpEncoder)
                 dbConnector.insert_results(experiment_schema=experiment_schema, experiment_table=experiment_table,
                                            results=results)
                 dbConnector.mark_running_job_finished(job_id=job_id, start=start, old_time_take=time_taken)

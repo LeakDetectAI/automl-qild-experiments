@@ -1,4 +1,5 @@
 import inspect
+import json
 import logging
 import multiprocessing
 import os
@@ -35,8 +36,8 @@ __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_es
            "learners", "classification_metrics", "mi_estimation_metrics", "mi_metrics", "lp_metric_dict",
            "get_duration_seconds", "duration_till_now", "time_from_now", "get_dataset_reader", "seconds_to_time",
            "time_from_now", "create_search_space", "get_dataset_reader", "convert_learner_params", "setup_logging",
-           "setup_random_seed", "check_file_exists", "get_automl_learned_estimator",
-           "get_time_taken", "get_openml_datasets"]
+           "setup_random_seed", "check_file_exists", "get_automl_learned_estimator", "get_time_taken",
+           "get_openml_datasets", "NpEncoder", "insert_results_in_table", "create_results"]
 
 from pycilt.utils import log_exception_error
 
@@ -337,3 +338,51 @@ def get_time_taken(log_path):
     else:
         time_value = 0
     return time_value
+
+
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NpEncoder, self).default(obj)
+
+
+def insert_results_in_table(db_connector, results, final_result_table, logger):
+    keys = list(results.keys())
+    values = list(results.values())
+    columns = ", ".join(list(results.keys()))
+    values_str = []
+    for i, (key, val) in enumerate(zip(keys, values)):
+        if isinstance(val, dict):
+            val = json.dumps(val, cls=NpEncoder)
+        else:
+            val = str(val)
+        values_str.append(val)
+        if i == 0:
+            str_values = "%s"
+        else:
+            str_values = str_values + ", %s"
+
+    insert_result = f"INSERT INTO {final_result_table} ({columns}) VALUES ({str_values}) RETURNING job_id"
+    db_connector.cursor_db.execute(insert_result, tuple(values_str))
+    logger.info(f"Inserting results: {insert_result} values {values_str}")
+    if db_connector.cursor_db.rowcount == 1:
+        logger.info(f"Results inserted for the job {results['job_id']}")
+
+
+def create_results(result):
+    results = {}
+    results['job_id'] = str(result['job_id'])
+    results['cluster_id'] = str(result['cluster_id'])
+    results['hypothesis'] = json.dumps(result['hypothesis'], cls=NpEncoder)
+    results['delay'] = str(result['delay'])
+    results['base_detector'] = str(result['base_detector'])
+    results['detection_method'] = str(result['detection_method'])
+    results['fold_id'] = str(result['fold_id'])
+    results['imbalance'] = str(result['imbalance'])
+    results['dataset_id'] = str(result["dataset_params"].get("dataset_id"))
+    return results

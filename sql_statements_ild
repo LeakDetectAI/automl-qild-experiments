@@ -107,7 +107,7 @@ UPDATE leakage_detection_new.avail_jobs set is_gpu=true where base_learner='mine
 
 
 DELETE from leakage_detection_new.running_jobs where True;
-alter sequence leakage_detection.running_jobs_running_id_seq restart with 1;
+alter sequence leakage_detection_new.running_jobs_running_id_seq restart with 1;
 UPDATE leakage_detection_new.running_jobs set running_id=job_id where true;
 alter sequence leakage_detection.running_jobs_running_id_seq restart with 1831;
 
