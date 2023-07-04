@@ -370,7 +370,7 @@ def insert_results_in_table(db_connector, results, final_result_table, logger):
     try:
         insert_result = f"INSERT INTO {final_result_table} ({columns}) VALUES ({str_values}) RETURNING job_id"
         db_connector.cursor_db.execute(insert_result, tuple(values_str))
-        logger.info(f"Inserting results: {insert_result} values {values_str}")
+        #logger.info(f"Inserting results: {insert_result} values {values_str}")
         if db_connector.cursor_db.rowcount == 1:
             logger.info(f"Results inserted for the job {results['job_id']}")
     except psycopg2.IntegrityError as error:
