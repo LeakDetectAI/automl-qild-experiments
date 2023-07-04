@@ -112,6 +112,7 @@ class DBConnector(metaclass=ABCMeta):
 
     def close_connection(self):
         self.connection.commit()
+        self.cursor_db.close()
         self.connection.close()
 
     def add_jobs_in_avail_which_failed(self):

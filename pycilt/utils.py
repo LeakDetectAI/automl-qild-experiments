@@ -54,13 +54,17 @@ def progress_bar(count, total, status=''):
     sys.stdout.flush()
 
 
-def print_dictionary(dictionary, sep='\n'):
+def print_dictionary(dictionary, sep='\t', n_keys=None):
     output = "  "
+    if n_keys is None:
+        n_keys = len(dictionary)
     for i, (key, value) in enumerate(dictionary.items()):
-        if i < len(dictionary) - 1:
+        if i < n_keys - 1:
             output = output + str(key) + " => " + str(value) + sep
         else:
             output = output + str(key) + " => " + str(value)
+        if i == n_keys-1:
+            break
     return output
 
 
@@ -147,3 +151,4 @@ def check_and_delete_corrupt_h5_file(file_path, logger):
             logger.error(f"The file '{basename}' has been deleted.")
     else:
         logger.info(f"File does not exist {basename}")
+

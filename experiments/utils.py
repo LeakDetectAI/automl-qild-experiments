@@ -38,7 +38,7 @@ __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_es
            "get_duration_seconds", "duration_till_now", "time_from_now", "get_dataset_reader", "seconds_to_time",
            "time_from_now", "create_search_space", "get_dataset_reader", "convert_learner_params", "setup_logging",
            "setup_random_seed", "check_file_exists", "get_automl_learned_estimator", "get_time_taken",
-           "get_openml_datasets", "NpEncoder", "insert_results_in_table", "create_results"]
+           "get_openml_datasets", "NpEncoder", "insert_results_in_table", "create_results", "check_entry_exists"]
 
 from pycilt.utils import log_exception_error
 
@@ -378,6 +378,14 @@ def insert_results_in_table(db_connector, results, final_result_table, logger):
         logger.error(f"IntegrityError for the job {results['job_id']} hypothesis {results['n_hypothesis_threshold']}, "
                      f"results already inserted to another node error")
         db_connector.connection.rollback()
+
+
+def check_entry_exists(db_connector, final_result_table, value1, value2):
+    query = f"""SELECT COUNT(*) FROM {final_result_table} WHERE job_id = '{value1}' 
+                AND n_hypothesis_threshold = '{value2}';"""
+    db_connector.cursor_db.execute(query)
+    count = db_connector.cursor_db.fetchone()[0]
+    return count > 0
 
 
 def create_results(result):
