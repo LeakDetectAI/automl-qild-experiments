@@ -5,7 +5,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
 #SBATCH -A hpc-prf-autosca
-#SBATCH -t 1-00:00:00
+#SBATCH -t 10:00:00
 #SBATCH -p normal
 #SBATCH -o /scratch/hpc-prf-autosca/prithag/clusterout/%x-%j
 #SBATCH -e /scratch/hpc-prf-autosca/prithag/clusterout/%x-%j

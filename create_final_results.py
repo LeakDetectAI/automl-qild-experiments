@@ -130,8 +130,6 @@ if __name__ == "__main__":
                 y_true.append(ground_truth)
                 rejected_hypothesis = hypothesis[label]
                 y_pred.append(int(rejected_hypothesis >= threshold))
-            result_new['n_hypothesis_threshold'] = threshold
-            result_new['hypothesis'] = json.dumps(result['hypothesis'], cls=NpEncoder)
             for metric_name, evaluation_metric in lp_metric_dict[learning_problem].items():
                 metric_loss = evaluation_metric(y_true, y_pred)
                 if np.isnan(metric_loss) or np.isinf(metric_loss):
@@ -141,6 +139,8 @@ if __name__ == "__main__":
                         result_new[metric_name] = f"{metric_loss}"
                     else:
                         result_new[metric_name] = f"{np.around(metric_loss, 4)}"
+            result_new['n_hypothesis_threshold'] = threshold
+            result_new['hypothesis'] = json.dumps(result['hypothesis'], cls=NpEncoder)
             result_string = print_dictionary(result_new, sep='\t')
             logger.info(f"Results for threshold {threshold} is: {result_string}")
             insert_results_in_table(db_connector, result_new, final_result_table, logger)
