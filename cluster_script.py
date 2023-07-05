@@ -1,8 +1,8 @@
 """Thin experiment runner which takes all simulation parameters from a database.
 
 Usage:
-  experiment_cv.py --cindex=<id> --isgpu=<bool> --schema=<schema>
-  experiment_cv.py (-h | --help)
+  cluster_script.py --cindex=<id> --isgpu=<bool> --schema=<schema>
+  cluster_script.py (-h | --help)
 
 Arguments:
   FILE                  An argument for passing in a file.

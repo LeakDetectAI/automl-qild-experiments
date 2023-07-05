@@ -13,7 +13,7 @@ LABEL_COL = 'label'
 
 
 class OpenMLDatasetReader(metaclass=ABCMeta):
-    def __init__(self, dataset_id: int, imbalance: float, random_state=None, **kwargs):
+    def __init__(self, dataset_id: int, imbalance: float, create_datasets=True, random_state=None, **kwargs):
         self.logger = logging.getLogger(OpenMLDatasetReader.__name__)
         self.dataset_id = dataset_id
         self.imbalance = imbalance
@@ -22,7 +22,8 @@ class OpenMLDatasetReader(metaclass=ABCMeta):
         self.vulnerable_classes = []
         self.__read_dataset__()
         self.__clean_up_dataset__()
-        self.__create_leakage_datasets__()
+        if create_datasets:
+            self.__create_leakage_datasets__()
 
     def __read_dataset__(self):
         self.dataset = openml.datasets.get_dataset(self.dataset_id, download_data=False)
@@ -32,7 +33,7 @@ class OpenMLDatasetReader(metaclass=ABCMeta):
         self.dataset_dictionary = {}
         if self.correct_class not in self.data_frame_raw[LABEL_COL].unique():
             raise ValueError(f'Dataframe is does not contain correct class {self.correct_class}')
-        self.logger.info(f"Class Labels {self.data_frame_raw[LABEL_COL].unique()}")
+        self.logger.info(f"Class Labels unformulated {list(self.data_frame_raw[LABEL_COL].unique())}")
         description = self.dataset.description
         vulnerable_classes_str = description.split('\n')[-1].split("vulnerable_classes ")[-1]
         vulnerable_classes_str = vulnerable_classes_str.strip('[]')

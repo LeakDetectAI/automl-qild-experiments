@@ -387,12 +387,10 @@ def check_entry_exists(db_connector, final_result_table, value1, value2):
     count = db_connector.cursor_db.fetchone()[0]
     return count > 0
 
-
 def create_results(result):
     results = {}
     results['job_id'] = str(result['job_id'])
     results['cluster_id'] = str(result['cluster_id'])
-    results['hypothesis'] = json.dumps(result['hypothesis'], cls=NpEncoder)
     results['delay'] = str(result['delay'])
     results['base_detector'] = str(result['base_detector'])
     results['detection_method'] = str(result['detection_method'])

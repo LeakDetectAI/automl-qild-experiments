@@ -1,2 +1,8 @@
-sbatch scripts/create_final_results.sh "leakage_detection_new"
-sbatch scripts/create_final_results.sh "leakage_detection"
+#!/bin/bash
+
+for i in {0..19}; do
+  sbatch scripts/create_final_results.sh "leakage_detection_new" $i
+done
+for i in {0..19}; do
+  sbatch scripts/create_final_results.sh "leakage_detection" $i
+done

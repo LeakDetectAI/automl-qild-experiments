@@ -1,3 +1,5 @@
+#!/bin/bash
+
 count=$1
 for i in $(seq $count);do
     sbatch scripts/run_ild.sh

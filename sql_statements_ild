@@ -113,3 +113,24 @@ alter sequence leakage_detection.running_jobs_running_id_seq restart with 1831;
 
 DELETE from leakage_detection_new.avail_jobs where job_id>=1831;
 alter sequence leakage_detection_new.avail_jobs_job_id_seq restart with 1831;
+
+ALTER TABLE results.leakage_detection_new ADD COLUMN dataset_id INTEGER, ADD COLUMN evaluation_time double precision;
+UPDATE results.leakage_detection_new AS results SET dataset_id = (jobs.dataset_params ->> 'dataset_id'::text)::INTEGER, evaluation_time = jobs.evaluation_time FROM leakage_detection_new.avail_jobs AS jobs WHERE jobs.job_id = results.job_id;
+
+SELECT jobs.job_id,
+       results.fold_id,
+       results.imbalance,
+       results.delay,
+       (jobs.dataset_params ->> 'dataset_id'::text)::integer AS dataset_id,
+       results.base_detector,
+       results.detection_method,
+       results.f1score,
+       results.accuracy,
+       results.mathewscorrelationcoefficient,
+       results.balancedaccuracy,
+       results.falsepositiverate,
+       results.falsenegativerate,
+       results.hypothesis,
+       jobs.evaluation_time
+FROM results.leakage_detection results
+         JOIN leakage_detection.avail_jobs jobs USING (job_id)
