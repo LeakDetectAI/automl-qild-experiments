@@ -587,7 +587,7 @@ class DBConnector(metaclass=ABCMeta):
         mi_detection_methods = [mi_detection_method]
         detection_methods = {MINE_MI_ESTIMATOR: mi_detection_methods, GMM_MI_ESTIMATOR: mi_detection_methods,
                              AUTO_GLUON: cls_detection_methods, AUTO_GLUON_STACK: cls_detection_methods,
-                             TABPNF: cls_detection_methods, TABPFN_VAR: cls_detection_methods,
+                             TABPFN: cls_detection_methods, TABPFN_VAR: cls_detection_methods,
                              MULTI_LAYER_PERCEPTRON: cls_detection_methods, RANDOM_FOREST: cls_detection_methods}
         for job in jobs_all:
             job = dict(job)

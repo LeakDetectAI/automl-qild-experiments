@@ -11,7 +11,6 @@ from pycilt.dataset_readers.utils import clean_class_label
 
 LABEL_COL = 'label'
 
-
 class OpenMLDatasetReader(metaclass=ABCMeta):
     def __init__(self, dataset_id: int, imbalance: float, create_datasets=True, random_state=None, **kwargs):
         self.logger = logging.getLogger(OpenMLDatasetReader.__name__)

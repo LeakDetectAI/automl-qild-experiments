@@ -293,7 +293,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             padding_name_group = file[self.padding_code]
             # self.logger.error(self.allkeys(padding_name_group))
             for model_name in self.results.keys():
-                if model_name == MAJORITY_VOTING:
+                if model_name in [MAJORITY_VOTING, RANDOM_CLASSIFIER]:
                     continue
                 model_group = padding_name_group[model_name]
                 # self.logger.error(self.allkeys(model_group))
