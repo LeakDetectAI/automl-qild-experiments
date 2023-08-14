@@ -11,3 +11,5 @@
 *.sif
 /__pycache__/
 /pycilt.egg-info/
+sql*
+*.sh
