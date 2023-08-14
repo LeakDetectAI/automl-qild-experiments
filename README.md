@@ -23,4 +23,4 @@ AutoMLQuantILDetect depends on AutoGLuon, TabPFN, Pytorch, Tensorflow, NumPy, Sc
 
 License
 --------
-[Apache License, Version 2.0](https://github.com/prithagupta/ML-ILD/blob/main/LICENSE)
+[Apache License, Version 2.0][https://github.com/LeakDetectAI/automl_quant_il_detect/blob/master/LICENSE]
