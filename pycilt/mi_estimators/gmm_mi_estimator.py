@@ -12,7 +12,7 @@ from ..utils import log_exception_error
 
 class GMMMIEstimator(MIEstimatorBase):
     def __init__(self, n_classes, n_features, y_cat=False, covariance_type='full', reg_covar=1e-06, val_size=0.30,
-                 n_reduced=20, reduction_technique='select_from_model_rf', random_state=42, **kwargs):
+                 n_reduced=30, reduction_technique='select_from_model_rf', random_state=42, **kwargs):
         super().__init__(n_classes=n_classes, n_features=n_features, random_state=random_state)
         self.y_cat = y_cat
         self.num_comps = list(np.arange(2, 20, 2))
@@ -69,11 +69,11 @@ class GMMMIEstimator(MIEstimatorBase):
                 raise ValueError(f"Dataset passed does not contain {self.n_features}")
             if self.n_classes != len(np.unique(y)):
                 raise ValueError(f"Dataset passed does not contain {self.n_classes}")
-            self.logger.info(f"Transforming and reducing the {self.n_features} features to {self.n_reduced}")
-            self.selection_model.fit(X, y)
             self.__is_fitted__ = True
-        if self.n_features > 100:
-            X = self.selection_model.transform(X)
+            if self.n_features > 100 and self.n_reduced<=self.n_features:
+                self.logger.info(f"Transforming and reducing the {self.n_features} features to {self.n_reduced}")
+                self.selection_model.fit(X, y)
+                X = self.selection_model.transform(X)
         return X
 
     def fit(self, X, y, verbose=0, **kwd):

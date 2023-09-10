@@ -11,16 +11,16 @@ DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe(
 
 if __name__ == "__main__":
     config_file_path = os.path.join(DIR_PATH, EXPERIMENTS, 'config', 'autosca.json')
-    log_path = os.path.join(DIR_PATH, EXPERIMENTS, 'files_deletion.log')
+    log_path = os.path.join(DIR_PATH, EXPERIMENTS, 'delete_files.log')
     setup_logging(log_path=log_path)
     logger = logging.getLogger('Experiment')
     logger.info(f"DB config filePath {config_file_path}")
-    for schema in [MUTUAL_INFORMATION, AUTO_ML]:
+    for schema in [AUTO_ML]:
         dbConnector = DBConnector(config_file_path=config_file_path, is_gpu=False, schema=schema,
                                   create_hash_list=True)
         dbConnector.init_connection()
         query = (f"SELECT hash_value, learning_problem, dataset_params, learner FROM {schema}.avail_jobs "
-                 f"where dataset='synthetic_imbalanced'")
+                 f"where dataset='synthetic_imbalanced' order by job_id")
         dbConnector.cursor_db.execute(query)
         jobs_all = dbConnector.cursor_db.fetchall()
         for row in jobs_all:
