@@ -37,6 +37,7 @@ class SyntheticDatasetGeneratorDistance(metaclass=ABCMeta):
         self.n_instances = sum(self.samples_per_class.values())
         self.class_labels = np.arange(self.n_classes)
         self.y_prob = {}
+        self.ent_y = None
         self.noise = noise
         self.generate_cov_means()
         self.logger = logging.getLogger(SyntheticDatasetGeneratorDistance.__name__)
@@ -102,6 +103,16 @@ class SyntheticDatasetGeneratorDistance(metaclass=ABCMeta):
                 y = np.append(y, labels)
         return X, y
 
+    def entropy_y(self, y):
+        uni, counts = np.unique(y, return_counts=True)
+        y_pred = counts / np.sum(counts)
+        y_pred = {i: c for i, c in zip(list(uni), y_pred)}
+        mi_pp = 0
+        for k_class in self.class_labels:
+            mi_pp += -self.y_prob[k_class] * np.log2(self.y_prob[k_class])
+            self.logger.info(f"{k_class}: {y_pred[k_class]},  {self.y_prob[k_class]}")
+        return mi_pp
+
     def calculate_mi(self):
         x_y_prob_list = []
         for k_class in self.class_labels:
@@ -135,10 +146,11 @@ class SyntheticDatasetGeneratorDistance(metaclass=ABCMeta):
         y_pred[y_pred == 1] = 1 - np.finfo(float).eps
         pyx = (y_pred * np.log2(y_pred)).sum(axis=1)
         mi_bp = pyx.mean()
-        mi_pp = 0
-        for k_class in self.class_labels:
-            mi_pp += -self.y_prob[k_class] * np.log2(self.y_prob[k_class])
-        mi = mi_bp + mi_pp
+        self.ent_y = self.entropy_y(y)
+
+        mi = mi_bp + self.ent_y
+        self.logger.info(f"mi_bp {mi_bp} mi_pp {self.ent_y}")
+        mi = np.max([mi, 0.0])
         return mi
 
     def bayes_predictor_pc_softmax_mi(self):

@@ -29,6 +29,7 @@ from docopt import docopt
 
 from experiments.dbconnection import DBConnector
 from experiments.utils import *
+from experiments.utils import leakage_detectors
 from pycilt.constants import *
 from pycilt.utils import *
 
@@ -114,7 +115,7 @@ if __name__ == "__main__":
 
                 # n_features = X.shape[-1]
                 # n_classes = len(np.unique(y))
-                ild_learner = learners[base_learner]
+                ild_learner = leakage_detectors[base_learner]
                 learner_params = convert_learner_params(learner_params_db)
                 learner_params['random_state'] = random_state
                 learner_params = {**learner_params, **dict(n_features=dataset_reader.n_features, n_classes=2)}

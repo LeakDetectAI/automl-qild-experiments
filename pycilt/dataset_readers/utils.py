@@ -10,7 +10,8 @@ def generate_samples_per_class(n_classes, samples=1000, imbalance=0.05, gen_type
         logger = logging.getLogger("Generate Samples")
     logger.info("###############################################################################")
     if imbalance > 1 / n_classes:
-        raise ValueError(f"The imbalance {imbalance} for a class cannot be more than uniform {1 / n_classes}")
+        raise ValueError(
+            f"The imbalance {np.around(imbalance, 2)} for a class cannot be more than uniform {1 / n_classes}")
     if gen_type not in GEN_TYPES:
         raise ValueError(f"Generation type {gen_type} not defined {GEN_TYPES}")
     assert (n_classes == 2) == (gen_type == 'single') or n_classes > 2
@@ -23,15 +24,17 @@ def generate_samples_per_class(n_classes, samples=1000, imbalance=0.05, gen_type
             samples_per_class[str(n_c)] = int(np.ceil(n_samples))
             logger.info(f"Class {n_c + 1} calculated {n_samples / n_total_instances}")
         samples_per_class[str(n_classes - 1)] = n_total_instances - sum(samples_per_class.values())
-        logger.info(f"Class {n_classes} calculated {samples_per_class[str(n_classes - 1)] / n_total_instances}")
+        v = samples_per_class[str(n_classes - 1)] / n_total_instances
+        logger.info(f"Class {n_classes} calculated {np.around(v, 2)}")
     if gen_type == 'multiple':
         for n_c in range((n_classes - 1)):
             n_samples = imbalance * n_total_instances
             samples_per_class[str(n_c)] = int(np.ceil(n_samples))
             logger.info(f"Class {n_c + 1} calculated {n_samples / n_total_instances}")
         samples_per_class[str(n_classes - 1)] = n_total_instances - sum(samples_per_class.values())
-        logger.info(f"Class {n_classes} calculated {samples_per_class[str(n_classes - 1)] / n_total_instances}")
-    logger.info(f"Imbalanced {imbalance} samples_per_class {samples_per_class}")
+        v = samples_per_class[str(n_classes - 1)] / n_total_instances
+        logger.info(f"Class {n_classes} calculated {np.around(v, 2)}")
+    logger.info(f"Imbalanced {np.around(imbalance, 2)} samples_per_class {samples_per_class}")
     return samples_per_class
 
 

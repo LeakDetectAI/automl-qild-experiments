@@ -6,7 +6,7 @@ from scipy.stats import multivariate_normal
 from scipy.stats import ortho_group
 from sklearn.utils import check_random_state, shuffle
 
-from pycilt.utils import softmax
+from pycilt.utils import softmax, normalize
 from ..constants import *
 
 
@@ -37,6 +37,7 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
         self.n_instances = sum(self.samples_per_class.values())
         self.class_labels = np.arange(self.n_classes)
         self.y_prob = {}
+        self.ent_y = None
         self.flip_y_prob = {}
         self.flip_y = flip_y
         self.generate_cov_means()
@@ -58,7 +59,8 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
             self.covariances[k_class] = cov
             self.seeds[k_class] = seed
             self.y_prob[k_class] = self.samples_per_class[k_class] / self.n_instances
-            self.flip_y_prob[k_class] = self.y_prob[k_class] * (1 - self.flip_y) + self.flip_y / self.n_classes
+            self.flip_y_prob[k_class] = (self.y_prob[k_class] * (1 - self.flip_y) + self.flip_y / self.n_classes)
+            self.flip_y_prob[k_class] = np.around(self.flip_y_prob[k_class], 4)
         # print(self.y_prob)
         # print(self.flip_y_prob)
 
@@ -84,8 +86,10 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
         return prob_y_given_x
 
     def get_prob_flip_y_given_x(self, X, class_label):
-        prob_y_given_x = (1 - self.flip_y) * self.get_prob_y_given_x(X, class_label) + (
-                self.flip_y * (1 / self.n_classes))
+        first_term = (1 - self.flip_y) * self.get_prob_y_given_x(X, class_label)
+        # second_term = (self.flip_y / self.n_classes)
+        second_term = (self.flip_y * self.y_prob[class_label])
+        prob_y_given_x = first_term + second_term
         return prob_y_given_x
 
     def get_prob_x_given_flip_y(self, X, class_label):
@@ -118,36 +122,59 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
         if self.flip_y > 0:
             if len(np.unique(list(self.samples_per_class.values()))) == 1:
                 self.logger.info("################# Balanced Dataset #################")
-                indicies = []
+                indices = []
                 for k_class in self.class_labels:
                     flip_samples = int(self.flip_y * self.samples_per_class[k_class])
                     ind0 = list(self.random_state.choice(np.where(y == k_class)[0], flip_samples, replace=False))
-                    indicies.extend(ind0)
-                self.logger.info(f"Original {np.unique(y, return_counts=True)}")
-                y[indicies] = shuffle(y[indicies], random_state=self.random_state)
+                    indices.extend(ind0)
                 uni, counts = np.unique(y, return_counts=True)
-                self.logger.info(f"Flipping {uni, counts}")
-                self.logger.info(f"Flipping Ratio {uni, counts / np.sum(counts)}")
+                d = {i: c for i, c in zip(uni, counts)}
+                self.logger.info(f"Original {d}")
+                self.logger.info(f"Probs {self.y_prob}")
+                y[indices] = shuffle(y[indices], random_state=self.random_state)
+                uni, counts = np.unique(y, return_counts=True)
+                d = {i: c for i, c in zip(list(uni), counts)}
+                d_o = {i: c for i, c in zip(list(uni), counts / np.sum(counts))}
+                self.logger.info(f"After Flipping {d}")
+                self.logger.info(f"Flipping Ratio {d_o}")
             else:
                 self.logger.info("################# Imbalanced Dataset #################")
-                self.logger.info(f"Original {np.unique(y, return_counts=True)}")
+                uni, counts = np.unique(y, return_counts=True)
+                d = {i: c for i, c in zip(uni, counts)}
+                self.logger.info(f"Original {d}")
+                self.logger.info(f"Probs {self.y_prob}")
                 choices = []
-                indicies = []
-                p = [1 / self.n_classes for i in range(self.n_classes)]
-                k_classes = list(np.arange(self.n_classes))
+                indices = []
                 for i, y_i in enumerate(y):
                     choice = self.random_state.choice(2, 1, p=[1 - self.flip_y, self.flip_y])
                     choices.append(choice)
                     if choice == 1:
-                        indicies.append(i)
+                        indices.append(i)
                         # y[i] = self.random_state.choice(self.n_classes, 1)
-                y[indicies] = self.random_state.randint(self.n_classes, size=len(indicies))
-                self.logger.info(f"np.mean(choices) {np.mean(choices)}")
+                p = np.array([self.samples_per_class[int(k)] / self.n_instances for k in range(self.n_classes)])
+                y_old = np.copy(y)
+                y[indices] = self.random_state.choice(self.n_classes, size=len(indices), p=p)
+                # y[indices] = self.random_state.randint(self.n_classes, size=len(indices))
+                self.logger.info(f"Actual Flip {self.flip_y} Flips {np.mean(y_old != y)}")
+                self.logger.info(f"Chosen flips {np.mean(choices)}")
                 uni, counts = np.unique(y, return_counts=True)
-                self.logger.info(f"Flipping {uni, counts}")
-                self.logger.info(f"Flipping Ratio {uni, counts / np.sum(counts)}")
-
+                d = {i: c for i, c in zip(list(uni), counts)}
+                d_o = {i: c for i, c in zip(list(uni), counts / np.sum(counts))}
+                self.logger.info(f"After Flipping {d}")
+                self.logger.info(f"Flipping Ratio {d_o}")
+                self.logger.info(f"Y_prob {self.y_prob}")
+                self.logger.info(f"Probs after flipping {self.flip_y_prob}")
         return X, y
+
+    def entropy_y(self, y):
+        uni, counts = np.unique(y, return_counts=True)
+        y_pred = counts / np.sum(counts)
+        y_pred = {i: c for i, c in zip(list(uni), y_pred)}
+        mi_pp = 0
+        for k_class in self.class_labels:
+            mi_pp += -self.y_prob[k_class] * np.log2(self.y_prob[k_class])
+            self.logger.info(f"{k_class}: {y_pred[k_class]},  {self.y_prob[k_class]}")
+        return mi_pp
 
     def calculate_mi(self):
         x_y_prob_list = []
@@ -165,7 +192,7 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
                     a_log_x_prob = (x_y_prob / p_x_marg)
                 else:
                     x_y_prob = self.get_prob_flip_y_given_x(X=data, class_label=k_class)
-                    a_log_x_prob = (x_y_prob / self.flip_y_prob[k_class])
+                    a_log_x_prob = (x_y_prob / self.y_prob[k_class])
                     # print(x_y_prob)
                 prob_list = np.nanmean(np.log2(a_log_x_prob))
                 # print(prob_list)
@@ -177,7 +204,7 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
             if self.flip_y == 0.0:
                 x_y_prob_list.append(prob_list * self.y_prob[k_class])
             else:
-                x_y_prob_list.append(prob_list * self.flip_y_prob[k_class])
+                x_y_prob_list.append(prob_list * self.y_prob[k_class])
         mi = np.nansum(x_y_prob_list)
         return mi
 
@@ -191,12 +218,15 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
                 y_pred[:, k_class] = self.get_prob_flip_y_given_x(X=X, class_label=k_class)
         y_pred[y_pred == 0] = np.finfo(float).eps
         y_pred[y_pred == 1] = 1 - np.finfo(float).eps
+        self.logger.info(f"Sum {y_pred.sum(axis=1)}")
+        self.logger.info(f"Sum {y_pred.sum()}, n_instances {self.n_instances}")
+        #self.logger.info(f"Y_pred {np.around(y_pred[0:3, :], 4)}")
         pyx = (y_pred * np.log2(y_pred)).sum(axis=1)
         mi_bp = pyx.mean()
-        mi_pp = 0
-        for k_class in self.class_labels:
-            mi_pp += -self.flip_y_prob[k_class] * np.log2(self.flip_y_prob[k_class])
-        mi = mi_bp + mi_pp
+        self.ent_y = self.entropy_y(y)
+        mi = mi_bp + self.ent_y
+        self.logger.info(f"mi_bp {mi_bp} mi_pp {self.ent_y}")
+        mi = np.max([mi, 0.0])
         return mi
 
     def bayes_predictor_pc_softmax_mi(self):

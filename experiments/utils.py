@@ -91,7 +91,7 @@ leakage_detectors = {AUTO_GLUON: AutoGluonLeakageDetector,
                      MINE_MI_ESTIMATOR: MIEstimationLeakageDetector,
                      GMM_MI_ESTIMATOR: MIEstimationLeakageDetector}
 
-learners = {**classifiers, **mi_estimators, **leakage_detectors}
+learners = {**classifiers, **mi_estimators}
 
 classification_metrics = {
     ACCURACY: accuracy_score,
