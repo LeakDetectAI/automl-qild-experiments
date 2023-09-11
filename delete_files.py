@@ -20,7 +20,7 @@ if __name__ == "__main__":
                                   create_hash_list=True)
         dbConnector.init_connection()
         query = (f"SELECT hash_value, learning_problem, dataset_params, learner FROM {schema}.avail_jobs "
-                 f"where dataset='synthetic_imbalanced' order by job_id")
+                 f"where dataset='synthetic_imbalanced' and learner = 'auto_gluon' order by job_id")
         dbConnector.cursor_db.execute(query)
         jobs_all = dbConnector.cursor_db.fetchall()
         for row in jobs_all:
