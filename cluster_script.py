@@ -220,7 +220,7 @@ if __name__ == "__main__":
                                 log_exception_error(logger, error)
                                 logger.error("Error while calibrating the probabilities setting mi using non"
                                              "calibrated probabilities")
-                                metric_loss = evaluation_metric(y_test, p_pred)
+                                metric_loss = evaluation_metric(y_true, p_pred)
                         else:
                             metric_loss = evaluation_metric(y_true, p_pred)
                     elif metric_name in [MCMC_LOG_LOSS, MCMC_MI_ESTIMATION, MCMC_PC_SOFTMAX, MCMC_SOFTMAX]:
