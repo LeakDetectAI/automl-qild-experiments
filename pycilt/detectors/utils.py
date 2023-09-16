@@ -24,6 +24,7 @@ mi_estimation_metrics = {
 }
 
 classification_leakage_detection_methods = {
+    PAIRED_TTEST_RANDOM: ACCURACY,
     PAIRED_TTEST: ACCURACY,
     FISHER_EXACT_TEST_MEAN: CONFUSION_MATRIX,
     FISHER_EXACT_TEST_MEDIAN: CONFUSION_MATRIX,

@@ -61,6 +61,7 @@ class AutoGluonClassifier(AutomlClassifier):
             try:
                 self.model = TabularPredictor.load(self.output_folder)
                 self.logger.info(f"Loading the model at {basename}")
+                self.leaderboard = self.model.leaderboard(extra_info=True)
             except Exception as error:
                 log_exception_error(self.logger, error)
                 self.logger.error(f"Cannot load the trained model at {basename}")
@@ -72,16 +73,21 @@ class AutoGluonClassifier(AutomlClassifier):
             difference = self.time_limit - time_taken
             if 200 <= self.time_limit < 300:
                 limit = 150
+            elif self.time_limit >= 3000:
+                limit = 2000
             else:
                 limit = 200
             self.logger.info(f"Fitting time of the model {time_taken} and remaining {difference}, limit {limit}")
-            if difference >= limit:
-                self.model = None
             num_models = len(self.leaderboard['fit_time'])
             self.logger.info(f"Number of models trained is {num_models} ")
-            if num_models <= 50:
-                self.model = None
-                self.logger.info(f"Retraining the model since they are less than 50")
+            if num_models < 1200:
+                if num_models <= 50:
+                    self.model = None
+                    self.logger.info(f"Retraining the model since they are less than 50")
+                if difference >= limit:
+                    self.model = None
+            else:
+                self.logger.info("Enough models trained")
 
         if self.model is None:
             try:
