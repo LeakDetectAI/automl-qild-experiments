@@ -1,9 +1,9 @@
 import os
 
+import matplotlib.path as mpath
 import numpy as np
 import pandas as pd
 import psycopg2
-import matplotlib.path as mpath
 
 from pycilt.constants import *
 
@@ -12,12 +12,47 @@ __all__ = ['MAE', 'MSE', 'NMAE', 'NMSE', 'columns_dict', 'learner_dict', 'datase
            'create_combined_synthetic_dataset', 'get_reduced_dataframe', 'learner_names', 'create_directory_safely',
            'detection_methods', 'ild_metrics', 'create_custom_order', 'get_synthetic_dataset_results',
            'get_real_dataset_results', 'create_combined_real_dataset', 'setup_logging', 'generation_methods',
-           'filter_real_dataset']
+           'filter_real_dataset', 'real_parameters', 'noise_column', 'imb_column', 'thre_column', 'delay_column',
+           'delay_value', 'fp_column', 'classes_column', 'features_column', 'noise_column', 'gen_type_column', ]
 
-MAE = "Mean absolute error"
-MSE = "Mean squared error"
-NMAE = "Normalized Mean\nabsolute error"
-NMSE = "Normalized Mean\nsquared error"
+delay_column = 'Delay'
+thre_column = 'Threshold'
+fp_column = "Flip Percentage $\epsilon$"
+classes_column = "Classes $M$"
+features_column = "Features $d$"
+imb_column = 'Imbalance $r$'
+noise_column = "Noise $\epsilon$"
+gen_type_column = 'Generation Type'
+
+noises = [0.0, 0.5, 1.0]
+title_noises = {}
+for fp in noises:
+    if fp == 1.0:
+        title_noises[fp] = f"Non-vulnerable\n$\epsilon$={fp}"
+    else:
+        title_noises[fp] = f"Vulnerable\n$\epsilon$={fp}"
+
+imbalances = [0.1, 0.3, 0.5]
+titles_imbalances = {}
+for imb in imbalances:
+    if imb == 0.5:
+        titles_imbalances[imb] = "Balanced"
+    else:
+        titles_imbalances[imb] = fr"{imb_column} = {imb}"
+thresholds = [1, 5, 7]
+titles_thresholds = {}
+for threshold in thresholds:
+    titles_thresholds[threshold] = fr'Holm-Bonferroni cut-off parameter $\tau$={threshold}'
+delay_value = 30
+titles_delays = {'less': fr'Delay $\leq$ ${delay_value}$ $\mu$-seconds',
+                 'more': fr'Delay $\geq$ ${delay_value}$ $\mu$-seconds'}
+real_parameters = {thre_column: titles_thresholds, imb_column: titles_imbalances, delay_column: titles_delays,
+                   noise_column: title_noises}
+
+MAE = "Mean Absolute Error"
+MSE = "Mean Squared Error"
+NMAE = "Normalized Mean Absolute Error"
+NMSE = "Normalized Mean Squared Error"
 columns_dict = {
     MID_POINT_MI_ESTIMATION.lower(): 'Mid-point',
     LOG_LOSS_MI_ESTIMATION.lower(): 'Log-loss',
@@ -28,8 +63,9 @@ columns_dict = {
     LOG_LOSS_MI_ESTIMATION_TEMPERATURE_SCALING.lower(): 'TS Cal Log-loss',
     PC_SOFTMAX_MI_ESTIMATION_HISTOGRAM_BINNING.lower(): 'HB Cal Log-loss',
     'paired-t-test': 'PTT-Majority',
-    'fishers-exact-median': 'FET-Median',
-    'fishers-exact-mean': 'FET-Mean'
+    'paired-t-test-random': 'PTT-Random',
+    'fishers-exact-median': 'FET-Mean',
+    'fishers-exact-mean': 'FET-Median'
 }
 learner_dict = {
     MULTI_LAYER_PERCEPTRON: "MLP",
@@ -40,15 +76,17 @@ learner_dict = {
     TABPFN_VAR: "TabPFN",
     GMM_MI_ESTIMATOR: "GMM Baseline",
     MINE_MI_ESTIMATOR: "MINE Baseline",
-    MINE_MI_ESTIMATOR_HPO: "MINE Baseline"
+    MINE_MI_ESTIMATOR_HPO: "MINE Baseline",
+    PC_SOFTMAX_MI_ESTIMATION: "PC-softmax Baseline"
 }
 dataset_dict = {
-    SYNTHETIC_DATASET: "Mixed MVN Noise",
-    SYNTHETIC_DISTANCE_DATASET: "Mixed MVN Distance",
-    SYNTHETIC_IMBALANCED_DATASET: "Mixed MVN Noise Imbalanced",
-    SYNTHETIC_DISTANCE_IMBALANCED_DATASET: "Mixed MVN Distance Imbalanced"
+    SYNTHETIC_DATASET: "MVN Perturbation Dataset",
+    SYNTHETIC_DISTANCE_DATASET: "MVN Proximity Dataset",
+    SYNTHETIC_IMBALANCED_DATASET: "MVN Perturbation Imbalanced Dataset",
+    SYNTHETIC_DISTANCE_IMBALANCED_DATASET: "MVN Proximity Imbalanced Dataset"
 }
 detection_methods = {
+    'paired-t-test-random': 'PTT-Random',
     'paired-t-test': 'PTT-Majority',
     'fishers-exact-mean': 'FET-Mean',
     'fishers-exact-median': 'FET-Median',
@@ -64,9 +102,9 @@ detection_methods = {
 }
 generation_methods = {
     'balanced': 'Balanced',
-    'binary': 'Binary-class\nimbalanced',
-    'multiple': 'Multi-class\nimbalanced',
-    'single': 'Multi-class\nimbalanced'
+    'binary': 'Binary-class\nImbalanced',
+    'multiple': 'Multi-class\nImbalanced',
+    'single': 'Multi-class\nImbalanced'
 }
 connect_params = {
     "dbname": "autosca",
@@ -81,19 +119,19 @@ color_palette = ['#A50026', '#A50026', '#D62728', '#FF9896', '#FF9896', '#FF9896
                  # Shades of red
                  # '#C49C94', '#8C564B', '#8C564B',
                  # Shades of brown
-                 '#08519C', '#1F77B4', '#1F77B4',
+                 '#08519C', '#08519C', '#1F77B4', '#1F77B4',
                  # Shades of blue
 
                  '#006D2C', '#006D2C', '#2CA02C', '#98DF8A', '#98DF8A', '#98DF8A', '#98DF8A', '#98DF8A', '#98DF8A',
                  # Shades of green
                  # '#FFBB78', '#FF7F0E', '#FF7F0E',
                  # Shades of orange
-                 '#9467BD', '#C5B0D5', '#C5B0D5',
+                 '#9467BD', '#9467BD', '#C5B0D5', '#C5B0D5',
                  # Shades of purple
 
                  '#08519C', '#08519C', '#1F77B4', '#AEC7E8', '#AEC7E8', '#AEC7E8', '#AEC7E8', '#AEC7E8', '#AEC7E8',
                  # Shades of blue
-                 '#9467BD', '#C5B0D5', '#C5B0D5',
+                 '#9467BD', '#9467BD', '#C5B0D5', '#C5B0D5',
                  # Shades of purple
                  '#000000', '#7F7F7F', '#C7C7C7'
                  # Shades of gray
@@ -104,9 +142,9 @@ circle = mpath.Path.unit_circle()
 cut_star = mpath.Path(
     vertices=np.concatenate([circle.vertices, star.vertices[::-1, ...]]),
     codes=np.concatenate([circle.codes, star.codes]))
-markers = ['o', 'o', 's', 'H', 'H', 'H', 'H', 'H', 'H', '8', 'p', 'p',
-           'x', 'x', '+', 'X', 'X', 'X', 'X', 'X', 'X', "P", cut_star, star,
-           'v', 'v', '^', '<', '<', '<', '<', '<', '<', '>', '1', '1',
+markers = ['o', 'o', 's', 'H', 'H', 'H', 'H', 'H', 'H', '8', '8', 'p', 'p',
+           'x', 'x', '+', 'X', 'X', 'X', 'X', 'X', 'X', star, star, cut_star, cut_star,
+           'v', 'v', '^', '<', '<', '<', '<', '<', '<', '>', '>', '1', '1',
            '<', 'v', '^']
 
 
@@ -133,7 +171,7 @@ def create_combined_real_dataset(table_name, filter_results=True):
         group = ['n_hypothesis_threshold', 'delay', 'imbalance', 'base_detector', 'detection_method']
     else:
         group = ['delay', 'imbalance', 'base_detector', 'detection_method']
-    columns_new = ["Dataset", 'Base Learner', "Detection Method", "Detection Technique", "Imbalance", "Delay",
+    columns_new = ["Dataset", 'Base Learner', "Detection Method", "Detection Technique", imb_column, "Delay",
                    "Threshold", "Time"]
     for col in ild_metrics:
         columns_new.extend([col, col + '-Std'])
@@ -150,7 +188,7 @@ def create_combined_real_dataset(table_name, filter_results=True):
 
         if detection_method == 'p_c_softmax_mi':
             if learner_dict[base_detector] == 'MLP':
-                one_row[1] = 'PC-Softmax Baseline'
+                one_row[1] = 'PC-softmax Baseline'
                 one_row[2] = detection_methods['estimated_mutual_information']
             else:
                 continue
@@ -171,25 +209,26 @@ def create_combined_real_dataset(table_name, filter_results=True):
     final_df = pd.DataFrame(data, columns=columns_new)
     if filter_results:
         custom_order = [learner_dict[AUTO_GLUON], learner_dict[TABPFN_VAR], learner_dict[GMM_MI_ESTIMATOR],
-                        learner_dict[MINE_MI_ESTIMATOR], 'PC-Softmax Baseline']
+                        learner_dict[MINE_MI_ESTIMATOR], 'PC-softmax Baseline']
     else:
         custom_order = [learner_dict[RANDOM_FOREST], learner_dict[AUTO_GLUON_STACK], learner_dict[AUTO_GLUON],
                         learner_dict[TABPFN], learner_dict[TABPFN_VAR], learner_dict[GMM_MI_ESTIMATOR],
-                        learner_dict[MINE_MI_ESTIMATOR], 'PC-Softmax Baseline']
+                        learner_dict[MINE_MI_ESTIMATOR], 'PC-softmax Baseline']
     detectors_order = [detection_methods['mid_point_mi'], detection_methods['log_loss_mi'],
                        detection_methods['log_loss_mi_isotonic_regression'],
                        detection_methods['log_loss_mi_platt_scaling'],
                        detection_methods['log_loss_mi_beta_calibration'],
                        detection_methods['log_loss_mi_temperature_scaling'],
                        detection_methods['log_loss_mi_histogram_binning'], detection_methods['paired-t-test'],
+                       detection_methods['paired-t-test-random'],
                        detection_methods['fishers-exact-mean'], detection_methods['fishers-exact-median'],
                        detection_methods['estimated_mutual_information']]
     techniques_order = [f"{learner} {col}" for learner in custom_order if 'Baseline' not in learner for col in
                         detectors_order]
-    techniques_order += ['GMM Baseline', 'MINE Baseline', 'PC-Softmax Baseline']
+    techniques_order += ['GMM Baseline', 'MINE Baseline', 'PC-softmax Baseline']
     final_df['Detection Technique'] = pd.Categorical(final_df['Detection Technique'], categories=techniques_order,
                                                      ordered=True)
-    final_df.sort_values(['Detection Technique', 'Imbalance', 'Delay'], inplace=True)
+    final_df.sort_values(['Detection Technique', imb_column, 'Delay'], inplace=True)
     final_df['Detection Technique'] = final_df['Detection Technique'].cat.remove_unused_categories()
 
     return final_df
@@ -228,7 +267,7 @@ def create_custom_order():
         for col in cols:
             learner_name = f"{learner} {col}"
             custom_order.append(learner_name)
-    custom_order = custom_order + ['GMM Baseline', 'MINE Baseline', 'PC-Softmax Baseline']
+    custom_order = custom_order + ['GMM Baseline', 'MINE Baseline', 'PC-softmax Baseline']
     return custom_order
 
 
@@ -248,18 +287,17 @@ def clean_array(arr):
     return arr_cleaned
 
 
-def get_values(y_true, y_pred, time, n_classes):
-    y_true = clean_array(y_true)
-    y_pred = clean_array(y_pred)
-    mae = np.around(np.nanmean(np.abs(y_true - y_pred)), 8)
-    mse = np.around(np.nanmean((y_true - y_pred) ** 2), 8)
-    time = np.mean(clean_array(time))
-    time = np.around(time, 4)
-    y_true_norm = y_true / np.log2(n_classes)
-    y_pred_norm = y_pred / np.log2(n_classes)
-    nmae = np.around(np.nanmean(np.abs(y_true_norm - y_pred_norm)), 8)
-    nmse = np.around(np.nanmean((y_true_norm - y_pred_norm) ** 2), 8)
-    return mae, mse, nmae, nmse, time
+def sort_dataframe(df):
+    learner_order = create_custom_order()
+    gen_type_order = [generation_methods['balanced'], generation_methods['binary'], generation_methods['single']]
+    df['Learner'] = pd.Categorical(df['Learner'], categories=learner_order, ordered=True)
+    df['Generation Type'] = pd.Categorical(df['Generation Type'], categories=gen_type_order, ordered=True)
+
+    # Sort the DataFrame based on the custom order
+    df.sort_values(['Learner', 'Generation Type'], inplace=True)
+    df['Learner'] = df['Learner'].cat.remove_unused_categories()
+    df['Generation Type'] = df['Generation Type'].cat.remove_unused_categories()
+    return df
 
 
 def get_values_std(y_true, y_pred, n_classes):
@@ -274,29 +312,59 @@ def get_values_std(y_true, y_pred, n_classes):
     return mae, mse, nmae, nmse
 
 
-def sort_dataframe(df):
-    learner_order = create_custom_order()
-    gen_type_order = [generation_methods['balanced'], generation_methods['binary'], generation_methods['single']]
-    df['Learner'] = pd.Categorical(df['Learner'], categories=learner_order, ordered=True)
-    df['Generation Type'] = pd.Categorical(df['Generation Type'], categories=gen_type_order, ordered=True)
+from pycilt.dataset_readers import generate_samples_per_class
 
-    # Sort the DataFrame based on the custom order
-    df.sort_values(['Learner', 'Generation Type'], inplace=True)
-    df['Learner'] = df['Learner'].cat.remove_unused_categories()
-    df['Generation Type'] = df['Generation Type'].cat.remove_unused_categories()
-    return df
 
+def get_max_mi_value(n_classes, gen_type, imbalance):
+    # print("******************************************************")
+    # print(n_classes, gen_type, imbalance)
+    if gen_type == 'balanced':
+        max_value = np.log2(n_classes)
+    else:
+        class_distribution = {str(i): 500 for i in range(n_classes)}
+        if gen_type == 'single' or gen_type == 'binary':
+            class_distribution = generate_samples_per_class(n_classes, 500, imbalance, 'single', None)
+        elif gen_type == 'multiple':
+            class_distribution = generate_samples_per_class(n_classes, 500, imbalance, 'multiple', None)
+        # print(class_distribution)
+        counts = np.array(list(class_distribution.values()))
+        total_instances = np.sum(counts)
+
+        probabilities = counts / total_instances
+        max_value = -np.sum(probabilities * np.log2(probabilities))
+        if max_value < 1.0:
+            max_value = 1.0
+    # print(max_value, np.log2(n_classes))
+    # max_value = np.log2(n_classes)
+    return max_value
+
+
+def get_values(y_true, y_pred, time, max_value, n_classes):
+    y_true = clean_array(y_true)
+    y_pred = clean_array(y_pred)
+    mae = np.around(np.nanmean(np.abs(y_true - y_pred)), 8)
+    mse = np.around(np.nanmean((y_true - y_pred) ** 2), 8)
+    time = np.mean(clean_array(time))
+    time = np.around(time, 4)
+    y_true_norm = y_true / max_value
+    y_pred_norm = y_pred / max_value
+    nmae = np.around(np.nanmean(np.abs(y_true_norm - y_pred_norm)), 8)
+    if nmae > 1.0:
+        nmae = nmae / np.log2(n_classes)
+    nmse = np.around(np.nanmean((y_true_norm - y_pred_norm) ** 2), 8)
+    return mae, mse, nmae, nmse, time
 
 def create_combined_synthetic_dataset():
     combined_results = get_synthetic_dataset_results()
-    columns_new = ["Dataset", 'Learner', "Flip Percentage", "Distance", "Noise", "Classes", "Features",
-                   "Generation Type", "Imbalance", MAE, MSE, NMAE, NMSE, "Time"]
+    columns_new = ["Dataset", 'Learner', fp_column, "Distance", noise_column, classes_column, features_column,
+                   gen_type_column, imb_column, MAE, MSE, NMAE, NMSE, "Time"]
     data = []
     for dataset, dataset_df in combined_results.groupby('dataset'):
         dataset_name = dataset_dict[dataset]
         group = ['flip_y', 'noise', 'n_classes', 'n_features', 'gen_type', 'imbalance']
         for (values), filter_df in dataset_df.groupby(group):
             flip_y, noise, n_classes, n_featrues, gen_type, imbalance = values
+            max_value = get_max_mi_value(n_classes, gen_type, imbalance)
             gen_type = generation_methods[gen_type]
             noise = np.round(noise, 1)
             for (learner), learner_df in filter_df.groupby('learner'):
@@ -310,16 +378,18 @@ def create_combined_synthetic_dataset():
                             # if np.any(np.isnan(y_true) | np.isinf(y_true) | np.isnan(y_pred) | np.isinf(y_pred)):
                             # print(dataset, values, learner, column)
                             learner_name = f"{learner_dict[learner]} {columns_dict[column]}"
-                            mae, mse, nmae, nmse, time = get_values(y_true, y_pred, time, n_classes)
+                            # print(n_classes, gen_type, imbalance, max_value)
+                            # print(y_true, y_pred)
+                            mae, mse, nmae, nmse, time = get_values(y_true, y_pred, time, max_value, n_classes)
                             one_row = [dataset_name, learner_name, flip_y, 1 - noise, noise, n_classes, n_featrues,
                                        gen_type, imbalance, mae, mse, nmae, nmse, time]
                             data.append(one_row)
                 if learner == 'mlp':
                     y_pred = learner_df['pcsoftmaxmi'].values
-                    learner_name = "PC-Softmax Baseline"
+                    learner_name = learner_dict[PC_SOFTMAX_MI_ESTIMATION]
                     # if np.any(np.isnan(y_true) | np.isinf(y_true) | np.isnan(y_pred) | np.isinf(y_pred)):
                     # print(dataset, values, learner, column)
-                    mae, mse, nmae, nmse, time = get_values(y_true, y_pred, time, n_classes)
+                    mae, mse, nmae, nmse, time = get_values(y_true, y_pred, time, max_value, n_classes)
                     one_row = [dataset_name, learner_name, flip_y, 1 - noise, noise, n_classes, n_featrues, gen_type,
                                imbalance, mae, mse, nmae, nmse, time]
                     data.append(one_row)
@@ -328,7 +398,7 @@ def create_combined_synthetic_dataset():
                     # if np.any(np.isnan(y_true) | np.isinf(y_true) | np.isnan(y_pred) | np.isinf(y_pred)):
                     # print(dataset, values, learner, column)
                     learner_name = learner_dict[learner]
-                    mae, mse, nmae, nmse, time = get_values(y_true, y_pred, time, n_classes)
+                    mae, mse, nmae, nmse, time = get_values(y_true, y_pred, time, max_value, n_classes)
                     one_row = [dataset_name, learner_name, flip_y, 1 - noise, noise, n_classes, n_featrues, gen_type,
                                imbalance, mae, mse, nmae, nmse, time]
                     data.append(one_row)
@@ -339,14 +409,14 @@ def create_combined_synthetic_dataset():
     return df
 
 
-def filter_real_dataset(real_df, imbalances, best_learners_balanced, best_learners_imbalanced, remove_ptt=False,
-                        remove_fet=False, logger=None, verbose=0):
+def filter_real_dataset(real_df, imbalances, best_learners_balanced, best_learners_imbalanced, remove_ptt_r=True,
+                        remove_ptt_mv=False, remove_fet=False, logger=None, verbose=0):
     dfs = []
     detection_column = "Detection Technique"
     for imbalance in imbalances:
         if verbose:
             logger.info(f"************ Imbalance {imbalance} ************")
-        cat_df = real_df[real_df['Imbalance'] == imbalance]
+        cat_df = real_df[real_df[imb_column] == imbalance]
         result = cat_df.groupby([detection_column])[ACCURACY].agg(['mean', 'std']).reset_index()
         result_df = pd.DataFrame(result)
         filter_learners = []
@@ -386,8 +456,10 @@ def filter_real_dataset(real_df, imbalances, best_learners_balanced, best_learne
             logger.info(f"Chosen Detectors {list(filter_df[detection_column].unique())}")
         dfs.append(filter_df)
     result_df = pd.concat(dfs, axis=0)
-    if remove_ptt:
+    if remove_ptt_mv:
         result_df = result_df[~result_df[detection_column].str.contains(detection_methods['paired-t-test'])]
+    if remove_ptt_r:
+        result_df = result_df[~result_df[detection_column].str.contains(detection_methods['paired-t-test-random'])]
     if remove_fet:
         result_df = result_df[~result_df[detection_column].str.contains(detection_methods['fishers-exact-mean'])]
     return result_df
@@ -437,7 +509,7 @@ def filter_best_results(cat_df, filter_case, logger, verbose):
         # Print the learner with the minimum mean absolute error
         # print("Learner with the minimum mean absolute error:", min_error_learner)
         filter_learners.append(chosen_learner['Learner'])
-    filter_learners = filter_learners + ['GMM Baseline', 'MINE Baseline', 'PC-Softmax Baseline']
+    filter_learners = filter_learners + ['GMM Baseline', 'MINE Baseline', learner_dict[PC_SOFTMAX_MI_ESTIMATION]]
     # print(f"Best Learners {filter_learners}")
     cat_df = cat_df[cat_df['Learner'].isin(filter_learners)]
     cat_df['Learner'] = cat_df['Learner'].astype("category")
@@ -485,21 +557,20 @@ def create_directory_safely(path, is_file_path=False):
         print(str(e))
 
 
-def setup_logging():
-    import logging
+import logging
+import inspect
+
+
+def setup_logging(log_path=None, level=logging.INFO):
+    if log_path is None:
+        dirname = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+        dirname = os.path.dirname(dirname)
+        log_path = os.path.join(dirname, "logs", "logs.log")
 
     # Create and configure the logger
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-
-    # Create a console handler and set its level
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-
-    # Define the log format
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    console_handler.setFormatter(formatter)
-
-    # Add the console handler to the logger
-    logger.addHandler(console_handler)
-    return logging
+    logging.basicConfig(filename=log_path, level=level,
+                        format='%(asctime)s %(name)s %(levelname)-8s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S', force=True)
+    logger = logging.getLogger("SetupLogging")  # root logger
+    logger.info("log file path: {}".format(log_path))
+    return logger
