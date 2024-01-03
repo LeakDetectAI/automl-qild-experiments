@@ -10,8 +10,8 @@ Installation
 ------------
 The latest release version of AutoMLQuantILDetect can be installed from GitHub as follows::
 	
-	pip install git+https://github.com/LeakDetectAI/information-leakage-techniques.git
-
+	pip install git+[https://github.com/LeakDetectAI/information-leakage-techniques.git
+](https://github.com/LeakDetectAI/automl_quant_il_detect.git)
 Another option is to clone the repository and install AutoMLQuantILDetect using::
 
 	python setup.py install
