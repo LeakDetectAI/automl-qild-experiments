@@ -31,6 +31,7 @@ class CSVReader(metaclass=ABCMeta):
         self.preprocessing = preprocessing
         self.ccs_fin_array = [False]
         self.correct_class = "Correctly Formatted Pkcs#1 Pms Message"
+        self.data_frame = None
         self.__load_dataset__()
 
     def __load_dataset__(self):
@@ -99,16 +100,17 @@ class CSVReader(metaclass=ABCMeta):
             df.reset_index(inplace=True)
             df.rename({0: 'Frequency'}, inplace=True, axis='columns')
             df.sort_values(by=[LABEL_COL], inplace=True)
-            f_vals = [0]
-            def div(row):
-                return row['Frequency'] / f_vals
-
             df['ratio_1_0'] = df[LABEL_COL].value_counts()/len(df.loc[df[LABEL_COL] == self.correct_class])
             fname = os.path.join(self.dataset_folder, "label_frequency.csv")
             df.to_csv(fname)
         self.label_frequency = df
 
-    def get_data_class_label(self, class_label=1, missing_ccs_fin=False):
+    def get_data_class_label(self, class_label=1, missing_ccs_fin=False, sample=True):
+        if sample:
+            ratios = self.data_frame[LABEL_COL].value_counts(normalize=True)
+            self.data_frame = self.data_frame.groupby(LABEL_COL).apply(
+                lambda x: x.sample(int(ratios[x.name] * 20000), replace=True)).reset_index(drop=True)
+
         if MISSING_CCS_FIN in self.data_frame.columns:
             df = self.data_frame[self.data_frame[MISSING_CCS_FIN] == missing_ccs_fin]
         else:

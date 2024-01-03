@@ -34,6 +34,7 @@ def wilcoxon_signed_rank_test(accuracies, accuracies2, alternative="two-sided", 
 
 
 def paired_ttest(x1, x2, n_training_folds, n_test_folds, correction=True, alternative="two-sided", verbose=False):
+    logger = logging.getLogger('Paired T-Test')
     n = len(x1)
     df = n - 1
     diff = [(x1[i] - x2[i]) for i in range(n)]
@@ -41,8 +42,11 @@ def paired_ttest(x1, x2, n_training_folds, n_test_folds, correction=True, altern
     d_bar = np.mean(diff)
     # compute the variance of differences
     sigma2 = np.var(diff, ddof=1)
+    if sigma2 == 0.0:
+        sigma2 = 1e-30
+        if verbose:
+            logger.info("Correcting the sigma")
 
-    logger = logging.getLogger('Paired T-Test')
     if correction:
         if verbose:
             logger.info("With the correction option")
