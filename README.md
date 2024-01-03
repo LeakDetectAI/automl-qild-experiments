@@ -10,8 +10,8 @@ Installation
 ------------
 The latest release version of AutoMLQuantILDetect can be installed from GitHub as follows::
 	
-	pip install git+[https://github.com/LeakDetectAI/information-leakage-techniques.git
-](https://github.com/LeakDetectAI/automl_quant_il_detect.git)
+	pip install git+[https://github.com/LeakDetectAI/information-leakage-techniques.git](https://github.com/LeakDetectAI/automl_quant_il_detect.git)
+ 
 Another option is to clone the repository and install AutoMLQuantILDetect using::
 
 	python setup.py install
@@ -19,7 +19,7 @@ Another option is to clone the repository and install AutoMLQuantILDetect using:
 
 Dependencies
 ------------
-AutoMLQuantILDetect depends on AutoGLuon, TabPFN, Pytorch, Tensorflow, NumPy, SciPy, matplotlib, Scikit-learn, and tqdm. For data processing and generation you will also need and pandas.
+AutoMLQuantILDetect depends on AutoGLuon, TabPFN, Pytorch, Tensorflow, NumPy, SciPy, matplotlib, Scikit-learn, and tqdm. For data processing and generation, you will also need pandas.
 
 License
 --------
