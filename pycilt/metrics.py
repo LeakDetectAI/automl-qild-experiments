@@ -186,15 +186,17 @@ def get_entropy_y(y_true):
     return mi_pp
 
 
-def pc_softmax_estimation(y_true, y_pred):
-    y_pred[y_pred == 0] = np.finfo(float).eps
-    y_pred[y_pred == 1] = 1 - np.finfo(float).eps
-    y_pred, y_true = remove_nan_values(y_pred, y_true=y_true)
+def pc_softmax_estimation(y_true, p_pred):
+    p_pred[p_pred == 0] = np.finfo(float).eps
+    p_pred[p_pred == 1] = 1 - np.finfo(float).eps
+    p_pred, y_true = remove_nan_values(p_pred, y_true=y_true)
+    # \[z_i = \ln\left(\frac{p_i}{1 - p_i}\right)\], Score approximation
+    s_pred = np.log(p_pred / (1 - p_pred))
     if y_true.size != 0:
         classes, counts = np.unique(y_true, return_counts=True)
         pys = counts / np.sum(counts)
         mis = []
-        x_exp = np.exp(y_pred)
+        x_exp = np.exp(s_pred)
         weighted_x_exp = x_exp * pys
         # weighted_x_exp = x_exp
         x_exp_sum = np.sum(weighted_x_exp, axis=1, keepdims=True)
