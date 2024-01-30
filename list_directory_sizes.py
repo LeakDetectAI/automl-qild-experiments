@@ -12,7 +12,7 @@ if __name__ == "__main__":
     setup_logging(log_path=log_path)
     logger = logging.getLogger('Experiment')
     # Define the command to run
-    command = "du -shc /scratch/hpc-prf-autosca/prithag/deep-learning-sca/*"
+    command = "du -shc /scratch/hpc-prf-aiafs/prithag/deep-learning-sca/*"
 
     # Execute the command and capture its output
     try:
@@ -32,7 +32,7 @@ if __name__ == "__main__":
         logger.info(e.stderr)
 
     # Define the command to run
-    command = "du -shc /scratch/hpc-prf-autosca/prithag/information-leakage-techniques/*"
+    command = "du -shc /scratch/hpc-prf-aiafs/prithag/automl_quant_il_detect/*"
 
     # Execute the command and capture its output
     try:

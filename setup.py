@@ -8,7 +8,7 @@ MAINTAINER = 'Pritha Gupta and Jan Drees'
 MAINTAINER_EMAIL = 'prithag@mail.uni-paderborn.de'
 VERSION = "1.0"
 LICENSE = "Apache"
-DOWNLOAD_URL = "https://github.com/prithagupta/information-leakage-techniques/"
+DOWNLOAD_URL = "https://github.com/prithagupta/automl_quant_il_detect/"
 PROJECT_ROOT = dirname(realpath(__file__))
 REQUIREMENTS_FILE = join(PROJECT_ROOT, 'requirements.txt')
 
