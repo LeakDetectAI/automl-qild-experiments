@@ -10,7 +10,7 @@ VERSION = "1.0"
 LICENSE = "Apache"
 DOWNLOAD_URL = "https://github.com/prithagupta/automl_quant_il_detect/"
 PROJECT_ROOT = dirname(realpath(__file__))
-REQUIREMENTS_FILE = join(PROJECT_ROOT, 'requirements_fixed.txt')
+REQUIREMENTS_FILE = join(PROJECT_ROOT, 'requirements.txt')
 
 with open(REQUIREMENTS_FILE) as f:
     install_reqs = f.read().splitlines()
