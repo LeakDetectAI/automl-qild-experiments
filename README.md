@@ -30,15 +30,14 @@ Citing pyc-ilt
 You can cite our `arXiv papers`_::
 
 
-
-@article{gupta2024information,
-      title={Information Leakage Detection through Approximate Bayes-optimal Prediction}, 
-      author={Pritha Gupta and Marcel Wever and Eyke Hüllermeier},
-      year={2024},
-      eprint={2401.14283},
-      archivePrefix={arXiv},
-      primaryClass={stat.ML}
-}
+	@article{gupta2024information,
+	      title={Information Leakage Detection through Approximate Bayes-optimal Prediction}, 
+	      author={Pritha Gupta and Marcel Wever and Eyke Hüllermeier},
+	      year={2024},
+	      eprint={2401.14283},
+	      archivePrefix={arXiv},
+	      primaryClass={stat.ML}
+	}
 
 
 License
