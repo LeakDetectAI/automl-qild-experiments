@@ -27,7 +27,7 @@ AutoMLQuantILDetect depends on AutoGLuon, TabPFN, Pytorch, Tensorflow, NumPy, Sc
 Citing pyc-ilt
 ----------------
 
-You can cite our `arXiv papers`_::
+You can cite our `arXiv paper`_::
 
 
 	@article{gupta2024information,
