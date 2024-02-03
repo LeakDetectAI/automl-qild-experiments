@@ -2,7 +2,7 @@
 
 AutoMLQuantILDetect is an advanced toolkit that harnesses the power of Automated Machine Learning (AutoML) to accurately quantify information leakage. 
 This package specializes in estimating mutual information (MI) within systems that release classification datasets. 
-By leveraging state-of-the-art statistical tests, it not only precisely quantifies MI but also effectively detects instances of information leakage within classification datasets. 
+By leveraging state-of-the-art statistical tests, it not only precisely quantifies mutual information (MI) but also effectively detects instances of information leakage within classification datasets. 
 With AutoMLQuantILDetect, you can confidently and comprehensively address the critical challenges of quantification and detection in the realm of information leakage analysis.
 
 
