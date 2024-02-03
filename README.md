@@ -27,9 +27,9 @@ AutoMLQuantILDetect depends on AutoGLuon, TabPFN, Pytorch, Tensorflow, NumPy, Sc
 Citing pyc-ilt
 ----------------
 
-You can cite our `arXiv papers`_::
+You can cite our `arXiv papers`_:
 
-@misc{gupta2024information,
+@article{gupta2024information,
       title={Information Leakage Detection through Approximate Bayes-optimal Prediction}, 
       author={Pritha Gupta and Marcel Wever and Eyke Hüllermeier},
       year={2024},
