@@ -46,7 +46,8 @@ datasets = {SYNTHETIC_DATASET: SyntheticDatasetGenerator,
             SYNTHETIC_DISTANCE_DATASET: SyntheticDatasetGeneratorDistance,
             SYNTHETIC_IMBALANCED_DATASET: SyntheticDatasetGenerator,
             SYNTHETIC_DISTANCE_IMBALANCED_DATASET: SyntheticDatasetGeneratorDistance,
-            OPENML_DATASET: OpenMLDatasetReader}
+            OPENML_DATASET: OpenMLTimingDatasetReader,
+            OPENML_PADDING_DATASET: OpenMLPaddingDatasetReader}
 classifiers = {MULTI_LAYER_PERCEPTRON: MultiLayerPerceptron,
                SGD_CLASSIFIER: SGDClassifier,
                RIDGE_CLASSIFIER: RidgeClassifier,
@@ -320,6 +321,19 @@ def get_openml_datasets():
             openml_datasets[dataset_id] = {'name': dataset['name'], 'link': f"https://www.openml.org/d/{dataset_id}"}
     return openml_datasets
 
+
+def get_openml_padding_datasets():
+    YOUR_API_KEY = '2e5bf0586e06bc552a66c263cbdbd52f'
+    USER_ID = "2086"
+    openml.config.apikey = YOUR_API_KEY
+    filtered_datasets = [dataset_id for dataset_id, dataset in openml.datasets.list_datasets().items() if
+                         dataset['uploader'] == USER_ID]
+    openml_datasets = {}
+    for dataset_id in filtered_datasets:
+        dataset = openml.datasets.get_dataset(dataset_id)
+        if "Padding" in dataset.description:
+            openml_datasets[dataset_id] = {'name': dataset.name, 'link': f"https://www.openml.org/d/{dataset_id}"}
+    return openml_datasets
 
 def get_time_taken(log_path):
     if os.path.exists(log_path):

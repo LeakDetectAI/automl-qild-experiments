@@ -10,7 +10,8 @@ import numpy as np
 import psycopg2
 from psycopg2.extras import DictCursor
 
-from experiments.utils import get_duration_seconds, duration_till_now, get_openml_datasets, NpEncoder
+from experiments.utils import get_duration_seconds, duration_till_now, get_openml_datasets, NpEncoder, \
+    get_openml_padding_datasets
 from pycilt.constants import *
 from pycilt.dataset_readers import GEN_TYPES, generate_samples_per_class
 from pycilt.detectors.utils import leakage_detection_methods
@@ -510,7 +511,7 @@ class DBConnector(metaclass=ABCMeta):
                 return True
         return False
 
-    def insert_new_jobs_openml(self, dataset="openml_dataset", max_job_id=15):
+    def insert_new_jobs_openml(self, dataset=OPENML_PADDING_DATASET, max_job_id=6):
         self.init_connection()
         avail_jobs = "{}.avail_jobs".format(self.schema)
         # learners = [TABPNF, TABPNF]
@@ -522,7 +523,10 @@ class DBConnector(metaclass=ABCMeta):
         jobs_all = self.cursor_db.fetchall()
         self.logger.info(jobs_all)
         imbalances = [0.1, 0.3, 0.5]
-        dataset_ids = list(get_openml_datasets().keys())
+        if dataset == OPENML_PADDING_DATASET:
+            dataset_ids = list(get_openml_padding_datasets().keys())
+        if dataset == OPENML_DATASET:
+            dataset_ids = list(get_openml_datasets().keys())
         for job in jobs_all:
             job = dict(job)
             del job["job_id"]
@@ -534,8 +538,8 @@ class DBConnector(metaclass=ABCMeta):
             self.logger.info(print_dictionary(job))
             detection_method = job['detection_method']
             base_learner = job["base_learner"]
-            for imbalance in imbalances:
-                for dataset_id in dataset_ids:
+            for dataset_id in dataset_ids:
+                for imbalance in imbalances:
                     keys = list(job.keys())
                     values = list(job.values())
                     columns = ", ".join(list(job.keys()))

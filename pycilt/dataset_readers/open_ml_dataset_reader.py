@@ -11,9 +11,10 @@ from pycilt.dataset_readers.utils import clean_class_label
 
 LABEL_COL = 'label'
 
-class OpenMLDatasetReader(metaclass=ABCMeta):
+
+class OpenMLTimingDatasetReader(metaclass=ABCMeta):
     def __init__(self, dataset_id: int, imbalance: float, create_datasets=True, random_state=None, **kwargs):
-        self.logger = logging.getLogger(OpenMLDatasetReader.__name__)
+        self.logger = logging.getLogger(OpenMLTimingDatasetReader.__name__)
         self.dataset_id = dataset_id
         self.imbalance = imbalance
         self.random_state = check_random_state(random_state)
@@ -103,3 +104,28 @@ class OpenMLDatasetReader(metaclass=ABCMeta):
             n_1 = len(np.where(y == 1)[0])
             self.logger.info(f"After processing----ratio {n_1 / n_0} p {self.imbalance}, n_0 {n_0}, n_1 {n_1}----")
         return X, y
+
+
+class OpenMLPaddingDatasetReader(OpenMLTimingDatasetReader):
+    def __init__(self, dataset_id: int, imbalance: float, create_datasets=True, random_state=None, **kwargs):
+        super().__init__(dataset_id=dataset_id, imbalance=imbalance, create_datasets=create_datasets,
+                         random_state=random_state, **kwargs)
+        self.logger = logging.getLogger(OpenMLPaddingDatasetReader.__name__)
+
+        if create_datasets:
+            self.__create_leakage_datasets__()
+
+    def __read_dataset__(self):
+        self.dataset = openml.datasets.get_dataset(self.dataset_id, download_data=False)
+        # Access the dataset information
+        self.data_frame_raw, _, _, self.attribute_names = self.dataset.get_data(dataset_format='dataframe')
+        self.attribute_names.remove(LABEL_COL)
+        self.dataset_dictionary = {}
+        if self.correct_class not in self.data_frame_raw[LABEL_COL].unique():
+            raise ValueError(f'Dataframe is does not contain correct class {self.correct_class}')
+        self.logger.info(f"Class Labels unformulated {list(self.data_frame_raw[LABEL_COL].unique())}")
+        description = self.dataset.description
+        vulnerable_classes_str = description.split('\n')[-1].split("vulnerable_classes ")[-1]
+        vulnerable_classes_str = vulnerable_classes_str.strip('[]')
+        self.vulnerable_classes = [s.strip() for s in vulnerable_classes_str.split(',')]
+        self.n_features = len(self.dataset.features) - 1
