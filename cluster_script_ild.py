@@ -152,7 +152,10 @@ if __name__ == "__main__":
 
                 results = {'job_id': str(job_id), 'cluster_id': str(cluster_id)}
                 results['hypothesis'] = json.dumps(values_of_m, cls=NpEncoder)
-                results['delay'] = f"{dataset_reader.delay}"
+                if dataset_name == OPENML_DATASET:
+                    results['delay'] = f"{dataset_reader.delay}"
+                if dataset_name == OPENML_PADDING_DATASET:
+                    results['server'] = f"{dataset_reader.server}"
                 results['fold_id'] = f"{dataset_reader.fold_id}"
                 results['imbalance'] = f"{dataset_reader.imbalance}"
                 results['base_detector'] = f"{base_learner}"
