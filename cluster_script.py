@@ -244,9 +244,9 @@ if __name__ == "__main__":
                             results[metric_name] = f"{np.around(metric_loss, 4)}"
                     logger.info(f"Out of sample error {metric_name} : {metric_loss}")
                     print(f"Out of sample error {metric_name} : {metric_loss}")
+                evaluation_time = dbConnector.mark_running_job_finished(job_id, start)
                 dbConnector.insert_results(experiment_schema=experiment_schema, experiment_table=experiment_table,
                                            results=results)
-                dbConnector.mark_running_job_finished(job_id, start)
                 logger.info(f"Job finished")
                 print(f"Job finished")
             except Exception as e:

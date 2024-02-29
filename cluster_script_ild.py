@@ -163,10 +163,11 @@ if __name__ == "__main__":
                 results['imbalance'] = f"{dataset_reader.imbalance}"
                 results['base_detector'] = f"{base_learner}"
                 results['detection_method'] = f"{detection_method}"
+                results['dataset_id'] = f"{dataset_reader.dataset_id}"
                 for metric_name, evaluation_metric in lp_metric_dict[learning_problem].items():
                     metric_loss = evaluation_metric(y_true, y_pred)
                     if np.isnan(metric_loss) or np.isinf(metric_loss):
-                        results[metric_name] = "\'Infinity\'"
+                        results[metric_name] = "Infinity"
                     else:
                         if np.around(metric_loss, 4) == 0.0:
                             results[metric_name] = f"{metric_loss}"
@@ -174,9 +175,12 @@ if __name__ == "__main__":
                             results[metric_name] = f"{np.around(metric_loss, 4)}"
                     logger.info(f"Out of sample error {metric_name} : {metric_loss}")
                     print(f"Out of sample error {metric_name} : {metric_loss}")
+
+                evaluation_time = dbConnector.mark_running_job_finished(job_id=job_id, start=start,
+                                                                        old_time_take=time_taken)
+                results['evaluation_time'] = f"{evaluation_time}"
                 dbConnector.insert_results(experiment_schema=experiment_schema, experiment_table=experiment_table,
                                            results=results)
-                dbConnector.mark_running_job_finished(job_id=job_id, start=start, old_time_take=time_taken)
                 logger.info(f"Job finished")
                 print(f"Job finished")
             except Exception as e:

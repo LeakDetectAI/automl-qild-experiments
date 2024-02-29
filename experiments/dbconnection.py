@@ -262,6 +262,7 @@ class DBConnector(metaclass=ABCMeta):
             evaluation_time = self.cursor_db.fetchone()[0]
             self.logger.info(f"The job {job_id} end time {end_time} is updated, total-time {evaluation_time}")
         self.close_connection()
+        return evaluation_time
 
     def insert_results(self, experiment_schema, experiment_table, results, **kwargs):
         self.init_connection(cursor_factory=None)
