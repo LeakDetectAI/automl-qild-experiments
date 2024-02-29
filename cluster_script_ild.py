@@ -159,7 +159,7 @@ if __name__ == "__main__":
                     results['fold_id'] = f"{dataset_reader.fold_id}"
                 if dataset_name == OPENML_PADDING_DATASET:
                     results['server'] = f"{dataset_reader.server}"
-                    results['fold_id'] = fold_id
+                    results['fold_id'] = f"{fold_id}"
                 results['imbalance'] = f"{dataset_reader.imbalance}"
                 results['base_detector'] = f"{base_learner}"
                 results['detection_method'] = f"{detection_method}"
