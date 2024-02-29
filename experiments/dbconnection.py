@@ -266,25 +266,6 @@ class DBConnector(metaclass=ABCMeta):
     def insert_results(self, experiment_schema, experiment_table, results, **kwargs):
         self.init_connection(cursor_factory=None)
         results_table = f"{experiment_schema}.{experiment_table}"
-        columns = ", ".join(list(results.keys()))
-        values_str = ", ".join(list(results.values()))
-
-        self.cursor_db.execute("select to_regclass(%s)", [results_table])
-        is_table_exist = bool(self.cursor_db.fetchone()[0])
-        if not is_table_exist:
-            self.logger.info(f"Table {results_table} does not exist creating with columns {columns}")
-            create_command = f"CREATE TABLE {results_table} (job_id INTEGER PRIMARY KEY, cluster_id INTEGER NOT NULL)"
-            self.cursor_db.execute(create_command)
-            for column in results.keys():
-                if column not in ["job_id", "cluster_id"]:
-                    alter_table_command = (
-                            "ALTER TABLE %s ADD COLUMN %s double precision"
-                            % (results_table, column)
-                    )
-                    self.cursor_db.execute(alter_table_command)
-            self.close_connection()
-            self.init_connection(cursor_factory=None)
-
         try:
             keys = list(results.keys())
             values = list(results.values())
@@ -300,10 +281,9 @@ class DBConnector(metaclass=ABCMeta):
                     str_values = "%s"
                 else:
                     str_values = str_values + ", %s"
-
             insert_result = f"INSERT INTO {results_table} ({columns}) VALUES ({str_values}) RETURNING job_id"
-            self.cursor_db.execute(insert_result, tuple(values_str))
             self.logger.info(f"Inserting results: {insert_result} values {values_str}")
+            self.cursor_db.execute(insert_result, tuple(values_str))
             if self.cursor_db.rowcount == 1:
                 self.logger.info(f"Results inserted for the job {results['job_id']}")
         except psycopg2.IntegrityError as e:

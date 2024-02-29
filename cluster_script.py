@@ -201,7 +201,6 @@ if __name__ == "__main__":
                 f.create_dataset('confusion_matrix', data=confusion_matrix(y_true, y_pred))
                 f.close()
                 results = {'job_id': str(job_id), 'cluster_id': str(cluster_id)}
-
                 for metric_name, evaluation_metric in lp_metric_dict[learning_problem].items():
                     if LOG_LOSS_MI_ESTIMATION in metric_name or PC_SOFTMAX_MI_ESTIMATION in metric_name:
                         calibrator_technique = None

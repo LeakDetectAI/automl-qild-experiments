@@ -129,5 +129,5 @@ class OpenMLPaddingDatasetReader(OpenMLTimingDatasetReader):
         vulnerable_classes_str = vulnerable_classes_str.strip('[]')
         self.vulnerable_classes = [s.strip() for s in vulnerable_classes_str.split(',')]
         self.n_features = len(self.dataset.features) - 1
-        self.server = description.split('server ')[-1]
+        self.server = self.dataset.name.split('padding-attack-dataset-')[-1]
 
