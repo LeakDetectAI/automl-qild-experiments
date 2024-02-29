@@ -83,11 +83,13 @@ if __name__ == "__main__":
                 experiment_table = dbConnector.job_description["experiment_table"]
                 validation_loss = dbConnector.job_description["validation_loss"]
                 hash_value = dbConnector.job_description["hash_value"]
-
+                fold_id = 0
+                if "fold_id" in dbConnector.job_description.keys():
+                    fold_id = int(dbConnector.job_description["fold_id"])
                 LEARNING_PROBLEM = learning_problem.lower()
                 if validation_loss == 'None':
                     validation_loss = None
-                random_state = np.random.RandomState(seed=seed + dataset_params.get('dataset_id', 0))
+                random_state = np.random.RandomState(seed=(seed + dataset_params.get('dataset_id', 0) + fold_id))
                 # Generate different seeds for given random_states
                 BASE_DIR = os.path.join(DIR_PATH, EXPERIMENTS, LEARNING_PROBLEM, base_learner.lower())
                 create_directory_safely(BASE_DIR, False)
@@ -154,9 +156,10 @@ if __name__ == "__main__":
                 results['hypothesis'] = json.dumps(values_of_m, cls=NpEncoder)
                 if dataset_name == OPENML_DATASET:
                     results['delay'] = f"{dataset_reader.delay}"
+                    results['fold_id'] = f"{dataset_reader.fold_id}"
                 if dataset_name == OPENML_PADDING_DATASET:
                     results['server'] = f"{dataset_reader.server}"
-                results['fold_id'] = f"{dataset_reader.fold_id}"
+                    results['fold_id'] = fold_id
                 results['imbalance'] = f"{dataset_reader.imbalance}"
                 results['base_detector'] = f"{base_learner}"
                 results['detection_method'] = f"{detection_method}"

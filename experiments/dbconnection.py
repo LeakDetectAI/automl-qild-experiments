@@ -52,7 +52,7 @@ class DBConnector(metaclass=ABCMeta):
         current_hash_values = []
         for job_c in jobs_check:
             job_c = dict(job_c)
-            if self.schema in [LEAKAGE_DETECTION, LEAKAGE_DETECTION_NEW]:
+            if self.schema in [LEAKAGE_DETECTION, LEAKAGE_DETECTION_NEW, LEAKAGE_DETECTION_PADDING]:
                 hash_value = self.get_hash_value_for_job_ild_check(job_c)
             else:
                 hash_value = self.get_hash_value_for_job(job_c)
@@ -501,7 +501,7 @@ class DBConnector(metaclass=ABCMeta):
         return new_job_id
 
     def check_exists(self, job):
-        if self.schema in [LEAKAGE_DETECTION, LEAKAGE_DETECTION_NEW]:
+        if self.schema in [LEAKAGE_DETECTION, LEAKAGE_DETECTION_NEW, LEAKAGE_DETECTION_PADDING]:
             hash_value_new = self.get_hash_value_for_job_ild_check(job)
         else:
             hash_value_new = self.get_hash_value_for_job(job)
@@ -511,7 +511,7 @@ class DBConnector(metaclass=ABCMeta):
                 return True
         return False
 
-    def insert_new_jobs_openml(self, dataset=OPENML_PADDING_DATASET, max_job_id=6):
+    def insert_new_jobs_openml(self, dataset=OPENML_PADDING_DATASET, max_job_id=7):
         self.init_connection()
         avail_jobs = "{}.avail_jobs".format(self.schema)
         # learners = [TABPNF, TABPNF]
@@ -573,6 +573,8 @@ class DBConnector(metaclass=ABCMeta):
                     else:
                         self.logger.info(f"Job already exist")
         self.close_connection()
+        if dataset == OPENML_PADDING_DATASET:
+            self.insert_new_jobs_with_different_fold(dataset=OPENML_PADDING_DATASET, folds=4)
 
     def insert_detection_methods(self, dataset="openml_dataset"):
         self.init_connection()
@@ -639,7 +641,8 @@ class DBConnector(metaclass=ABCMeta):
     def insert_new_jobs_with_different_fold(self, dataset="synthetic", folds=4):
         self.init_connection()
         avail_jobs = "{}.avail_jobs".format(self.schema)
-        select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND {avail_jobs}.fold_id =0 ORDER  BY {avail_jobs}.job_id"
+        select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND \
+                        {avail_jobs}.fold_id =0 ORDER  BY {avail_jobs}.job_id"
 
         self.cursor_db.execute(select_job)
         jobs_all = self.cursor_db.fetchall()
