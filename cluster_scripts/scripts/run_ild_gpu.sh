@@ -25,7 +25,7 @@ which python
 which pip
 
 export SCRIPT_FILE=$PFS_FOLDER/automl_quant_il_detect/cluster_script_ild.py
-python $SCRIPT_FILE --cindex=$SLURM_JOB_ID --isgpu=1 --schema='leakage_detection_new'
+python $SCRIPT_FILE --cindex=$SLURM_JOB_ID --isgpu=1 --schema='leakage_detection_padding'
 
 exit 0
 ~
