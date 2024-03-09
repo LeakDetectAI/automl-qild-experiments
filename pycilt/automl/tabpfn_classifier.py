@@ -34,22 +34,29 @@ class AutoTabPFNClassifier(AutomlClassifier):
         self.model = None
 
     def transform(self, X, y=None):
+        self.logger.info(f"Before Transform {X.shape[-1]}")
         if not self.__is_fitted__:
             if self.n_features != X.shape[-1]:
                 raise ValueError(f"Dataset passed does not contain {self.n_features}")
             if self.n_classes != len(np.unique(y)):
                 raise ValueError(f"Dataset passed does not contain {self.n_classes}")
-            self.__is_fitted__ = True
             if self.n_features > 100 and self.n_reduced < self.n_features:
                 self.logger.info(f"Transforming and reducing the {self.n_features} features to {self.n_reduced}")
                 self.selection_model.fit(X, y)
                 X = self.selection_model.transform(X)
+                self.__is_fitted__ = True
+        else:
+            if self.n_features > 100 and self.n_reduced < self.n_features:
+                X = self.selection_model.transform(X)
+        self.logger.info(f"After Transform {X.shape[-1]}")
         return X
 
     def fit(self, X, y, **kwd):
         X = self.transform(X, y)
         self.model = TabPFNClassifier(device=self.device, N_ensemble_configurations=self.n_ensembles)
         self.model.fit(X, y, overwrite_warning=True)
+        self.logger.info("Fitting Done")
+
 
     def predict(self, X, verbose=0):
         p = self.predict_proba(X, verbose=0)
