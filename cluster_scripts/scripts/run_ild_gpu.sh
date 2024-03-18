@@ -3,7 +3,7 @@
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH --cpus-per-task=32
-#SBATCH --mem=64G
+#SBATCH --mem=128G
 #SBATCH --gres=gpu:a100:1
 #SBATCH -A hpc-prf-aiafs
 #SBATCH -t 4-00:00:00
