@@ -6,7 +6,6 @@ from infoselect import get_gmm, SelectVars
 from sklearn.linear_model import LogisticRegression
 
 from .mi_base_class import MIEstimatorBase
-from ..dimensionality_reduction_techniques import create_dimensionality_reduction_model
 from ..utils import log_exception_error
 
 
@@ -23,8 +22,7 @@ class GMMMIEstimator(MIEstimatorBase):
 
         self.n_reduced = n_reduced
         self.reduction_technique = reduction_technique
-        self.selection_model = create_dimensionality_reduction_model(reduction_technique=self.reduction_technique,
-                                                                     n_reduced=self.n_reduced)
+        self.selection_model = None
         self.__is_fitted__ = False
 
         # Classification Model
@@ -64,12 +62,16 @@ class GMMMIEstimator(MIEstimatorBase):
         return aic_fit, bic_fit, likelihood, n_components
 
     def transform(self, X, y=None):
-        self.logger.info(f"Before Transform {X.shape[-1]}")
+        self.logger.info(f"Before transform n_features {X.shape[-1]}")
+        if y is not None:
+            classes, n_classes = np.unique(y, return_counts=True)
+            self.logger.info(f"Classes {classes} No of Classes {n_classes}")
         if not self.__is_fitted__:
             if self.n_features != X.shape[-1]:
                 raise ValueError(f"Dataset passed does not contain {self.n_features}")
-            if self.n_classes != len(np.unique(y)):
-                raise ValueError(f"Dataset passed does not contain {self.n_classes}")
+            if y is not None:
+                if self.n_classes != len(np.unique(y)):
+                    raise ValueError(f"Dataset passed does not contain {self.n_classes}")
             if self.n_features > 100 and self.n_reduced < self.n_features:
                 self.logger.info(f"Transforming and reducing the {self.n_features} features to {self.n_reduced}")
                 self.selection_model.fit(X, y)
@@ -78,7 +80,7 @@ class GMMMIEstimator(MIEstimatorBase):
         else:
             if self.n_features > 100 and self.n_reduced < self.n_features:
                 X = self.selection_model.transform(X)
-        self.logger.info(f"After Transform {X.shape[-1]}")
+        self.logger.info(f"After transform n_features {X.shape[-1]}")
         return X
 
     def fit(self, X, y, verbose=0, **kwd):

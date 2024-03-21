@@ -193,7 +193,7 @@ class DBConnector(metaclass=ABCMeta):
         while self.job_description is None:
             try:
                 job_id = job_ids[0]
-                print("Job selected : {}".format(job_id))
+                print(f"Job selected : {job_id}")
                 select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.job_id = {job_id}"
                 self.cursor_db.execute(select_job)
                 self.job_description = self.cursor_db.fetchone()
