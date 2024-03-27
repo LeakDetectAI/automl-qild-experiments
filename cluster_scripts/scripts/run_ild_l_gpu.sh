@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J "LM_ILDGPU"
+#SBATCH -J "ILD_LM_GPU"
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH --cpus-per-task=32
