@@ -1,4 +1,6 @@
 import copy
+import gc
+import torch
 import logging
 import os
 
@@ -48,6 +50,11 @@ class SklearnLeakageDetector(InformationLeakageDetector):
             self.logger.error("Cannot fit the Bayes SearchCV ")
         train_size = X_train.shape[0]
         learner_params = copy.deepcopy(self.learner_params)
+        if learner is not None:
+            del learner
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
         for i in range(self.n_hypothesis):
             self.logger.info("**************************************************************************************")
             loss, learner_params = update_params_at_k(bayes_search, search_keys, learner_params, k=i)

@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 DISTNAME = 'pycilt'
 DESCRIPTION = 'Information Leakage Detection Techniques'
-MAINTAINER = 'Pritha Gupta and Jan Drees'
+MAINTAINER = 'Pritha Gupta'
 MAINTAINER_EMAIL = 'prithag@mail.uni-paderborn.de'
 VERSION = "1.0"
 LICENSE = "Apache"

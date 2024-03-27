@@ -59,6 +59,7 @@ class AutoTabPFNClassifier(AutomlClassifier):
         X = self.transform(X, y)
         self.model = TabPFNClassifier(device=self.device, N_ensemble_configurations=self.n_ensembles)
         self.model.fit(X, y, overwrite_warning=True)
+        self.clear_memory()
         self.logger.info("Fitting Done")
 
 
@@ -73,12 +74,32 @@ class AutoTabPFNClassifier(AutomlClassifier):
         acc = balanced_accuracy_score(y, y_pred)
         return acc
 
-    def predict_proba(self, X, verbose=0):
-        X = self.transform(X)
-        self.logger.info("Predict_proba Transform Done")
-        y_pred = self.model.predict_proba(X, normalize_with_test=True, return_logits=False)
+    def predict_proba(self, X, batch_size=200, verbose=0):
+        n_samples = X.shape[0]
+        n_batches = np.ceil(n_samples / batch_size).astype(int)
+        predictions = []
+        for i in range(n_batches):
+            start_idx = i * batch_size
+            end_idx = min((i + 1) * batch_size, n_samples)
+            X_batch = X[start_idx:end_idx]
+            X_transformed = self.transform(X_batch)
+            self.logger.info(f"Processing batch {i + 1}/{n_batches} Start id {start_idx} end id {end_idx}")
+            batch_pred = self.model.predict_proba(X_transformed, normalize_with_test=True, return_logits=False)
+            predictions.append(batch_pred)
+
+        y_pred = np.concatenate(predictions, axis=0)
         self.logger.info("Predict_proba Done")
+        self.clear_memory()
         return y_pred
 
     def decision_function(self, X, verbose=0):
         return self.predict_proba(X, verbose)
+
+    def clear_memory(self):
+        # Call Python's garbage collector
+        import gc
+        gc.collect()
+        # Explicitly clear CUDA cache if available
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
