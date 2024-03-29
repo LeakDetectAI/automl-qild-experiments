@@ -49,44 +49,36 @@ class SklearnLeakageDetector(InformationLeakageDetector):
             log_exception_error(self.logger, error)
             self.logger.error("Cannot fit the Bayes SearchCV ")
         train_size = X_train.shape[0]
-        learner_params = copy.deepcopy(self.learner_params)
+
         if learner is not None:
             del learner
             gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
-        for i in range(self.n_hypothesis):
-            self.logger.info("**************************************************************************************")
-            loss, learner_params = update_params_at_k(bayes_search, search_keys, learner_params, k=i)
-            learner = self.base_detector(**learner_params)
-            self.logger.info(f"Model {i} with loss {loss} and parameters {learner_params}")
-            self.estimators.append(learner)
-        return train_size
+
+        return train_size, bayes_search, search_keys
 
     def fit(self, X, y):
         if self._is_fitted_:
             self.logger.info(f"Model already fitted for the padding {self.padding_code}")
-            self.results[RANDOM_CLASSIFIER][ACCURACY] = []
-            for k, (train_index, test_index) in enumerate(self.cv_iterator.split(X, y)):
-                self.logger.info(f"********************************* Split {k + 1} *********************************")
-                X_train, X_test = X[train_index], X[test_index]
-                y_train, y_test = y[train_index], y[test_index]
-                self.calculate_random_classifier_accuracy(X_train, y_train, X_test, y_test)
-            self.store_results_random()
         else:
-            train_size = self.perform_hyperparameter_optimization(X, y)
-            for k, (train_index, test_index) in enumerate(self.cv_iterator.split(X, y)):
-                self.logger.info(f"********************************* Split {k+1} *********************************")
-                train_index = train_index[:train_size]
-                X_train, X_test = X[train_index], X[test_index]
-                y_train, y_test = y[train_index], y[test_index]
-                self.calculate_random_classifier_accuracy(X_train, y_train, X_test, y_test)
-                self.calculate_majority_voting_accuracy(X_train, y_train, X_test, y_test)
-                for i, model in enumerate(self.estimators):
-                    self.logger.info(f"************* Model {i+1}: {model.__class__.__name__} ********************")
+            train_size, bayes_search, search_keys = self.perform_hyperparameter_optimization(X, y)
+            for i in range(self.n_hypothesis):
+                learner_params = copy.deepcopy(self.learner_params)
+                loss, learner_params = update_params_at_k(bayes_search, search_keys, learner_params, k=i)
+                self.logger.info(f"**********  Model {i + 1} with loss {loss} **********")
+                model = self.base_detector(**learner_params)
+                for k, (train_index, test_index) in enumerate(self.cv_iterator.split(X, y)):
+                    train_index = train_index[:train_size]
+                    X_train, X_test = X[train_index], X[test_index]
+                    y_train, y_test = y[train_index], y[test_index]
                     model.fit(X=X_train, y=y_train)
                     p_pred, y_pred = get_scores(X_test, model)
+                    self.logger.info(f"************************* Split {k + 1} **************************")
                     self.evaluate_scores(X_test, X_train, y_test, y_train, y_pred, p_pred, model, i)
+                    if i == 0:
+                        self.calculate_random_classifier_accuracy(X_train, y_train, X_test, y_test)
+                        self.calculate_majority_voting_accuracy(X_train, y_train, X_test, y_test)
             self.store_results()
 
 

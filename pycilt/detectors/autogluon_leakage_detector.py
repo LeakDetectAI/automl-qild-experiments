@@ -38,13 +38,6 @@ class AutoGluonLeakageDetector(InformationLeakageDetector):
     def fit(self, X, y, **kwargs):
         if self._is_fitted_:
             self.logger.info(f"Model already fitted for the padding {self.padding_code}")
-            self.results[RANDOM_CLASSIFIER][ACCURACY] = []
-            for k, (train_index, test_index) in enumerate(self.cv_iterator.split(X, y)):
-                self.logger.info(f"********************************* Split {k + 1} *********************************")
-                X_train, X_test = X[train_index], X[test_index]
-                y_train, y_test = y[train_index], y[test_index]
-                self.calculate_random_classifier_accuracy(X_train, y_train, X_test, y_test)
-            self.store_results_random()
         else:
             train_size = self.perform_hyperparameter_optimization(X, y)
             for k, (train_index, test_index) in enumerate(self.cv_iterator.split(X, y)):
@@ -74,5 +67,4 @@ class AutoGluonLeakageDetector(InformationLeakageDetector):
                     except Exception as error:
                         log_exception_error(self.logger, error)
                         self.logger.error(f"Problem with fitting the model")
-
-            self.store_results()
+                self.store_results()
