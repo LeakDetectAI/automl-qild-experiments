@@ -1,4 +1,7 @@
+import copy
+
 from .sklearn_leakage_detector import SklearnLeakageDetector
+from ..bayes_search_utils import update_params_at_k
 from ..constants import *
 from ..mi_estimators import GMMMIEstimator, MineMIEstimatorHPO
 
@@ -31,15 +34,19 @@ class MIEstimationLeakageDetector(SklearnLeakageDetector):
         if self._is_fitted_:
             self.logger.info(f"Model already fitted for the padding {self.padding_code}")
         else:
-            train_size = self.perform_hyperparameter_optimization(X, y)
-            for k, (train_index, test_index) in enumerate(self.cv_iterator.split(X, y)):
-                self.logger.info(f"************************************ Split {k} ************************************")
-                train_index = train_index[:train_size]
-                X_train, X_test = X[train_index], X[test_index]
-                y_train, y_test = y[train_index], y[test_index]
-                for i, model in enumerate(self.estimators):
-                    self.logger.info(f"************************************ Model {i} ************************************")
+
+            train_size, bayes_search, search_keys = self.perform_hyperparameter_optimization(X, y)
+            for i in range(self.n_hypothesis):
+                learner_params = copy.deepcopy(self.learner_params)
+                loss, learner_params = update_params_at_k(bayes_search, search_keys, learner_params, k=i)
+                self.logger.info(f"**********  Model {i + 1} with loss {loss} **********")
+                model = self.base_detector(**learner_params)
+                for k, (train_index, test_index) in enumerate(self.cv_iterator.split(X, y)):
+                    train_index = train_index[:train_size]
+                    X_train, X_test = X[train_index], X[test_index]
+                    y_train, y_test = y[train_index], y[test_index]
                     model.fit(X=X_train, y=y_train)
+                    self.logger.info(f"************************* Split {k + 1} **************************")
                     metric_loss = model.estimate_mi(X, y)
                     self.logger.info(f"Metric {ESTIMATED_MUTUAL_INFORMATION}: Value {metric_loss}")
                     model_name = list(self.results.keys())[i]
