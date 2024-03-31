@@ -32,9 +32,9 @@ class AutoGluonClassifier(AutomlClassifier):
         else:
             self.hyperparameters = None
         if remove_boosting_models:
-            self.exclude_model_types = ['GBM', 'CAT', 'XGB', 'LGB', 'KNN', 'NN_TORCH']
+            self.exclude_model_types = ['GBM', 'CAT', 'XGB', 'LGB', 'KNN', 'NN_TORCH', "AG_AUTOMM", 'LR']
         else:
-            self.exclude_model_types = []
+            self.exclude_model_types = ["AG_AUTOMM", 'LR']
         self.auto_stack = auto_stack
         self.n_features = n_features
         self.n_classes = n_classes

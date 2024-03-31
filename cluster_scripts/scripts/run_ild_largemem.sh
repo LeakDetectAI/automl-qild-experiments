@@ -3,7 +3,7 @@
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH --cpus-per-task=32
-#SBATCH --mem=128G
+#SBATCH --mem=256G
 #SBATCH -A hpc-prf-aiafs
 #SBATCH -t 7-00:00:00
 #SBATCH -p largemem

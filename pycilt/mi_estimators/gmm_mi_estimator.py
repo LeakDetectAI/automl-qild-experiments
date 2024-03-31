@@ -63,7 +63,7 @@ class GMMMIEstimator(MIEstimatorBase):
         return aic_fit, bic_fit, likelihood, n_components
 
     def transform(self, X, y=None):
-        self.logger.info(f"Before transform n_features {X.shape[-1]}")
+        self.logger.info(f"Before transform n_instances {X.shape[0]} n_features {X.shape[-1]}")
         if y is not None:
             classes, n_classes = np.unique(y, return_counts=True)
             self.logger.info(f"Classes {classes} No of Classes {n_classes}")
@@ -84,7 +84,7 @@ class GMMMIEstimator(MIEstimatorBase):
         else:
             if self.n_features > 50 and self.n_reduced < self.n_features:
                 X = self.selection_model.transform(X)
-        self.logger.info(f"After transform n_features {X.shape[-1]}")
+        self.logger.info(f"After transform n_instances {X.shape[0]} n_features {X.shape[-1]}")
         return X
 
     def fit(self, X, y, verbose=0, **kwd):

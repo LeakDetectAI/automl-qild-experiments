@@ -1,4 +1,4 @@
-from autogluon.core.space import Real, Int, Categorical
+from autogluon.common.space import Real, Int, Categorical
 
 hyperparameters = {
     "NN_TORCH": {
