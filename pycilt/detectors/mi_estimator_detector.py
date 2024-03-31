@@ -34,7 +34,6 @@ class MIEstimationLeakageDetector(SklearnLeakageDetector):
         if self._is_fitted_:
             self.logger.info(f"Model already fitted for the padding {self.padding_code}")
         else:
-
             train_size, bayes_search, search_keys = self.perform_hyperparameter_optimization(X, y)
             for i in range(self.n_hypothesis):
                 learner_params = copy.deepcopy(self.learner_params)

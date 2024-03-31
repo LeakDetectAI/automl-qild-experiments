@@ -6,6 +6,7 @@ from infoselect import get_gmm, SelectVars
 from sklearn.linear_model import LogisticRegression
 
 from .mi_base_class import MIEstimatorBase
+from ..dimensionality_reduction_techniques import create_dimensionality_reduction_model
 from ..utils import log_exception_error
 
 
@@ -72,6 +73,9 @@ class GMMMIEstimator(MIEstimatorBase):
             if y is not None:
                 if self.n_classes != len(np.unique(y)):
                     raise ValueError(f"Dataset passed does not contain {self.n_classes}")
+            self.selection_model = create_dimensionality_reduction_model(reduction_technique=self.reduction_technique,
+                                                                         n_reduced=self.n_reduced)
+            self.logger.info(f"Creating the model")
             if self.n_features > 50 and self.n_reduced < self.n_features:
                 self.logger.info(f"Transforming and reducing the {self.n_features} features to {self.n_reduced}")
                 self.selection_model.fit(X, y)
