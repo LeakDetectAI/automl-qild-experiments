@@ -4,10 +4,9 @@ import logging
 import os
 
 import torch
-from sklearn.model_selection import StratifiedShuffleSplit, train_test_split
+from sklearn.model_selection import StratifiedShuffleSplit
 
 from .ild_base_class import InformationLeakageDetector
-from .. import AutoTabPFNClassifier
 from ..bayes_search import BayesSearchCV
 from ..bayes_search_utils import get_scores, log_callback, update_params_at_k
 from ..constants import *

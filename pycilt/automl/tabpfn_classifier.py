@@ -2,7 +2,6 @@ import logging
 
 import numpy as np
 import torch
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.utils import check_random_state

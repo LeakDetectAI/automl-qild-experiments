@@ -14,7 +14,6 @@ import openml
 import psycopg2
 import sklearn
 import tensorflow as tf
-from keras import backend as K
 import torch
 from netcal.binning import IsotonicRegression, HistogramBinning
 from netcal.scaling import LogisticCalibration, BetaCalibration, TemperatureScaling
