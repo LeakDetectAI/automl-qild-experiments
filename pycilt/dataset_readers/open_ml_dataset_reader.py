@@ -26,7 +26,7 @@ class OpenMLTimingDatasetReader(metaclass=ABCMeta):
             self.__create_leakage_datasets__()
 
     def __read_dataset__(self):
-        self.dataset = openml.datasets.get_dataset(self.dataset_id, download_data=False)
+        self.dataset = openml.datasets.get_dataset(self.dataset_id, download_data=True)
         # Access the dataset information
         self.data_frame_raw, _, _, self.attribute_names = self.dataset.get_data(dataset_format='dataframe')
         self.attribute_names.remove(LABEL_COL)
@@ -116,7 +116,7 @@ class OpenMLPaddingDatasetReader(OpenMLTimingDatasetReader):
             self.__create_leakage_datasets__()
 
     def __read_dataset__(self):
-        self.dataset = openml.datasets.get_dataset(self.dataset_id, download_data=False)
+        self.dataset = openml.datasets.get_dataset(self.dataset_id, download_data=True)
         # Access the dataset information
         self.data_frame_raw, _, _, self.attribute_names = self.dataset.get_data(dataset_format='dataframe')
         self.attribute_names.remove(LABEL_COL)

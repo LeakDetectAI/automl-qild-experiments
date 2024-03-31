@@ -14,8 +14,8 @@ import openml
 import psycopg2
 import sklearn
 import tensorflow as tf
-import torch
 from keras import backend as K
+import torch
 from netcal.binning import IsotonicRegression, HistogramBinning
 from netcal.scaling import LogisticCalibration, BetaCalibration, TemperatureScaling
 from packaging import version
@@ -264,30 +264,25 @@ def setup_random_seed(random_state=1234):
     np.random.seed(seed)
     random.seed(seed)
     os.environ["KERAS_BACKEND"] = "tensorflow"
-    devices = tf.config.experimental.list_physical_devices('GPU')
-    logger.info("Devices {}".format(devices))
+    devices = tf.config.list_physical_devices('GPU')
+    logger.info("Keras Devices {}".format(devices))
     n_gpus = len(devices)
-    logger.info("Number of GPUS {}".format(n_gpus))
+    logger.info("Keras GPU {}".format(n_gpus))
     if n_gpus == 0:
-        config = tf.compat.v1.ConfigProto(
-            intra_op_parallelism_threads=1,
-            inter_op_parallelism_threads=1,
-            allow_soft_placement=True,
-            log_device_placement=False,
-            device_count={"CPU": multiprocessing.cpu_count() - 2},
-        )
+        # Limiting CPU usage
+        cpu_count = multiprocessing.cpu_count()
+        tf.config.threading.set_inter_op_parallelism_threads(1)
+        tf.config.threading.set_intra_op_parallelism_threads(1)
+        if cpu_count > 2:
+            # TensorFlow doesn't directly allow setting CPU count, but you can control parallelism
+            # For limiting CPU, consider setting parallelism threads as shown above
+            pass
     else:
-        config = tf.compat.v1.ConfigProto(
-            allow_soft_placement=True,
-            log_device_placement=True,
-            intra_op_parallelism_threads=2,
-            inter_op_parallelism_threads=2,
-        )
-        config.gpu_options.allow_growth = True
-    sess = tf.compat.v1.Session(config=config)
-    K.set_session(sess)
+        # Configuring GPU options
+        for gpu in tf.config.list_physical_devices('GPU'):
+            tf.config.experimental.set_memory_growth(gpu, True)
     torch_gpu = torch.device('cuda' if torch.cuda.is_available() else "cpu")
-    logger.info("GPU device {}".format(torch_gpu))
+    logger.info("Torch GPU device {}".format(torch_gpu))
 
 
 def check_file_exists(file_path):

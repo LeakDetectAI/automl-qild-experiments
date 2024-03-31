@@ -1,5 +1,4 @@
-from keras.engine.base_layer import Layer
-from keras.layers import Dense, Activation, BatchNormalization
+from keras.layers import Layer, Dense, Activation, BatchNormalization
 
 
 class NormalizedDense(Layer):

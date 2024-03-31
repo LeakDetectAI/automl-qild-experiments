@@ -1,16 +1,17 @@
 import copy
 import gc
-import torch
 import logging
 import os
 
-from sklearn.model_selection import StratifiedShuffleSplit
+import torch
+from sklearn.model_selection import StratifiedShuffleSplit, train_test_split
 
 from .ild_base_class import InformationLeakageDetector
+from .. import AutoTabPFNClassifier
 from ..bayes_search import BayesSearchCV
 from ..bayes_search_utils import get_scores, log_callback, update_params_at_k
 from ..constants import *
-from ..utils import log_exception_error, create_directory_safely
+from ..utils import log_exception_error, create_directory_safely, print_dictionary
 
 
 class SklearnLeakageDetector(InformationLeakageDetector):
@@ -25,11 +26,12 @@ class SklearnLeakageDetector(InformationLeakageDetector):
         self.validation_loss = validation_loss
         self.inner_cv_iterator = StratifiedShuffleSplit(n_splits=self.n_inner_folds, test_size=0.30,
                                                         random_state=self.random_state)
-        self.optimizers_file_path = os.path.join(base_directory, OPTIMIZER_FOLDER, hash_value,
+        self.tabpfn_folder = os.path.join(base_directory, OPTIMIZER_FOLDER, hash_value,
                                                  f"{self.padding_code}.pkl")
-        create_directory_safely(self.optimizers_file_path, True)
+        create_directory_safely(self.tabpfn_folder, True)
         self.logger = logging.getLogger(SklearnLeakageDetector.__name__)
         self.n_jobs = 10
+
 
     def perform_hyperparameter_optimization(self, X, y):
         X_train, y_train = self.get_training_dataset(X, y)
@@ -37,7 +39,7 @@ class SklearnLeakageDetector(InformationLeakageDetector):
         bayes_search_params = dict(estimator=learner, search_spaces=self.search_space, n_iter=self.hp_iters,
                                    scoring=self.validation_loss, n_jobs=self.n_jobs, cv=self.inner_cv_iterator,
                                    error_score=0, random_state=self.random_state,
-                                   optimizers_file_path=self.optimizers_file_path)
+                                   optimizers_file_path=self.tabpfn_folder)
         bayes_search = BayesSearchCV(**bayes_search_params)
         search_keys = list(self.search_space.keys())
         search_keys.sort()
@@ -49,29 +51,32 @@ class SklearnLeakageDetector(InformationLeakageDetector):
             log_exception_error(self.logger, error)
             self.logger.error("Cannot fit the Bayes SearchCV ")
         train_size = X_train.shape[0]
-
         if learner is not None:
             del learner
             gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
-
-        return train_size, bayes_search, search_keys
+        self.estimators = []
+        for i in range(self.n_hypothesis):
+            learner_params = copy.deepcopy(self.learner_params)
+            loss, learner_params = update_params_at_k(bayes_search, search_keys, learner_params, k=i)
+            self.estimators.append([loss, learner_params])
+        return train_size
 
     def fit(self, X, y):
         if self._is_fitted_:
             self.logger.info(f"Model already fitted for the padding {self.padding_code}")
         else:
-            train_size, bayes_search, search_keys = self.perform_hyperparameter_optimization(X, y)
+            train_size = self.perform_hyperparameter_optimization(X, y)
             for i in range(self.n_hypothesis):
-                learner_params = copy.deepcopy(self.learner_params)
-                loss, learner_params = update_params_at_k(bayes_search, search_keys, learner_params, k=i)
+                loss, learner_params = self.estimators[i]
                 self.logger.info(f"**********  Model {i + 1} with loss {loss} **********")
-                model = self.base_detector(**learner_params)
+                self.logger.info(f"Parameters {print_dictionary(learner_params)}")
                 for k, (train_index, test_index) in enumerate(self.cv_iterator.split(X, y)):
                     train_index = train_index[:train_size]
                     X_train, X_test = X[train_index], X[test_index]
                     y_train, y_test = y[train_index], y[test_index]
+                    model = self.base_detector(**learner_params)
                     model.fit(X=X_train, y=y_train)
                     p_pred, y_pred = get_scores(X_test, model)
                     self.logger.info(f"************************* Split {k + 1} **************************")
@@ -79,6 +84,13 @@ class SklearnLeakageDetector(InformationLeakageDetector):
                     if i == 0:
                         self.calculate_random_classifier_accuracy(X_train, y_train, X_test, y_test)
                         self.calculate_majority_voting_accuracy(X_train, y_train, X_test, y_test)
+                    directory_path = learner_params.get('base_path', None)
+                    if directory_path is not None:
+                        try:
+                            os.rmdir(directory_path)
+                            self.logger.info(f"The directory '{directory_path}' has been removed.")
+                        except OSError as e:
+                            self.logger.error(f"Error: {directory_path} : {e.strerror}")
             self.store_results()
 
 

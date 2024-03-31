@@ -16,7 +16,7 @@ class AutoGluonClassifier(AutomlClassifier):
 
     def __init__(self, n_features, n_classes, time_limit=1800, output_folder=None, eval_metric='accuracy',
                  use_hyperparameters=True, delete_tmp_folder_after_terminate=True, auto_stack=True,
-                 remove_boosting_models=False, random_state=None, **kwargs):
+                 remove_boosting_models=False, verbosity=6, random_state=None, **kwargs):
         self.logger = logging.getLogger(name=AutoGluonClassifier.__name__)
         self.random_state = check_random_state(random_state)
         self.output_folder = output_folder
@@ -24,6 +24,7 @@ class AutoGluonClassifier(AutomlClassifier):
         self.hyperparameter_tune_kwargs = {'scheduler': 'local', 'searcher': 'auto'}
         self.eval_metric = eval_metric
         self.use_hyperparameters = use_hyperparameters
+        self.verbosity = verbosity
         if self.use_hyperparameters:
             if remove_boosting_models:
                 self.hyperparameters = hyperparameters
@@ -107,7 +108,7 @@ class AutoGluonClassifier(AutomlClassifier):
                 self.logger.info("Fitting the model from the scratch")
                 self.model = TabularPredictor(label=self.class_label, sample_weight=self.sample_weight,
                                               problem_type=self.problem_type, eval_metric=self.eval_metric,
-                                              path=self.output_folder)
+                                              path=self.output_folder, verbosity=self.verbosity)
                 self.model.fit(train_data, time_limit=self.time_limit, hyperparameters=hyperparameters,
                                hyperparameter_tune_kwargs=self.hyperparameter_tune_kwargs, auto_stack=self.auto_stack,
                                excluded_model_types=self.exclude_model_types)

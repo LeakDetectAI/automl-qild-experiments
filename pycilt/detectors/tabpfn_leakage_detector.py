@@ -1,14 +1,8 @@
-import copy
-import gc
-
-import torch
+import os
 
 from .sklearn_leakage_detector import SklearnLeakageDetector
 from ..automl import AutoTabPFNClassifier
-from ..bayes_search import BayesSearchCV
-from ..bayes_search_utils import get_scores, log_callback, update_params_at_k
 from ..constants import *
-from ..utils import log_exception_error
 
 
 class TabPFNLeakageDetector(SklearnLeakageDetector):
@@ -21,9 +15,19 @@ class TabPFNLeakageDetector(SklearnLeakageDetector):
                          **kwargs)
         self.n_jobs = 8
         self.base_detector = AutoTabPFNClassifier
+        if self.base_detector == AutoTabPFNClassifier:
+            self.learner_params['base_path'] = os.path.join(base_directory, OPTIMIZER_FOLDER, hash_value,
+                                                            self.padding_code)
 
     def perform_hyperparameter_optimization(self, X, y):
-        return super().perform_hyperparameter_optimization(X, y)
+        train_size = super().perform_hyperparameter_optimization(X, y)
+        directory_path = self.learner_params['base_path']
+        try:
+            os.rmdir(directory_path)
+            self.logger.info(f"The directory '{directory_path}' has been removed.")
+        except OSError as e:
+            self.logger.error(f"Error: {directory_path} : {e.strerror}")
+        return train_size
 
     def fit(self, X, y):
         super().fit(X, y)

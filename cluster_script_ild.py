@@ -32,6 +32,7 @@ from experiments.utils import *
 from experiments.utils import leakage_detectors
 from pycilt.constants import *
 from pycilt.utils import *
+from memory_profiler import profile
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 LOGS_FOLDER = 'logs'

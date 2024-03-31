@@ -54,7 +54,7 @@ def progress_bar(count, total, status=''):
     sys.stdout.flush()
 
 
-def print_dictionary(dictionary, sep='\t', n_keys=None):
+def print_dictionary(dictionary, sep='\n', n_keys=None):
     output = "  "
     if n_keys is None:
         n_keys = len(dictionary)

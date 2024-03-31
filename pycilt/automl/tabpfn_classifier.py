@@ -2,7 +2,9 @@ import logging
 
 import numpy as np
 import torch
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import balanced_accuracy_score
+from sklearn.model_selection import train_test_split
 from sklearn.utils import check_random_state
 from tabpfn import TabPFNClassifier
 
@@ -12,7 +14,7 @@ from ..dimensionality_reduction_techniques import create_dimensionality_reductio
 
 class AutoTabPFNClassifier(AutomlClassifier):
     def __init__(self, n_features, n_classes, n_ensembles=100, n_reduced=20, reduction_technique='select_from_model_rf',
-                 random_state=None, **kwargs):
+                 base_path=None, random_state=None, **kwargs):
         self.n_features = n_features
         self.n_classes = n_classes
         self.logger = logging.getLogger(name=AutoTabPFNClassifier.__name__)
@@ -31,6 +33,7 @@ class AutoTabPFNClassifier(AutomlClassifier):
         self.logger.info(f"Device {self.device}")
         self.n_ensembles = n_ensembles
         self.model = None
+        self.base_path = base_path
 
     def transform(self, X, y=None):
         self.logger.info(f"Before transform n_instances {X.shape[0]} n_features {X.shape[-1]}")
@@ -58,8 +61,17 @@ class AutoTabPFNClassifier(AutomlClassifier):
         return X
 
     def fit(self, X, y, **kwd):
+        if X.shape[0] >= 4000:
+            reduced_train_size = 4000
+            self.logger.info(f"Initial instances {X.shape[0]} reduced to {reduced_train_size}")
+            X, _, y, _ = train_test_split(X, y, train_size=reduced_train_size,
+                                          stratify=y, random_state=self.random_state)
         X = self.transform(X, y)
-        self.model = TabPFNClassifier(device=self.device, N_ensemble_configurations=self.n_ensembles)
+        params = dict(device=self.device, base_path=self.base_path, N_ensemble_configurations=self.n_ensembles)
+        if self.base_path is not None:
+            params['base_path'] = self.base_path
+
+        self.model = TabPFNClassifier(**params)
         self.model.fit(X, y, overwrite_warning=True)
         self.clear_memory()
         self.logger.info("Fitting Done")
@@ -76,22 +88,24 @@ class AutoTabPFNClassifier(AutomlClassifier):
         acc = balanced_accuracy_score(y, y_pred)
         return acc
 
-    def predict_proba(self, X, batch_size=200, verbose=0):
+    def predict_proba(self, X, batch_size=None, verbose=0):
+        self.logger.info("Predicting Probabilities")
         n_samples = X.shape[0]
-        n_batches = np.ceil(n_samples / batch_size).astype(int)
-        predictions = []
-        if self.device == "cuda":
-            batch_size = 50
-        for i in range(n_batches):
-            start_idx = i * batch_size
-            end_idx = min((i + 1) * batch_size, n_samples)
-            X_batch = X[start_idx:end_idx]
-            X_transformed = self.transform(X_batch)
-            self.logger.info(f"Processing batch {i + 1}/{n_batches} Start id {start_idx} end id {end_idx}")
-            batch_pred = self.model.predict_proba(X_transformed, normalize_with_test=True, return_logits=False)
-            predictions.append(batch_pred)
+        X = self.transform(X)
+        if batch_size is None:
+            y_pred = self.model.predict_proba(X, normalize_with_test=True, return_logits=False)
+        else:
+            n_batches = np.ceil(n_samples / batch_size).astype(int)
+            predictions = []
+            for i in range(n_batches):
+                start_idx = i * batch_size
+                end_idx = min((i + 1) * batch_size, n_samples)
+                X_batch = X[start_idx:end_idx]
+                self.logger.info(f"Processing batch {i + 1}/{n_batches} Start id {start_idx} end id {end_idx}")
+                batch_pred = self.model.predict_proba(X_batch, normalize_with_test=True, return_logits=False)
+                predictions.append(batch_pred)
 
-        y_pred = np.concatenate(predictions, axis=0)
+            y_pred = np.concatenate(predictions, axis=0)
         self.logger.info("Predict_proba Done")
         self.clear_memory()
         return y_pred

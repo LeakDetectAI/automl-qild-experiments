@@ -5,7 +5,7 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=128G
 #SBATCH -A hpc-prf-aiafs
-#SBATCH -t 7-00:00:00
+#SBATCH -t 6-00:00:00
 #SBATCH -p normal
 #SBATCH --mail-user prithag@mail.uni-paderborn.de
 #SBATCH -o /scratch/hpc-prf-aiafs/prithag/clusterout/%x-%j
