@@ -6,7 +6,7 @@
 #SBATCH --mem=128G
 #SBATCH --gres=gpu:a100:1
 #SBATCH -A hpc-prf-aiafs
-#SBATCH -t 6-00:00:00
+#SBATCH -t 5-00:00:00
 #SBATCH -p gpu
 #SBATCH --mail-user prithag@mail.uni-paderborn.de
 #SBATCH -o /scratch/hpc-prf-aiafs/prithag/clusterout/%x-%j

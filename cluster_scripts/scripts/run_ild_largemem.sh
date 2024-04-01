@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH -J "ILD"
+#SBATCH -J "ILDL"
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=256G
 #SBATCH -A hpc-prf-aiafs
-#SBATCH -t 6-00:00:00
+#SBATCH -t 5-00:00:00
 #SBATCH -p largemem
 #SBATCH --mail-user prithag@mail.uni-paderborn.de
 #SBATCH -o /scratch/hpc-prf-aiafs/prithag/clusterout/%x-%j
