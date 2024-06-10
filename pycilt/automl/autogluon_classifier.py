@@ -16,7 +16,7 @@ class AutoGluonClassifier(AutomlClassifier):
 
     def __init__(self, n_features, n_classes, time_limit=1800, output_folder=None, eval_metric='accuracy',
                  use_hyperparameters=True, delete_tmp_folder_after_terminate=True, auto_stack=True,
-                 remove_boosting_models=False, verbosity=6, random_state=None, **kwargs):
+                 remove_boosting_models=True, verbosity=6, random_state=None, **kwargs):
         self.logger = logging.getLogger(name=AutoGluonClassifier.__name__)
         self.random_state = check_random_state(random_state)
         self.output_folder = output_folder
@@ -140,13 +140,30 @@ class AutoGluonClassifier(AutomlClassifier):
         y_pred = self.model.predict_proba(test_data)
         return y_pred.values
 
-    def convert_to_dataframe(self, X, y):
-        if y is None:
+    def convert_to_dataframe(self, X, y=None):
+        # Ensure X and y are NumPy arrays
+        X = np.asarray(X)
+        if y is not None:
+            y = np.asarray(y)
+        # If y is None, generate random labels
+        else:
             n_instances = X.shape[0]
             y = self.random_state.choice(self.n_classes, size=n_instances)
+
+        # Ensure X and y are writeable
+        X = np.copy(X)
+        X.flags.writeable = True
+        y = np.copy(y)
+        y.flags.writeable = True
+
+        # Concatenate X and y
         data = np.concatenate((X, y[:, None]), axis=1)
+
+        # Check the number of features
         if self.n_features != X.shape[-1]:
-            raise ValueError(f"Dataset passed does not contain {self.n_features}")
+            raise ValueError(f"Dataset passed does not contain {self.n_features} features")
+
+        # Convert to DataFrame
         df_data = pd.DataFrame(data=data, columns=self.columns)
         return df_data
 

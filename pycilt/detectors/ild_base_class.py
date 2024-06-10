@@ -114,6 +114,8 @@ class InformationLeakageDetector(metaclass=ABCMeta):
 
     def create_results_from_backup(self):
         check_and_delete_corrupt_h5_file(self.results_file_backup, self.logger)
+        dir_path = os.path.dirname(os.path.realpath(self.results_file_backup))
+
         if os.path.exists(self.results_file_backup):
             if not self._is_fitted_:
                 source = h5py.File(self.results_file_backup, 'r')
@@ -122,7 +124,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                 self.logger.info(f"Locked the backup file: {self.rf_backup_name}")
                 # Perform the file copy operation
                 shutil.copy(self.results_file_backup, self.results_file)
-                self.logger.info(f"Copied the file from {self.rf_backup_name} to {self.rf_name}")
+                self.logger.info(f"Copied the file from {self.rf_backup_name} to {dir_path}, {self.rf_name}")
                 # Release the lock on the source file
                 fcntl.flock(source.id.get_vfd_handle(), fcntl.LOCK_UN)
                 source.close()

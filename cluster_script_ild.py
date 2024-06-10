@@ -52,7 +52,7 @@ if __name__ == "__main__":
     os.environ["HIP_LAUNCH_BLOCKING"] = "1"
     os.environ["CUDA_LAUNCH_BLOCKING"] = "2"
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    for i in range(200):
+    for i in range(1000):
         start = datetime.now()
         dbConnector.job_description = None
         if 'CCS_REQID' in os.environ.keys():
@@ -136,6 +136,8 @@ if __name__ == "__main__":
                     logger.info(f"Running the detector for label {label} vulnerable {ground_truth}")
                     detector_params['padding_name'] = label
                     ild_model = ild_learner(**detector_params)
+                    if not ild_model._is_fitted_ and job_id >= 1080:
+                        raise NotImplemented(f"Model not fitted for padding_name {label}")
                     ild_model.fit(X, y)
                     predicted_decision, n_hypothesis_detection = ild_model.detect()
                     logger.info(f"The label is vulnerable {ground_truth} and predicted {predicted_decision}")

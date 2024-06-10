@@ -32,8 +32,8 @@ if __name__ == "__main__":
             max_job_id = 24
         if schema == LEAKAGE_DETECTION_PADDING:
             max_job_id = 8
-        dbConnector.insert_new_jobs_openml(dataset=OPENML_PADDING_DATASET, max_job_id=max_job_id)
-        #dbConnector.insert_detection_methods(dataset=OPENML_PADDING_DATASET)
+        #dbConnector.insert_new_jobs_openml(dataset=OPENML_PADDING_DATASET, max_job_id=max_job_id)
+        dbConnector.insert_detection_methods(dataset=OPENML_PADDING_DATASET)
         # dbConnector.insert_new_jobs_different_configurations(max_job_id=max_job_id, dataset=SYNTHETIC_DATASET)
         # dbConnector.insert_new_jobs_different_configurations(max_job_id=max_job_id, dataset=SYNTHETIC_DISTANCE_DATASET)
         # dbConnector.insert_new_jobs_imbalanced(max_job_id=max_job_id, dataset=SYNTHETIC_IMBALANCED_DATASET)

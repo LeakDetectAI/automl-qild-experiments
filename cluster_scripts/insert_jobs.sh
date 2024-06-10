@@ -13,8 +13,11 @@
 cd $PFS_FOLDER/automl_quant_il_detect/
 ml lang
 ml Python/3.9.5
-echo $PYTHONUSERBASE
-echo $PATH
+ml Python/3.9.5-GCCcore-10.3.0
+
+export PYTHONUSERBASE=$PFS_FOLDER/automl_quant_il_detect/.local
+export PATH=$PFS_FOLDER/automl_quant_il_detect/.bin:$PATH
+export PATH=$PFS_FOLDER/automl_quant_il_detect/.local/bin:$PATH
 which python
 which pip
 
