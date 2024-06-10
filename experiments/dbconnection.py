@@ -334,6 +334,21 @@ class DBConnector(metaclass=ABCMeta):
             self.logger.info("The job {} is interrupted".format(job_id))
         self.close_connection()
 
+    def append_error_string_in_running_job2(self, job_id, error_message, **kwargs):
+        self.init_connection(cursor_factory=None)
+        running_jobs = f"{self.schema}.running_jobs"
+        current_message = (
+            f"SELECT cluster_id, error_history from {running_jobs} WHERE {running_jobs}.job_id = {job_id}")
+        self.cursor_db.execute(current_message)
+        cur_message = self.cursor_db.fetchone()
+        error_message = "cluster{}".format(cur_message[0]) + error_message
+        if cur_message[1] != "NA":
+            error_message = error_message + ";\n" + cur_message[1]
+        update_job = f"UPDATE {running_jobs} SET error_history = %s, interrupted = %s, finished=%s WHERE job_id = %s"
+        self.cursor_db.execute(update_job, (error_message, False, False, job_id))
+        if self.cursor_db.rowcount == 1:
+            self.logger.info("The job {} is interrupted".format(job_id))
+        self.close_connection()
     # def rename_all_jobs(self, DIR_PATH, LOGS_FOLDER, OPTIMIZER_FOLDER):
     #     self.init_connection()
     #     avail_jobs = "{}.avail_jobs".format(self.schema)

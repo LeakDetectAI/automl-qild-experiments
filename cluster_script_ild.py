@@ -137,7 +137,7 @@ if __name__ == "__main__":
                     detector_params['padding_name'] = label
                     ild_model = ild_learner(**detector_params)
                     if not ild_model._is_fitted_ and job_id >= 1080:
-                        raise NotImplemented(f"Model not fitted for padding_name {label}")
+                        raise NotImplemented(f"Model not fitted for the padding_name {label}")
                     ild_model.fit(X, y)
                     predicted_decision, n_hypothesis_detection = ild_model.detect()
                     logger.info(f"The label is vulnerable {ground_truth} and predicted {predicted_decision}")
@@ -192,7 +192,10 @@ if __name__ == "__main__":
                     message = e
                 logger.error(traceback.format_exc())
                 message = "exception{}".format(str(message))
-                dbConnector.append_error_string_in_running_job(job_id=job_id, error_message=message)
+                if isinstance(e, NotImplemented):
+                    dbConnector.append_error_string_in_running_job2(job_id=job_id, error_message=message)
+                else:
+                    dbConnector.append_error_string_in_running_job(job_id=job_id, error_message=message)
             except:
                 logger.error(traceback.format_exc())
                 message = "exception{}".format(sys.exc_info()[0].__name__)
