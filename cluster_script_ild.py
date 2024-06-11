@@ -184,7 +184,7 @@ if __name__ == "__main__":
                 results['evaluation_time'] = f"{evaluation_time}"
                 dbConnector.insert_results(experiment_schema=experiment_schema, experiment_table=experiment_table,
                                            results=results)
-                logger.info(f"Job finished")
+                logger.info("Job finished")
                 print(f"Job finished")
             except Exception as e:
                 if hasattr(e, 'message'):
@@ -193,7 +193,7 @@ if __name__ == "__main__":
                     message = e
                 logger.error(traceback.format_exc())
                 lowest_job_id = dbConnector.get_lowest_job_id_with_hash(hash_value=hash_value)
-                message = f"exception\tlowest_job_id_{lowest_job_id}_{str(message)}"
+                message = f"exception\tlowest_job_id_{lowest_job_id}\t{str(message)}"
                 if isinstance(e, NotImplementedError):
                     dbConnector.append_error_string_in_running_job2(job_id=job_id, error_message=message)
                     dbConnector.append_error_string_in_running_job2(job_id=lowest_job_id, error_message=message)

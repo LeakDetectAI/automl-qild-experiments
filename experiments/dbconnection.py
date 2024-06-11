@@ -339,23 +339,21 @@ class DBConnector(metaclass=ABCMeta):
     def get_lowest_job_id_with_hash(self, hash_value):
         self.init_connection(cursor_factory=None)
         avail_jobs = f"{self.schema}.avail_jobs"
-        query = f"""SELECT job_id FROM {avail_jobs} WHERE hash_value = %s ORDER BY job_id ASC LIMIT 1;"""
+        query = f"""SELECT job_id FROM {avail_jobs} WHERE hash_value = %s ORDER BY job_id ASC;"""
 
         # Execute the query
         self.cursor_db.execute(query, (hash_value,))
 
         # Fetch the result
-        result = self.cursor_db.fetchall()
-        print(result)
-
+        result = list(self.cursor_db.fetchall())
+        lowest_job_id = None
         if result:
-            lowest_job_id = result[0]
-            print(f"The lowest job_id with hash_value '{hash_value}' is {lowest_job_id}.")
-        else:
-            print(f"No job found with hash_value '{hash_value}'.")
-
-        if self.cursor_db.rowcount == 1:
+            lowest_job_id = result[0][0]
+            self.logger.info(f"The lowest job_id with hash_value '{hash_value}' is {lowest_job_id}.")
             self.logger.info(f"The job {lowest_job_id} was not evaluated properly")
+        else:
+            self.logger.info(f"No job found with hash_value '{hash_value}'.")
+
         self.close_connection()
         return lowest_job_id
 
