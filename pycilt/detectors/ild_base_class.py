@@ -80,24 +80,19 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                 self.logger.info(f"Simulations done for padding label {self.padding_code}")
                 for model_name, metric_results in self.results.items():
                     padding_name_group = file[self.padding_code]
-                    if model_name != RANDOM_CLASSIFIER:
-                        conditions.append(model_name in padding_name_group)
-                    else:
-                        self.logger.info(f"Predictions for {model_name} redone")
+                    self.logger.info(f"Check if for {model_name} in results {model_name in padding_name_group}")
+                    conditions.append(model_name in padding_name_group)
                     if model_name in padding_name_group:
                         model_group = padding_name_group.get(model_name)
-                        if model_name != RANDOM_CLASSIFIER:
-                            self.logger.info(f"Predictions done for model {model_name}")
-                            for metric_name, results in metric_results.items():
-                                conditions.append(metric_name in model_group)
-                                self.logger.info(f"Results exists for metric {metric_name}")
-                                vals = np.array(model_group[metric_name])
-                                self.logger.info(f"Results {vals}")
-                                length = len(vals)
-                                self.logger.info(f"Results stored for {self.cv_iterations} and exist for {length}")
-                                conditions.append(length == self.cv_iterations)
-                        else:
-                            self.logger.info(f"Predictions for {model_name} redone")
+                        self.logger.info(f"Predictions done for model {model_name}")
+                        for metric_name, results in metric_results.items():
+                            conditions.append(metric_name in model_group)
+                            self.logger.info(f"Results exists for metric {metric_name}: {metric_name in model_group}")
+                            vals = np.array(model_group.get(metric_name))
+                            self.logger.info(f"Results {vals}")
+                            length = len(vals)
+                            self.logger.info(f"Results stored for {self.cv_iterations} and exist for {length}")
+                            conditions.append(length == self.cv_iterations)
             file.close()
             self.close_file()
 
@@ -278,11 +273,18 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                 padding_name_group = file.get(self.padding_code)
             for model_name, metric_results in self.results.items():
                 self.logger.info(f"{model_name} in {padding_name_group}: {model_name in padding_name_group}")
-                model_group = padding_name_group.create_group(model_name)
-                self.logger.info(f"Creating model group {model_name} results {model_group}")
+                if model_name not in padding_name_group:
+                    model_group = padding_name_group.create_group(model_name)
+                    self.logger.info(f"Creating model group {model_name} results {model_group}")
+                else:
+                    model_group = padding_name_group.get(model_name)
+                    self.logger.info(f"Extracting model group {model_name} results {model_group}")
                 for metric_name, results in metric_results.items():
                     self.logger.info(f"Storing results {metric_name} results {np.array(results)}")
-                    model_group.create_dataset(metric_name, data=np.array(results))
+                    if metric_name in model_group:
+                        model_group.update({metric_name: np.array(results)})
+                    else:
+                        model_group.create_dataset(metric_name, data=np.array(results))
         except Exception as error:
             log_exception_error(self.logger, error)
             self.logger.error("Problem creating the dataset ")

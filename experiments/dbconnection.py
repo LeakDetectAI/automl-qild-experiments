@@ -321,8 +321,8 @@ class DBConnector(metaclass=ABCMeta):
     def append_error_string_in_running_job(self, job_id, error_message, **kwargs):
         self.init_connection(cursor_factory=None)
         running_jobs = f"{self.schema}.running_jobs"
-        current_message = (
-            f"SELECT cluster_id, error_history from {running_jobs} WHERE {running_jobs}.job_id = {job_id}")
+        current_message = (f"SELECT cluster_id, error_history from {running_jobs} WHERE "
+                           f"{running_jobs}.job_id = {job_id}")
         self.cursor_db.execute(current_message)
         cur_message = self.cursor_db.fetchone()
         error_message = "cluster{}".format(cur_message[0]) + error_message
@@ -334,14 +334,39 @@ class DBConnector(metaclass=ABCMeta):
             self.logger.info("The job {} is interrupted".format(job_id))
         self.close_connection()
 
+    import psycopg2
+
+    def get_lowest_job_id_with_hash(self, hash_value):
+        self.init_connection(cursor_factory=None)
+        avail_jobs = f"{self.schema}.avail_jobs"
+
+        query = f""" SELECT job_id FROM {avail_jobs} WHERE hash_value = %s ORDER BY job_id ASC LIMIT 1;"""
+
+        # Execute the query
+        self.cursor_db.execute(query, (hash_value))
+
+        # Fetch the result
+        result = self.cursor_db.fetchone()
+
+        if result:
+            lowest_job_id = result[0]
+            print(f"The lowest job_id with hash_value '{hash_value}' is {lowest_job_id}.")
+        else:
+            print(f"No job found with hash_value '{hash_value}'.")
+
+        if self.cursor_db.rowcount == 1:
+            self.logger.info(f"The job {lowest_job_id} was not evaluated properly")
+        self.close_connection()
+        return lowest_job_id
+
     def append_error_string_in_running_job2(self, job_id, error_message, **kwargs):
         self.init_connection(cursor_factory=None)
         running_jobs = f"{self.schema}.running_jobs"
-        current_message = (
-            f"SELECT cluster_id, error_history from {running_jobs} WHERE {running_jobs}.job_id = {job_id}")
+        current_message = (f"SELECT cluster_id, error_history from {running_jobs} "
+                           f"WHERE {running_jobs}.job_id = {job_id}")
         self.cursor_db.execute(current_message)
         cur_message = self.cursor_db.fetchone()
-        error_message = "cluster{}".format(cur_message[0]) + error_message
+        error_message = f"cluster{cur_message[0]}" + error_message
         if cur_message[1] != "NA":
             error_message = error_message + ";\n" + cur_message[1]
         update_job = f"UPDATE {running_jobs} SET error_history = %s, interrupted = %s, finished=%s WHERE job_id = %s"
@@ -453,45 +478,26 @@ class DBConnector(metaclass=ABCMeta):
             self.cursor_db.execute(insert_job)
             new_job_id = self.cursor_db.fetchone()[0]
 
-        self.logger.info(
-            "Job {} with fold id {} updated/inserted".format(new_job_id, fold_id)
-        )
+        self.logger.info(f"Job {new_job_id} with fold id {fold_id} updated/inserted")
         start = datetime.now()
-        update_job = """UPDATE {} set job_allocated_time = %s, hash_value = %s WHERE job_id = %s""".format(
-            avail_jobs
-        )
+        update_job = f"""UPDATE {avail_jobs} set job_allocated_time = %s, hash_value = %s WHERE job_id = %s"""
         self.cursor_db.execute(update_job, (start, job_desc["hash_value"], new_job_id))
-        select_job = """SELECT * FROM {0} WHERE {0}.job_id = {1} FOR UPDATE""".format(
-            running_jobs, new_job_id
-        )
+        select_job = f"""SELECT * FROM {running_jobs} WHERE {running_jobs}.job_id = {new_job_id} FOR UPDATE"""
         self.cursor_db.execute(select_job)
         count_ = len(self.cursor_db.fetchall())
         if count_ == 0:
-            insert_job = """INSERT INTO {0} (job_id, cluster_id ,finished, interrupted) 
-                            VALUES ({1}, {2},FALSE, FALSE)""".format(
-                running_jobs, new_job_id, cluster_id
-            )
+            insert_job = f"""INSERT INTO {running_jobs} (job_id, cluster_id ,finished, interrupted) 
+                            VALUES ({new_job_id}, {cluster_id},FALSE, FALSE)"""
             self.cursor_db.execute(insert_job)
             if self.cursor_db.rowcount == 1:
-                self.logger.info(
-                    "The job {} is inserted in running jobs".format(new_job_id)
-                )
+                self.logger.info(f"The job {new_job_id} is inserted in running jobs")
         else:
-            self.logger.info(
-                "Job with job_id {} present in the updating and row locked".format(
-                    new_job_id
-                )
-            )
-            update_job = """UPDATE {} set cluster_id = %s, interrupted = %s, finished = %s WHERE job_id = %s""".format(
-                running_jobs
-            )
-            self.cursor_db.execute(
-                update_job, (cluster_id, "FALSE", "FALSE", new_job_id)
-            )
+            self.logger.info(f"Job with job_id {new_job_id} present in the updating and row locked")
+            update_job = f"""UPDATE {running_jobs} set cluster_id = %s, interrupted = %s, 
+                             finished = %s WHERE job_id = %s"""
+            self.cursor_db.execute(update_job, (cluster_id, "FALSE", "FALSE", new_job_id))
             if self.cursor_db.rowcount == 1:
-                self.logger.info(
-                    "The job {} is updated in running jobs".format(new_job_id)
-                )
+                self.logger.info(f"The job {new_job_id} is updated in running jobs")
         self.close_connection()
 
         return new_job_id
