@@ -192,11 +192,11 @@ if __name__ == "__main__":
                 else:
                     message = e
                 logger.error(traceback.format_exc())
-                message = "exception{}".format(str(message))
-                if isinstance(e, NotImplemented):
+                lowest_job_id = dbConnector.get_lowest_job_id_with_hash(hash_value=hash_value)
+                message = f"exception\tlowest_job_id_{lowest_job_id}_{str(message)}"
+                if isinstance(e, NotImplementedError):
                     dbConnector.append_error_string_in_running_job2(job_id=job_id, error_message=message)
-                    job_id = dbConnector.get_lowest_job_id_with_hash(job_id=job_id)
-                    dbConnector.append_error_string_in_running_job(job_id=job_id, error_message=message)
+                    dbConnector.append_error_string_in_running_job2(job_id=lowest_job_id, error_message=message)
                 else:
                     dbConnector.append_error_string_in_running_job(job_id=job_id, error_message=message)
             except:

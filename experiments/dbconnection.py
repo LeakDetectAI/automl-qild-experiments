@@ -339,14 +339,14 @@ class DBConnector(metaclass=ABCMeta):
     def get_lowest_job_id_with_hash(self, hash_value):
         self.init_connection(cursor_factory=None)
         avail_jobs = f"{self.schema}.avail_jobs"
-
-        query = f""" SELECT job_id FROM {avail_jobs} WHERE hash_value = %s ORDER BY job_id ASC LIMIT 1;"""
+        query = f"""SELECT job_id FROM {avail_jobs} WHERE hash_value = %s ORDER BY job_id ASC LIMIT 1;"""
 
         # Execute the query
-        self.cursor_db.execute(query, (hash_value))
+        self.cursor_db.execute(query, (hash_value,))
 
         # Fetch the result
-        result = self.cursor_db.fetchone()
+        result = self.cursor_db.fetchall()
+        print(result)
 
         if result:
             lowest_job_id = result[0]
@@ -515,7 +515,7 @@ class DBConnector(metaclass=ABCMeta):
 
     def insert_new_jobs_openml(self, dataset=OPENML_PADDING_DATASET, max_job_id=7):
         self.init_connection()
-        avail_jobs = "{}.avail_jobs".format(self.schema)
+        avail_jobs = f"{self.schema}.avail_jobs"
         # learners = [TABPNF, TABPNF]
         # select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND" \
         #             f" {avail_jobs}.job_id<={max_job_id} and {avail_jobs}.base_learner NOT IN {tuple(learners)} " \
@@ -687,7 +687,7 @@ class DBConnector(metaclass=ABCMeta):
 
     def insert_new_jobs_different_configurations(self, dataset="synthetic", max_job_id=13):
         self.init_connection()
-        avail_jobs = "{}.avail_jobs".format(self.schema)
+        avail_jobs = f"{self.schema}.avail_jobs"
         select_job = f"SELECT * FROM {avail_jobs} WHERE {avail_jobs}.dataset='{dataset}' AND " \
                      f"{avail_jobs}.fold_id =0 and {avail_jobs}.job_id<={max_job_id} ORDER  BY {avail_jobs}.job_id"
 

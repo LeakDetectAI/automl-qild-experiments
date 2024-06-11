@@ -90,9 +90,8 @@ class InformationLeakageDetector(metaclass=ABCMeta):
                             self.logger.info(f"Results exists for metric {metric_name}: {metric_name in model_group}")
                             vals = np.array(model_group.get(metric_name))
                             self.logger.info(f"Results {vals}")
-                            length = len(vals)
-                            self.logger.info(f"Results stored for {self.cv_iterations} and exist for {length}")
-                            conditions.append(length == self.cv_iterations)
+                            self.logger.info(f"Results stored for {self.cv_iterations} and exist for {len(vals)}")
+                            conditions.append(len(vals) == self.cv_iterations)
             file.close()
             self.close_file()
 
