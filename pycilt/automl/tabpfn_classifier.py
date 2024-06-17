@@ -2,12 +2,11 @@ import logging
 
 import numpy as np
 import torch
+from pycilt.automl.automl_core import AutomlClassifier
 from sklearn.metrics import balanced_accuracy_score
-from sklearn.model_selection import train_test_split
 from sklearn.utils import check_random_state
 from tabpfn import TabPFNClassifier
 
-from pycilt.automl.automl_core import AutomlClassifier
 from ..dimensionality_reduction_techniques import create_dimensionality_reduction_model
 
 
@@ -60,11 +59,6 @@ class AutoTabPFNClassifier(AutomlClassifier):
         return X
 
     def fit(self, X, y, **kwd):
-        if X.shape[0] >= 4000:
-            reduced_train_size = 4000
-            self.logger.info(f"Initial instances {X.shape[0]} reduced to {reduced_train_size}")
-            X, _, y, _ = train_test_split(X, y, train_size=reduced_train_size,
-                                          stratify=y, random_state=self.random_state)
         X = self.transform(X, y)
         params = dict(device=self.device, base_path=self.base_path, N_ensemble_configurations=self.n_ensembles)
         if self.base_path is not None:
@@ -105,7 +99,7 @@ class AutoTabPFNClassifier(AutomlClassifier):
                 predictions.append(batch_pred)
 
             y_pred = np.concatenate(predictions, axis=0)
-        self.logger.info("Predict_proba Done")
+        self.logger.info("Predicting Probabilities Done")
         self.clear_memory()
         return y_pred
 

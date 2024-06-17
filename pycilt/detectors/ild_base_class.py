@@ -18,7 +18,8 @@ from pycilt.classifiers import MajorityVoting
 from pycilt.detectors.utils import *
 from pycilt.metrics import probability_calibration
 from pycilt.statistical_tests import paired_ttest
-from pycilt.utils import log_exception_error, create_directory_safely, check_and_delete_corrupt_h5_file
+from pycilt.utils import log_exception_error, create_directory_safely, check_and_delete_corrupt_h5_file, \
+    print_dictionary
 from .utils import leakage_detection_names
 from .. import RandomClassifier
 from ..constants import *
@@ -70,41 +71,46 @@ class InformationLeakageDetector(metaclass=ABCMeta):
 
     @property
     def _is_fitted_(self) -> bool:
+        self.logger.info(f"++++++++++++++++++++++++++++++++ _is_fitted_ ++++++++++++++++++++++++++++++++")
+
         self.logger.info(f"Checking main file {self.rf_name} for results for padding {self.padding_name}")
         check_and_delete_corrupt_h5_file(self.results_file, self.logger)
-        conditions = [os.path.exists(self.results_file)]
+        conditions = {"os.path.exists(self.results_file)": os.path.exists(self.results_file)}
         if os.path.exists(self.results_file):
             file = h5py.File(self.results_file, 'r')
-            conditions.append(self.padding_code in file)
+            conditions[f"{self.padding_code} in file"] = self.padding_code in file
             if self.padding_code in file:
                 self.logger.info(f"Simulations done for padding label {self.padding_code}")
                 for model_name, metric_results in self.results.items():
                     padding_name_group = file[self.padding_code]
-                    self.logger.info(f"Check if for {model_name} in results {model_name in padding_name_group}")
-                    conditions.append(model_name in padding_name_group)
+                    self.logger.info(f"Check if {model_name} exists in results {model_name in padding_name_group}")
+                    conditions[f"{model_name} in {padding_name_group}"] = model_name in padding_name_group
                     if model_name in padding_name_group:
                         model_group = padding_name_group.get(model_name)
                         self.logger.info(f"Predictions done for model {model_name}")
                         for metric_name, results in metric_results.items():
-                            conditions.append(metric_name in model_group)
+                            conditions[f"{metric_name} in {model_group}"] = metric_name in model_group
                             self.logger.info(f"Results exists for metric {metric_name}: {metric_name in model_group}")
-                            vals = np.array(model_group.get(metric_name))
-                            self.logger.info(f"Results {vals}")
-                            self.logger.info(f"Results stored for {self.cv_iterations} and exist for {len(vals)}")
-                            conditions.append(len(vals) == self.cv_iterations)
+                            vals = np.array(model_group[metric_name]) #np.array(model_group.get(metric_name))
+                            self.logger.info(f"Results {vals} stored for {self.cv_iterations} exist for {len(vals)}")
+                            conditions[f"{padding_name_group}_{model_name}_{metric_name} len(vals) == self.cv_iterations"] = len(vals) == self.cv_iterations
             file.close()
             self.close_file()
-
-        if os.path.exists(self.results_file) and not np.all(conditions):
+        conditions_vals = list(conditions.values())
+        self.logger.info(f"Results for padding {self.padding_name} {not np.all(conditions_vals)} "
+                         f"Coniditions: {print_dictionary(conditions)}")
+        if os.path.exists(self.results_file) and not np.all(conditions_vals):
             if os.path.exists(self.results_file):
                 file = h5py.File(self.results_file, 'w')
                 if self.padding_code in file:
                     del file[self.padding_code]
                     self.logger.info(f"Results for padding {self.padding_name} removed since it is incomplete "
-                                     f"{not np.all(conditions)} {conditions}")
+                                     f"{not np.all(conditions_vals)} {print_dictionary(conditions)}")
                 file.close()
                 self.close_file()
-        return np.all(conditions)
+        self.logger.info(f"++++++++++++++++++++ _is_fitted_ {np.all(conditions_vals)} +++++++++++++++++++++++++++++")
+
+        return np.all(conditions_vals)
 
     def create_results_from_backup(self):
         check_and_delete_corrupt_h5_file(self.results_file_backup, self.logger)
@@ -330,7 +336,7 @@ class InformationLeakageDetector(metaclass=ABCMeta):
             self.close_file()
             return model_results
         else:
-            raise ValueError(f"The results are not found at the path {self.rf_name}")
+            raise ValueError(f"The results are not found at the path {self.results_file}")
 
     def read_majority_accuracies(self):
         if os.path.exists(self.results_file):

@@ -5,8 +5,10 @@ import os
 
 import torch
 from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import train_test_split
 
 from .ild_base_class import InformationLeakageDetector
+from ..automl.tabpfn_classifier import AutoTabPFNClassifier
 from ..bayes_search import BayesSearchCV
 from ..bayes_search_utils import get_scores, log_callback, update_params_at_k
 from ..constants import *
@@ -44,6 +46,7 @@ class SklearnLeakageDetector(InformationLeakageDetector):
         search_keys.sort()
         self.logger.info(f"Search Keys {search_keys}")
         callback = log_callback(search_keys)
+        X_train, y_train = self.reduce_dataset(X_train, y_train)
         try:
             bayes_search.fit(X_train, y_train, groups=None, callback=callback, **self.fit_params)
         except Exception as error:
@@ -75,7 +78,10 @@ class SklearnLeakageDetector(InformationLeakageDetector):
                     train_index = train_index[:train_size]
                     X_train, X_test = X[train_index], X[test_index]
                     y_train, y_test = y[train_index], y[test_index]
+
                     model = self.base_detector(**learner_params)
+                    X_train, y_train = self.reduce_dataset(X_train, y_train)
+                    X_test, y_test = self.reduce_dataset(X_test, y_test)
                     model.fit(X=X_train, y=y_train)
                     p_pred, y_pred = get_scores(X_test, model)
                     self.logger.info(f"************************* Split {k + 1} **************************")
@@ -92,4 +98,11 @@ class SklearnLeakageDetector(InformationLeakageDetector):
                             self.logger.error(f"Error: {directory_path} : {e.strerror}")
             self.store_results()
 
-
+    def reduce_dataset(self, X, y):
+        n_samples = X.shape[0]
+        if X.shape[0] > 4000 and self.base_detector == AutoTabPFNClassifier:
+            reduced_size = 4000
+            self.logger.info(f"Initial instances {X.shape[0]} reduced to {reduced_size}")
+            X, _, y, _ = train_test_split(X, y, train_size=reduced_size,
+                                          stratify=y, random_state=self.random_state)
+        return X, y

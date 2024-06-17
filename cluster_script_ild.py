@@ -196,7 +196,7 @@ if __name__ == "__main__":
                 message = f"exception\tlowest_job_id_{lowest_job_id}\t{str(message)}"
                 if isinstance(e, NotImplementedError):
                     dbConnector.append_error_string_in_running_job2(job_id=job_id, error_message=message)
-                    dbConnector.append_error_string_in_running_job2(job_id=lowest_job_id, error_message=message)
+                    dbConnector.append_error_string_in_running_job(job_id=lowest_job_id, error_message=message)
                 else:
                     dbConnector.append_error_string_in_running_job(job_id=job_id, error_message=message)
             except:
