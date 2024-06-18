@@ -27,8 +27,7 @@ class SklearnLeakageDetector(InformationLeakageDetector):
         self.validation_loss = validation_loss
         self.inner_cv_iterator = StratifiedShuffleSplit(n_splits=self.n_inner_folds, test_size=0.30,
                                                         random_state=self.random_state)
-        self.tabpfn_folder = os.path.join(base_directory, OPTIMIZER_FOLDER, hash_value,
-                                                 f"{self.padding_code}.pkl")
+        self.tabpfn_folder = os.path.join(base_directory, OPTIMIZER_FOLDER, hash_value, f"{self.padding_code}.pkl")
         create_directory_safely(self.tabpfn_folder, True)
         self.logger = logging.getLogger(SklearnLeakageDetector.__name__)
         self.n_jobs = 10
@@ -51,7 +50,7 @@ class SklearnLeakageDetector(InformationLeakageDetector):
             bayes_search.fit(X_train, y_train, groups=None, callback=callback, **self.fit_params)
         except Exception as error:
             log_exception_error(self.logger, error)
-            self.logger.error("Cannot fit the Bayes SearchCV ")
+            self.logger.error(" Cannot fit the Bayes SearchCV ")
         train_size = X_train.shape[0]
         if learner is not None:
             del learner
@@ -99,7 +98,6 @@ class SklearnLeakageDetector(InformationLeakageDetector):
             self.store_results()
 
     def reduce_dataset(self, X, y):
-        n_samples = X.shape[0]
         if X.shape[0] > 4000 and self.base_detector == AutoTabPFNClassifier:
             reduced_size = 4000
             self.logger.info(f"Initial instances {X.shape[0]} reduced to {reduced_size}")
