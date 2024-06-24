@@ -37,7 +37,8 @@ __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_es
            "get_duration_seconds", "duration_till_now", "time_from_now", "get_dataset_reader", "seconds_to_time",
            "time_from_now", "create_search_space", "get_dataset_reader", "convert_learner_params", "setup_logging",
            "setup_random_seed", "check_file_exists", "get_automl_learned_estimator", "get_time_taken",
-           "get_openml_datasets", "NpEncoder", "insert_results_in_table", "create_results", "check_entry_exists"]
+           "get_openml_datasets", "NpEncoder", "insert_results_in_table", "create_results", "check_entry_exists",
+           "get_job_info", "check_job_status"]
 
 from pycilt.utils import log_exception_error
 
@@ -407,3 +408,34 @@ def create_results(result):
     results['dataset_id'] = str(result["dataset_params"].get("dataset_id"))
     results['evaluation_time'] = str(result["evaluation_time"])
     return results
+
+
+import subprocess
+
+
+def get_job_info(cluster_id):
+    try:
+        # Run the scontrol command to get detailed information about the job
+        result = subprocess.run(['scontrol', 'show', 'job', str(cluster_id)], capture_output=True, text=True)
+
+        # Check the output for job status
+        if "JobId=" + str(cluster_id) in result.stdout:
+            return result.stdout
+        else:
+            return "Job not found or completed."
+    except Exception as e:
+        return f"An error occurred: {e}"
+
+
+def check_job_status(cluster_id):
+    try:
+        # Run the squeue command and get the output
+        result = subprocess.run(['squeue', '--job', str(cluster_id)], capture_output=True, text=True)
+
+        # Check if the job ID is in the output
+        if str(cluster_id) in result.stdout:
+            return "Job is in the queue or running."
+        else:
+            return "Job is not in the queue."
+    except Exception as e:
+        return f"An error occurred: {e}"

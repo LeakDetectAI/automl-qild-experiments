@@ -10,8 +10,7 @@ import numpy as np
 import psycopg2
 from psycopg2.extras import DictCursor
 
-from experiments.utils import get_duration_seconds, duration_till_now, get_openml_datasets, NpEncoder, \
-    get_openml_padding_datasets
+from experiments.utils import *
 from pycilt.constants import *
 from pycilt.dataset_readers import GEN_TYPES, generate_samples_per_class
 from pycilt.detectors.utils import leakage_detection_methods
@@ -334,11 +333,11 @@ class DBConnector(metaclass=ABCMeta):
             self.logger.info("The job {} is interrupted".format(job_id))
         self.close_connection()
 
-    import psycopg2
-
     def get_lowest_job_id_with_hash(self, hash_value):
         self.init_connection(cursor_factory=None)
         avail_jobs = f"{self.schema}.avail_jobs"
+        running_jobs = f"{self.schema}.running_jobs"
+
         query = f"""SELECT job_id FROM {avail_jobs} WHERE hash_value = %s ORDER BY job_id ASC;"""
 
         # Execute the query
@@ -354,8 +353,19 @@ class DBConnector(metaclass=ABCMeta):
         else:
             self.logger.info(f"No job found with hash_value '{hash_value}'.")
 
+        if lowest_job_id is not None:
+            query = f"""SELECT cluster_id FROM {running_jobs} WHERE job_id = %s"""
+            self.cursor_db.execute(query, (lowest_job_id,))
+            result = list(self.cursor_db.fetchall())
+            if result:
+                cluster_id = result[0][0]
+            else:
+                cluster_id = None
+
+        status = check_job_status(cluster_id)
+        self.logger.info(f"Job {lowest_job_id} cluster_id '{cluster_id}' and status {status}")
         self.close_connection()
-        return lowest_job_id
+        return lowest_job_id, status
 
     def append_error_string_in_running_job2(self, job_id, error_message, **kwargs):
         self.init_connection(cursor_factory=None)

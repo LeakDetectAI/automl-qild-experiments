@@ -52,7 +52,7 @@ if __name__ == "__main__":
     os.environ["HIP_LAUNCH_BLOCKING"] = "1"
     os.environ["CUDA_LAUNCH_BLOCKING"] = "2"
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    for i in range(1000):
+    for i in range(10):
         start = datetime.now()
         dbConnector.job_description = None
         if 'CCS_REQID' in os.environ.keys():
@@ -192,11 +192,12 @@ if __name__ == "__main__":
                 else:
                     message = e
                 logger.error(traceback.format_exc())
-                lowest_job_id = dbConnector.get_lowest_job_id_with_hash(hash_value=hash_value)
-                message = f"exception\tlowest_job_id_{lowest_job_id}\t{str(message)}"
+                lowest_job_id, status = dbConnector.get_lowest_job_id_with_hash(hash_value=hash_value)
+                message = f"exception\tlowest_job_id_{lowest_job_id} \n with status {status}\t{str(message)}"
                 if isinstance(e, NotImplementedError):
                     dbConnector.append_error_string_in_running_job2(job_id=job_id, error_message=message)
-                    dbConnector.append_error_string_in_running_job(job_id=lowest_job_id, error_message=message)
+                    if "running" not in status.lower():
+                        dbConnector.append_error_string_in_running_job(job_id=lowest_job_id, error_message=message)
                 else:
                     dbConnector.append_error_string_in_running_job(job_id=job_id, error_message=message)
             except:
