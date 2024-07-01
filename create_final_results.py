@@ -38,8 +38,11 @@ if __name__ == "__main__":
     config_file_path = os.path.join(DIR_PATH, EXPERIMENTS, 'config', 'autosca.json')
     if schema == LEAKAGE_DETECTION_NEW:
         n_hypothesis = 11
-    else:
+    elif schema == LEAKAGE_DETECTION:
         n_hypothesis = 6
+    elif schema == LEAKAGE_DETECTION_PADDING:
+        n_hypothesis = 11
+
     logger.info(f"Schema analyzed {schema} n_hypothesis {n_hypothesis}")
     db_connector = DBConnector(config_file_path=config_file_path, is_gpu=False, schema=schema)
     db_connector.init_connection()

@@ -52,7 +52,7 @@ if __name__ == "__main__":
     os.environ["HIP_LAUNCH_BLOCKING"] = "1"
     os.environ["CUDA_LAUNCH_BLOCKING"] = "2"
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    for i in range(10):
+    for i in range(400):
         start = datetime.now()
         dbConnector.job_description = None
         if 'CCS_REQID' in os.environ.keys():
