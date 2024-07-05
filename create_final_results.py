@@ -136,7 +136,7 @@ if __name__ == "__main__":
             for metric_name, evaluation_metric in lp_metric_dict[learning_problem].items():
                 metric_loss = evaluation_metric(y_true, y_pred)
                 if np.isnan(metric_loss) or np.isinf(metric_loss):
-                    result_new[metric_name] = "\'Infinity\'"
+                    result_new[metric_name] = "Infinity"
                 else:
                     if np.around(metric_loss, 4) == 0.0:
                         result_new[metric_name] = f"{metric_loss}"

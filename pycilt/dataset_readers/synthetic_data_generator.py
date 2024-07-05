@@ -7,6 +7,7 @@ from scipy.stats import ortho_group
 from sklearn.utils import check_random_state, shuffle
 
 from pycilt.utils import softmax, normalize
+from .utils import FACTOR
 from ..constants import *
 
 
@@ -54,7 +55,7 @@ class SyntheticDatasetGenerator(metaclass=ABCMeta):
             # matrix1 = np.matmul(A, A.transpose())
             # positive semi-definite matrix
             seed = self.random_state.randint(2 ** 31, dtype="uint32") + self.fold_id
-            mean = np.ones(self.n_features) + (k_class * 1.5)
+            mean = np.ones(self.n_features) + (k_class * FACTOR)
             self.means[k_class] = mean
             self.covariances[k_class] = cov
             self.seeds[k_class] = seed
