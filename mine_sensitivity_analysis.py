@@ -7,8 +7,8 @@ import wandb
 from sklearn.model_selection import StratifiedShuffleSplit
 
 from experiments.utils import *
-from pycilt.dataset_readers import SyntheticDatasetGenerator
-from pycilt.mi_estimators import MineMIEstimatorHPO
+from autoqild import *
+
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 EXPERIMENTS = 'experiments'

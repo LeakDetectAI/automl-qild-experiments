@@ -10,18 +10,18 @@
 #SBATCH -o /scratch/hpc-prf-aiafs/prithag/clusterout/%x-%j
 #SBATCH -e /scratch/hpc-prf-aiafs/prithag/clusterout/%x-%j
 
-cd $PFS_FOLDER/automl_quant_il_detect/
+cd $PFS_FOLDER/automl_qild_experiments/
 ml lang
 ml Python/3.9.5
 ml Python/3.9.5-GCCcore-10.3.0
 
-export PYTHONUSERBASE=$PFS_FOLDER/automl_quant_il_detect/.local
-export PATH=$PFS_FOLDER/automl_quant_il_detect/.bin:$PATH
-export PATH=$PFS_FOLDER/automl_quant_il_detect/.local/bin:$PATH
+export PYTHONUSERBASE=$PFS_FOLDER/automl_qild_experiments/.local
+export PATH=$PFS_FOLDER/automl_qild_experiments/.bin:$PATH
+export PATH=$PFS_FOLDER/automl_qild_experiments/.local/bin:$PATH
 which python
 which pip
 
-export SCRIPT_FILE=$PFS_FOLDER/automl_quant_il_detect/insert_jobs.py
+export SCRIPT_FILE=$PFS_FOLDER/automl_qild_experiments/insert_jobs.py
 python $SCRIPT_FILE
 
 exit 0

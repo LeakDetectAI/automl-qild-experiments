@@ -11,7 +11,7 @@
 #SBATCH -o /scratch/hpc-prf-aiafs/prithag/clusterout/%x-%j
 #SBATCH -e /scratch/hpc-prf-aiafs/prithag/clusterout/%x-%j
 
-cd $PFS_FOLDER/automl_quant_il_detect/
+cd $PFS_FOLDER/automl_qild_experiments/
 module reset
 ml lang
 ml Python/3.9.5
@@ -19,7 +19,7 @@ source ~/.bashrc
 which python
 which pip
 
-export SCRIPT_FILE=$PFS_FOLDER/automl_quant_il_detect/mine_sensitivity_analysis.py
+export SCRIPT_FILE=$PFS_FOLDER/automl_qild_experiments/mine_sensitivity_analysis.py
 python $SCRIPT_FILE
 
 exit 0

@@ -2,7 +2,7 @@ import inspect
 import logging
 import os
 from experiments.utils import setup_logging
-from pycilt.constants import *
+from autoqild import *
 import subprocess
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -32,7 +32,7 @@ if __name__ == "__main__":
         logger.info(e.stderr)
 
     # Define the command to run
-    command = "du -shc /scratch/hpc-prf-aiafs/prithag/automl_quant_il_detect/*"
+    command = "du -shc /scratch/hpc-prf-aiafs/prithag/automl_qild_experiments/*"
 
     # Execute the command and capture its output
     try:

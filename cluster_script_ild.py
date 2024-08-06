@@ -29,9 +29,6 @@ from docopt import docopt
 
 from experiments.dbconnection import DBConnector
 from experiments.utils import *
-from experiments.utils import leakage_detectors
-from pycilt.constants import *
-from pycilt.utils import *
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 LOGS_FOLDER = 'logs'

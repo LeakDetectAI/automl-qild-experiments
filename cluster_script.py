@@ -28,14 +28,9 @@ from docopt import docopt
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import StratifiedShuffleSplit
 
+from autoqild import *
 from experiments.dbconnection import DBConnector
 from experiments.utils import *
-from pycilt import *
-from pycilt.bayes_search import BayesSearchCV
-from pycilt.bayes_search_utils import update_params_at_k, log_callback, get_scores
-from pycilt.constants import *
-from pycilt.metrics import probability_calibration
-from pycilt.utils import *
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
@@ -99,7 +94,7 @@ if __name__ == "__main__":
                 duration = get_duration_seconds(duration)
                 dataset_params['random_state'] = random_state
                 dataset_params['fold_id'] = fold_id
-                #if 'more_instances' in learner_name:
+                # if 'more_instances' in learner_name:
                 #    dataset_params["samples_per_class"] = 250 * dataset_params["n_features"]
                 dataset_reader = get_dataset_reader(dataset_name, dataset_params)
                 X, y = dataset_reader.generate_dataset()

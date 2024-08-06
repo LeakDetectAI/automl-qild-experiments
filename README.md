@@ -12,7 +12,7 @@ Installation
 ------------
 The latest release version of AutoMLQuantILDetect can be installed from GitHub as follows::
 	
-	pip install git+https://github.com/LeakDetectAI/automl_quant_il_detect.git
+	pip install git+https://github.com/LeakDetectAI/automl_qild_experiments.git
  
 Another option is to clone the repository and install AutoMLQuantILDetect using::
 
@@ -42,4 +42,4 @@ You can cite our `arXiv paper`_::
 
 License
 --------
-[Apache License, Version 2.0](https://github.com/LeakDetectAI/automl_quant_il_detect/blob/master/LICENSE)
+[Apache License, Version 2.0](https://github.com/LeakDetectAI/automl_qild_experiments/blob/master/LICENSE)

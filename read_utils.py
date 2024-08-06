@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import psycopg2
 
-from pycilt.constants import *
+from autoqild import *
 
 __all__ = ['MAE', 'MSE', 'NMAE', 'NMSE', 'columns_dict', 'learner_dict', 'dataset_dict', 'color_palette',
            'color_palette_dict', 'markers', 'markers_dict', 'get_synthetic_dataset_results', 'create_combined_dataset',

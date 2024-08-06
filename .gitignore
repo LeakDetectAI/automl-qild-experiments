@@ -1,5 +1,5 @@
 /experiments/leakage_detection/
-/pycilt/information_leakage_datasets/
+/autoqild/information_leakage_datasets/
 /.idea/
 /.ipynb_checkpoints/
 *.pyc
@@ -10,7 +10,7 @@
 *.h5
 *.sif
 /__pycache__/
-/pycilt.egg-info/
+/autoqild.egg-info/
 sql*
 *.sh
 2023-04-28-journal/

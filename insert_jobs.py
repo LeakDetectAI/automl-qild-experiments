@@ -4,7 +4,7 @@ import os
 
 from experiments.dbconnection import DBConnector
 from experiments.utils import setup_logging
-from pycilt.constants import *
+from autoqild import *
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 EXPERIMENTS = 'experiments'

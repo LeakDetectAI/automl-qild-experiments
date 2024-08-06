@@ -28,19 +28,15 @@ from sklearn.tree import DecisionTreeClassifier, ExtraTreeClassifier
 from sklearn.utils import check_random_state
 from skopt.space import Real, Categorical, Integer
 
-from pycilt import *
-from pycilt.constants import *
-from pycilt.metrics import *
+from autoqild import *
 
 __all__ = ["datasets", "classifiers", "calibrators", "calibrator_params", "mi_estimators", "get_dataset_reader",
            "learners", "classification_metrics", "mi_estimation_metrics", "mi_metrics", "lp_metric_dict",
-           "get_duration_seconds", "duration_till_now", "time_from_now", "get_dataset_reader", "seconds_to_time",
-           "time_from_now", "create_search_space", "get_dataset_reader", "convert_learner_params", "setup_logging",
-           "setup_random_seed", "check_file_exists", "get_automl_learned_estimator", "get_time_taken",
-           "get_openml_datasets", "NpEncoder", "insert_results_in_table", "create_results", "check_entry_exists",
-           "get_job_info", "check_job_status"]
+           'leakage_detectors', "get_duration_seconds", "duration_till_now", "time_from_now", "get_dataset_reader",
+           "seconds_to_time", "time_from_now", "create_search_space", "get_dataset_reader", "convert_learner_params",
+           "setup_logging", "setup_random_seed", "check_file_exists", "get_automl_learned_estimator", "get_time_taken",
+           "get_openml_datasets", "NpEncoder", "insert_results_in_table", "create_results", "check_entry_exists"]
 
-from pycilt.utils import log_exception_error
 
 datasets = {SYNTHETIC_DATASET: SyntheticDatasetGenerator,
             SYNTHETIC_DISTANCE_DATASET: SyntheticDatasetGeneratorDistance,
@@ -330,6 +326,7 @@ def get_openml_padding_datasets():
             openml_datasets[dataset_id] = {'name': dataset.name, 'link': f"https://www.openml.org/d/{dataset_id}"}
     return openml_datasets
 
+
 def get_time_taken(log_path):
     if os.path.exists(log_path):
         with open(log_path, "r") as file:
@@ -379,7 +376,7 @@ def insert_results_in_table(db_connector, results, final_result_table, logger):
     try:
         insert_result = f"INSERT INTO {final_result_table} ({columns}) VALUES ({str_values}) RETURNING job_id"
         db_connector.cursor_db.execute(insert_result, tuple(values_str))
-        #logger.info(f"Inserting results: {insert_result} values {values_str}")
+        # logger.info(f"Inserting results: {insert_result} values {values_str}")
         if db_connector.cursor_db.rowcount == 1:
             logger.info(f"Results inserted for the job {results['job_id']}")
     except psycopg2.IntegrityError as error:
@@ -396,6 +393,7 @@ def check_entry_exists(db_connector, final_result_table, value1, value2):
     count = db_connector.cursor_db.fetchone()[0]
     return count > 0
 
+
 def create_results(result):
     results = {}
     results['job_id'] = str(result['job_id'])
@@ -408,34 +406,3 @@ def create_results(result):
     results['dataset_id'] = str(result["dataset_params"].get("dataset_id"))
     results['evaluation_time'] = str(result["evaluation_time"])
     return results
-
-
-import subprocess
-
-
-def get_job_info(cluster_id):
-    try:
-        # Run the scontrol command to get detailed information about the job
-        result = subprocess.run(['scontrol', 'show', 'job', str(cluster_id)], capture_output=True, text=True)
-
-        # Check the output for job status
-        if "JobId=" + str(cluster_id) in result.stdout:
-            return result.stdout
-        else:
-            return "Job not found or completed."
-    except Exception as e:
-        return f"An error occurred: {e}"
-
-
-def check_job_status(cluster_id):
-    try:
-        # Run the squeue command and get the output
-        result = subprocess.run(['squeue', '--job', str(cluster_id)], capture_output=True, text=True)
-
-        # Check if the job ID is in the output
-        if str(cluster_id) in result.stdout:
-            return "Job is in the queue or running."
-        else:
-            return "Job is not in the queue."
-    except Exception as e:
-        return f"An error occurred: {e}"

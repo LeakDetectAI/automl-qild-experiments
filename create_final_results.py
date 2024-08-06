@@ -22,8 +22,8 @@ from docopt import docopt
 
 from experiments.dbconnection import DBConnector
 from experiments.utils import *
-from pycilt.constants import *
-from pycilt.utils import print_dictionary
+from autoqild.constants import *
+from autoqild.utils import print_dictionary
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 EXPERIMENTS = 'experiments'
