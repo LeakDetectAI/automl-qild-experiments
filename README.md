@@ -21,7 +21,7 @@ Dependencies
 AutoMLQuantILDetect depends on AutoGLuon, TabPFN, Pytorch, Tensorflow, NumPy, SciPy, matplotlib, Scikit-learn, and tqdm. For data processing and generation, you will also need pandas.
 
 
-Citing pyc-ilt
+Citing autoqild
 ----------------
 
 You can cite our `arXiv paper`_::
