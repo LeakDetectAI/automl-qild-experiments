@@ -3,9 +3,11 @@ Introduction
 ------------
 Implementation of the experiments as submitted to the Information Sciences Journal.
 
-The main scripts used to run the experiments to estimate the MI and detect leakage are cluster_script.py and cluster_script_ild.py. We used a Postgres database to configure all the jobs. The job configurations for running different mutual information estimation techniques on synthetic datasets, used by `cluster_script.py`, are uploaded in the 'database'[https://github.com/LeakDetectAI/automl-qild-experiments/tree/master/database] folder as:
+## Job Configurations
 
-1. `database\mutual_information.avail_jobs.csv` 
+The job configurations for running different mutual information estimation techniques on synthetic datasets, used by `cluster_script.py`, are uploaded as:
+
+1. `database\mutual_information.avail_jobs.csv`
 2. `database\mutual_information.running_jobs.csv`
 3. `database\automl.avail_jobs.csv`
 4. `database\automl.running_jobs.csv`
@@ -17,10 +19,14 @@ For running the experiments to detect information leakage on real datasets gener
 
 These files contain all the necessary configurations to execute the respective tasks within your experiments. Ensure to update and review these files as needed for your simulations.
 
-The package autoqild can be installed using the instructions below:
+You can find the folder containing these files at the following link: [database folder](https://github.com/LeakDetectAI/automl-qild-experiments/tree/master/database).
+
+
 
 Installation
 ------------
+The package `autoqild` package used for running the experiments can be installed using the instructions below:
+
 The latest release version of AutoMLQuantILDetect can be installed from GitHub as follows::
 	
 	pip install git+https://github.com/LeakDetectAI/AutoMLQuantILDetect.git
@@ -44,7 +50,7 @@ AutoMLQuantILDetect depends on the following libraries:
 - tqdm
 - pandas (required for data processing and generation)
 
-### Citing automl-qild
+### Citing autoqild
 
 If you use this toolkit in your research, please cite our paper available on arXiv:
 
