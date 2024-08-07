@@ -3,7 +3,7 @@ Introduction
 ------------
 Implementation of the experiments as submitted to the Information Sciences Journal.
 
-The main scripts used to run the experiments to estimate the MI and detect leakage are cluster_script.py and cluster_script_ild.py. We used a Postgres database to configure all the jobs. The job configurations for running different mutual information estimation techniques on synthetic datasets, used by `cluster_script.py`, are uploaded in the 'database'[(https://github.com/LeakDetectAI/automl-qild-experiments/tree/master/database)] folder as:
+The main scripts used to run the experiments to estimate the MI and detect leakage are cluster_script.py and cluster_script_ild.py. We used a Postgres database to configure all the jobs. The job configurations for running different mutual information estimation techniques on synthetic datasets, used by `cluster_script.py`, are uploaded in the 'database'[https://github.com/LeakDetectAI/automl-qild-experiments/tree/master/database] folder as:
 
 1. `database\mutual_information.avail_jobs.csv` 
 2. `database\mutual_information.running_jobs.csv`
