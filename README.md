@@ -1,18 +1,15 @@
 
 Introduction
 ------------
-The AutoMLQuantILDetect, package uses AutoML approaches to detect and quantify information leakage in systems.
-AutoMLQuantILDetect is an advanced toolkit that harnesses the power of Automated Machine Learning (AutoML) to accurately quantify information leakage. 
-This package specializes in estimating mutual information (MI) within systems that release classification datasets. 
-By leveraging state-of-the-art statistical tests, it not only precisely quantifies mutual information (MI) but also effectively detects instances of information leakage within classification datasets. 
-With AutoMLQuantILDetect, you can confidently and comprehensively address the critical challenges of quantification and detection in the realm of information leakage analysis.
+Implementation of the experiments as submitted to the Information Sciences Journal.
 
+The main scripts used to run the experiments to estimate the MI and detect leakage are cluster_script.py and cluster_script_ild.py. We used a Postgres database to configure all the jobs. The package autoqild can be installed using the instructions below:
 
 Installation
 ------------
 The latest release version of AutoMLQuantILDetect can be installed from GitHub as follows::
 	
-	pip install git+https://github.com/LeakDetectAI/automl_qild_experiments.git
+	pip install git+https://github.com/LeakDetectAI/AutoMLQuantILDetect.git
  
 Another option is to clone the repository and install AutoMLQuantILDetect using::
 
