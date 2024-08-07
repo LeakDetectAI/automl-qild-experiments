@@ -27,6 +27,7 @@ from datetime import datetime
 import numpy as np
 from docopt import docopt
 
+from autoqild import *
 from experiments.dbconnection import DBConnector
 from experiments.utils import *
 
