@@ -16,27 +16,31 @@ Another option is to clone the repository and install AutoMLQuantILDetect using:
 	python setup.py install
 
 
-Dependencies
-------------
-AutoMLQuantILDetect depends on AutoGLuon, TabPFN, Pytorch, Tensorflow, NumPy, SciPy, matplotlib, Scikit-learn, and tqdm. For data processing and generation, you will also need pandas.
+### Dependencies
 
+AutoMLQuantILDetect depends on the following libraries:
+- AutoGLuon
+- TabPFN
+- Pytorch
+- Tensorflow
+- NumPy
+- SciPy
+- matplotlib
+- Scikit-learn
+- tqdm
+- pandas (required for data processing and generation)
 
-Citing autoqild
-----------------
+### Citing automl-qild
 
-You can cite our `arXiv paper`_::
+If you use this toolkit in your research, please cite our paper available on arXiv:
 
-
-	@article{gupta2024information,
-	      title={Information Leakage Detection through Approximate Bayes-optimal Prediction}, 
-	      author={Pritha Gupta and Marcel Wever and Eyke Hüllermeier},
-	      year={2024},
-	      eprint={2401.14283},
-	      archivePrefix={arXiv},
-	      primaryClass={stat.ML}
-	}
-
-
-License
---------
-[Apache License, Version 2.0](https://github.com/LeakDetectAI/automl_qild_experiments/blob/master/LICENSE)
+```
+@article{gupta2024information,
+  title={Information Leakage Detection through Approximate Bayes-optimal Prediction},
+  author={Pritha Gupta, Marcel Wever, and Eyke Hüllermeier},
+  year={2024},
+  eprint={2401.14283},
+  archivePrefix={arXiv},
+  primaryClass={stat.ML}
+}
+```
