@@ -47,7 +47,7 @@ if __name__ == "__main__":
     db_connector.init_connection()
     result_table = f"results.{schema}"
     avail_jobs = f"{schema}.avail_jobs"
-    final_result_table = f"results.{schema}_final"
+    final_result_table = f"results.{schema}_full"
     select_job = f"""SELECT * FROM {result_table} JOIN {avail_jobs} ON {result_table}.job_id = {avail_jobs}.job_id 
                      WHERE {result_table}.job_id % 20 = {bucket_id} order by {result_table}.job_id;"""
     db_connector.cursor_db.execute(select_job)
@@ -105,7 +105,7 @@ if __name__ == "__main__":
         column_names_query = f"SELECT * FROM {final_result_table} LIMIT 0;"
         db_connector.cursor_db.execute(column_names_query)
         column_names = [desc[0] for desc in db_connector.cursor_db.description]
-        primary_key = f"ALTER TABLE {final_result_table} ADD CONSTRAINT {schema}_final_pkey " \
+        primary_key = f"ALTER TABLE {final_result_table} ADD CONSTRAINT {final_result_table}_final_pkey " \
                       f"PRIMARY KEY(job_id, n_hypothesis_threshold);"
         db_connector.cursor_db.execute(primary_key)
         logger.info("Primary key constraint added successfully")
