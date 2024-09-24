@@ -22,8 +22,7 @@ from docopt import docopt
 
 from experiments.dbconnection import DBConnector
 from experiments.utils import *
-from autoqild.constants import *
-from autoqild.utils import print_dictionary
+from autoqild import *
 
 DIR_PATH = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 EXPERIMENTS = 'experiments'
@@ -56,26 +55,49 @@ if __name__ == "__main__":
     db_connector.cursor_db.execute("select to_regclass(%s)", [final_result_table])
     is_table_exist = bool(db_connector.cursor_db.fetchone()[0])
     if not is_table_exist:
-        create_table = f"""CREATE TABLE IF NOT EXISTS {final_result_table}
-                        (
-                            job_id                        integer not null,
-                            n_hypothesis_threshold        integer not null,
-                            dataset_id                    integer not null,
-                            cluster_id                    integer not null,
-                            base_detector                 text    not null,
-                            detection_method              text    not null,
-                            fold_id                       integer not null,
-                            imbalance                     double precision,
-                            delay                         double precision,
-                            f1score                       double precision,
-                            accuracy                      double precision,
-                            mathewscorrelationcoefficient double precision,
-                            balancedaccuracy              double precision,
-                            falsepositiverate             double precision,
-                            falsenegativerate             double precision,
-                            evaluation_time                double precision,
-                            hypothesis                    json
-                        );"""
+        if schema == LEAKAGE_DETECTION_PADDING:
+            create_table = f"""CREATE TABLE IF NOT EXISTS {final_result_table}
+                                    (
+                                        job_id                        integer not null,
+                                        n_hypothesis_threshold        integer not null,
+                                        dataset_id                    integer not null,
+                                        cluster_id                    integer not null,
+                                        base_detector                 text    not null,
+                                        detection_method              text    not null,
+                                        server                        text    not null,
+                                        fold_id                       integer not null,
+                                        imbalance                     double precision,
+                                        delay                         double precision,
+                                        f1score                       double precision,
+                                        accuracy                      double precision,
+                                        mathewscorrelationcoefficient double precision,
+                                        balancedaccuracy              double precision,
+                                        falsepositiverate             double precision,
+                                        falsenegativerate             double precision,
+                                        evaluation_time                double precision,
+                                        hypothesis                    json
+                                    );"""
+        else:
+            create_table = f"""CREATE TABLE IF NOT EXISTS {final_result_table}
+                            (
+                                job_id                        integer not null,
+                                n_hypothesis_threshold        integer not null,
+                                dataset_id                    integer not null,
+                                cluster_id                    integer not null,
+                                base_detector                 text    not null,
+                                detection_method              text    not null,
+                                fold_id                       integer not null,
+                                imbalance                     double precision,
+                                delay                         double precision,
+                                f1score                       double precision,
+                                accuracy                      double precision,
+                                mathewscorrelationcoefficient double precision,
+                                balancedaccuracy              double precision,
+                                falsepositiverate             double precision,
+                                falsenegativerate             double precision,
+                                evaluation_time                double precision,
+                                hypothesis                    json
+                            );"""
         db_connector.cursor_db.execute(create_table)
         admin_allocation = f"""alter table {final_result_table} owner to autoscaadmin;"""
         db_connector.cursor_db.execute(admin_allocation)
@@ -144,6 +166,8 @@ if __name__ == "__main__":
                         result_new[metric_name] = f"{np.around(metric_loss, 4)}"
             result_new['n_hypothesis_threshold'] = threshold
             result_new['hypothesis'] = json.dumps(result['hypothesis'], cls=NpEncoder)
+            if schema == LEAKAGE_DETECTION_PADDING:
+                result_new['server'] = result['server']
             result_string = print_dictionary(result_new, sep='\t')
             logger.info(f"Results for threshold {threshold} is: {result_string}")
             insert_results_in_table(db_connector, result_new, final_result_table, logger)

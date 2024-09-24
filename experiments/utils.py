@@ -75,7 +75,7 @@ mi_estimators = {GMM_MI_ESTIMATOR: GMMMIEstimator,
                  'gmm_mi_estimator_true': GMMMIEstimator,
                  'gmm_mi_estimator_more_instances_true': GMMMIEstimator,
                  MINE_MI_ESTIMATOR: MineMIEstimator,
-                 MINE_MI_ESTIMATOR_HPO: MineMIEstimatorHPO,
+                 MINE_MI_ESTIMATOR_HPO: MineMIEstimatorMSE,
                  'softmax_mi_estimator': PCSoftmaxMIEstimator,
                  'pc_softmax_mi_estimator': PCSoftmaxMIEstimator}
 
