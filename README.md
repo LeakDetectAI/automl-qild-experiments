@@ -56,7 +56,7 @@ If you use this toolkit in your research, please cite our paper available on arX
 
 ```
 ### 💬 Cite Us
-If you use this toolkit in your research, please cite our paper available on arXiv:
+If you use this toolkit in your research, please cite our paper available on Information Science Jounrla, In case of in depth knowledge requirement check out the detailed dissertation written around it.:
 ```
 	@article{GUPTA2025122419,
 		title = {Information leakage detection through approximate Bayes-optimal prediction},
